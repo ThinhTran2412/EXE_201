@@ -27,6 +27,15 @@ public sealed record UpdatePhotographerProfileRequest(
     decimal? MaxBudget,
     bool? AcceptsInstantBooking);
 
+public sealed record UpdatePhotographerPersonalInfoRequest(
+    string? NationalId,
+    string? Phone,
+    string? Email,
+    string? PersonalAddress,
+    string? VerificationDocumentFrontUrl,
+    string? VerificationDocumentBackUrl,
+    string? VerificationPortraitUrl);
+
 public sealed record SetAvailabilityRequest(bool IsAvailable);
 
 public sealed record CancelBookingRequest(string Reason);

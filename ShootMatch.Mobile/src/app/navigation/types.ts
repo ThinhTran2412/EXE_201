@@ -29,4 +29,5 @@ export type PhotographerStackParamList = {
   Chat: undefined;
   ServiceManagement: undefined;
   BookingCalendar: undefined;
+  PersonalInfo: undefined;
 };
