@@ -57,3 +57,13 @@ Tài liệu này ghi lại các lỗi đã phát sinh trong quá trình phát tr
 | Money wrap | Giá trung bình / mức thấp nhất bị xuống dòng, chữ `đ` rơi riêng. | ✅ Fixed | Dùng layout `moneyRow` để giữ số tiền + đơn vị cùng một dòng. |
 | Swagger file upload | Swagger không mở vì `IFormFile` trực tiếp với `[FromForm]` gây lỗi generate operation. | ✅ Fixed | Đổi sang request wrapper `UploadPhotographerPhotoRequest`. |
 | PasswordHash overwrite | Update profile có nguy cơ ghi đè `PasswordHash` null xuống DB. | ✅ Fixed | Giữ giá trị cũ trong controller và repository khi field mới null. |
+
+## Session 2026-05-14 chiều — Migration & Personal Info
+
+| Lỗi | Mô tả | Trạng thái | Giải pháp |
+|---|---|---|---|
+| **Migration chưa apply** | `AddPhotographerPersonalInfo` tạo rồi nhưng chưa chạy lên Supabase → `column NationalId does not exist`. | ✅ Fixed | `dotnet ef database update --connection <supabase-conn>`. |
+| **GraphQL thiếu fields** | Query `photographerProfile` không include `nationalId`, `personalAddress`, `verificationDocument*` → data luôn null khi load. | ✅ Fixed | Thêm đủ fields vào GQL query và interface `PhotographerProfile`. |
+| **Field name mismatch** | Mobile dùng `address` nhưng API/domain expose `personalAddress` → không bao giờ map đúng. | ✅ Fixed | Đổi toàn bộ sang `personalAddress` trong interface, state, display và API call. |
+| **TS implicit any** | 4 `onChangeText` callback trong `PersonalInfoScreen` thiếu type → lỗi TS `implicitly has 'any' type`. | ✅ Fixed | Thêm `: string` vào từng tham số callback. |
+| **Fields bị disabled** | `PersonalInfoScreen` default `locked = true` → user không nhập được gì khi mới vào trang. | ✅ Fixed | Đổi mặc định `locked = false`. |

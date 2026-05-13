@@ -10,7 +10,7 @@ import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getPhotographerProfile, updateProfile, uploadProfileImage, submitVerification } from '../api';
+import { getPhotographerProfile, updateProfile, updatePersonalInfo, uploadProfileImage, submitVerification } from '../api';
 import { colors } from '../../../app/theme/colors';
 import { spacing } from '../../../app/theme/spacing';
 
@@ -49,7 +49,9 @@ export default function PProfileScreen() {
   const [submittingVerify, setSubmittingVerify] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [personalInfoModalVisible, setPersonalInfoModalVisible] = useState(false);
   const [editForm, setEditForm] = useState({ displayName: '', bio: '', quote: '' });
+  const [personalForm, setPersonalForm] = useState({ phone: '', email: '', personalAddress: '', nationalId: '' });
 
   const loadProfile = React.useCallback(async () => {
     setLoading(true);
@@ -58,6 +60,12 @@ export default function PProfileScreen() {
       if (p) {
         setProfile(p);
         setEditForm({ displayName: p.displayName || '', bio: p.bio || '', quote: p.quote || '' });
+        setPersonalForm({
+          phone: p.phone || '',
+          email: p.email || '',
+          personalAddress: p.personalAddress || '',
+          nationalId: p.nationalId || '',
+        });
       }
     } catch (err) {
       console.error('Load profile error:', err);
@@ -179,7 +187,7 @@ export default function PProfileScreen() {
         <View style={styles.coverContainer}>
           <Animated.View entering={FadeIn.duration(800)} style={StyleSheet.absoluteFillObject}>
             <Image source={{ uri: coverUrl }} style={styles.cover} />
-            <LinearGradient pointerEvents="none" colors={['rgba(13,11,20,0.1)', 'rgba(13,11,20,0.8)', '#0d0b14']} style={StyleSheet.absoluteFillObject} />
+            <LinearGradient pointerEvents="none" colors={['rgba(13,11,20,0.02)', 'rgba(13,11,20,0.18)', 'rgba(13,11,20,0.42)']} style={StyleSheet.absoluteFillObject} />
           </Animated.View>
 
           <Pressable
@@ -282,6 +290,21 @@ export default function PProfileScreen() {
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
+              <Pressable style={styles.personalEditBtn} onPress={() => navigation.navigate('PersonalInfo')}>
+                <Ionicons name="create-outline" size={16} color="#F7E7D2" />
+              </Pressable>
+            </View>
+            <View style={styles.personalInfoCard}>
+              <PersonalInfoRow icon="card-outline" label="CCCD" value={personalForm.nationalId || 'Chưa cập nhật'} />
+              <PersonalInfoRow icon="call-outline" label="SĐT" value={personalForm.phone || 'Chưa cập nhật'} />
+              <PersonalInfoRow icon="mail-outline" label="Email" value={personalForm.email || 'Chưa cập nhật'} />
+              <PersonalInfoRow icon="location-outline" label="Địa chỉ" value={personalForm.personalAddress || 'Chưa cập nhật'} />
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Portfolio</Text>
               <Pressable onPress={() => navigation.navigate('Portfolio')}>
                 <Text style={styles.seeAllBtn}>Xem tất cả</Text>
@@ -334,6 +357,47 @@ export default function PProfileScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <Modal visible={personalInfoModalVisible} animationType="slide" transparent>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalWrapper}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Cập nhật thông tin cá nhân</Text>
+              <Pressable onPress={() => setPersonalInfoModalVisible(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={24} color="#FFFBF0" />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+              <Text style={styles.inputLabel}>Căn cước / CCCD</Text>
+              <TextInput style={styles.inputField} value={personalForm.nationalId} onChangeText={(t) => setPersonalForm(prev => ({ ...prev, nationalId: t }))} placeholder="Nhập số căn cước / CCCD" placeholderTextColor={colors.textMuted} />
+              <Text style={styles.inputLabel}>Số điện thoại liên lạc</Text>
+              <TextInput style={styles.inputField} value={personalForm.phone} onChangeText={(t) => setPersonalForm(prev => ({ ...prev, phone: t }))} placeholder="Nhập số điện thoại" placeholderTextColor={colors.textMuted} keyboardType="phone-pad" />
+              <Text style={styles.inputLabel}>Email cụ thể</Text>
+              <TextInput style={styles.inputField} value={personalForm.email} onChangeText={(t) => setPersonalForm(prev => ({ ...prev, email: t }))} placeholder="Nhập email" placeholderTextColor={colors.textMuted} keyboardType="email-address" autoCapitalize="none" />
+              <Text style={styles.inputLabel}>Địa chỉ cụ thể</Text>
+              <TextInput style={[styles.inputField, styles.textArea]} value={personalForm.personalAddress} onChangeText={(t) => setPersonalForm(prev => ({ ...prev, personalAddress: t }))} placeholder="Nhập địa chỉ liên hệ" placeholderTextColor={colors.textMuted} multiline />
+              <Pressable
+                style={styles.saveBtn}
+                onPress={async () => {
+                  try {
+                    await updatePersonalInfo(personalForm);
+                    await loadProfile();
+                    setPersonalInfoModalVisible(false);
+                    Alert.alert('Thành công', 'Đã cập nhật thông tin cá nhân.');
+                  } catch (err: any) {
+                    const message = err?.response?.data?.message || err?.response?.data || err?.message || 'Không thể cập nhật thông tin cá nhân.';
+                    Alert.alert('Lỗi', typeof message === 'string' ? message : 'Không thể cập nhật thông tin cá nhân.');
+                  }
+                }}
+              >
+                <LinearGradient colors={[colors.primary, '#E67E22']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveBtnGradient}>
+                  <Text style={styles.saveBtnText}>Lưu thông tin</Text>
+                </LinearGradient>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -352,12 +416,26 @@ function MenuLink({ icon, label, onPress }: any) {
   );
 }
 
+function PersonalInfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <View style={styles.personalRow}>
+      <View style={styles.personalRowIcon}>
+        <Ionicons name={icon as any} size={16} color="#F7E7D2" />
+      </View>
+      <View style={styles.personalRowBody}>
+        <Text style={styles.personalRowLabel}>{label}</Text>
+        <Text style={styles.personalRowValue}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0d0b14' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0d0b14' },
-  coverContainer: { height: 320, position: 'relative' },
+  coverContainer: { width: '100%', aspectRatio: 16 / 9, maxHeight: 260, position: 'relative' },
   cover: { width: '100%', height: '100%', resizeMode: 'cover' },
-  coverActionOverlay: { position: 'absolute', bottom: 18, right: 16, zIndex: 9999, elevation: 9999, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.35)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 22 },
+  coverActionOverlay: { position: 'absolute', bottom: 18, right: 16, zIndex: 9999, elevation: 9999, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.22)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 22 },
   coverActionText: { color: '#FFFBF0', fontSize: 13, fontWeight: '600' },
   topActions: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', zIndex: 10 },
   iconBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
@@ -391,11 +469,18 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 22, fontWeight: 'bold', color: '#FFFBF0' },
   statLabel: { fontSize: 12, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 1 },
   section: { marginBottom: 32 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#FFFBF0', letterSpacing: 0.5 },
   seeAllBtn: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  personalEditBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(243,192,139,0.12)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(243,192,139,0.12)' },
   bioContainer: { backgroundColor: 'rgba(30, 28, 38, 0.5)', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
   bioText: { color: 'rgba(255, 251, 240, 0.75)', lineHeight: 24, fontSize: 15 },
+  personalInfoCard: { backgroundColor: 'rgba(30, 28, 38, 0.55)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)', gap: 10 },
+  personalRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  personalRowIcon: { width: 26, height: 26, borderRadius: 8, backgroundColor: 'rgba(243,192,139,0.12)', justifyContent: 'center', alignItems: 'center', marginTop: 1 },
+  personalRowBody: { flex: 1 },
+  personalRowLabel: { color: 'rgba(255,251,240,0.55)', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  personalRowValue: { color: '#FFFBF0', fontSize: 13, fontWeight: '600', lineHeight: 18, marginTop: 2 },
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
   gridPhoto: { borderRadius: 12, backgroundColor: '#2a2636' },
   addPhotoPlaceholder: { borderRadius: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(230, 126, 34, 0.3)', justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: 'rgba(230, 126, 34, 0.05)' },

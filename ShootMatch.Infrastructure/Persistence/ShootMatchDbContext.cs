@@ -65,6 +65,11 @@ public sealed class ShootMatchDbContext(
             entity.Property(x => x.CoverPhotoUrl).HasMaxLength(1024);
             entity.Property(x => x.Bio).HasMaxLength(2000);
             entity.Property(x => x.Quote).HasMaxLength(500);
+            entity.Property(x => x.NationalId).HasMaxLength(30);
+            entity.Property(x => x.PersonalAddress).HasMaxLength(500);
+            entity.Property(x => x.VerificationDocumentFrontUrl).HasMaxLength(1024);
+            entity.Property(x => x.VerificationDocumentBackUrl).HasMaxLength(1024);
+            entity.Property(x => x.VerificationPortraitUrl).HasMaxLength(1024);
             entity.Property(x => x.InstagramUrl).HasMaxLength(512);
             entity.Property(x => x.MinBudget).HasColumnType("numeric(18,2)");
             entity.Property(x => x.MaxBudget).HasColumnType("numeric(18,2)");

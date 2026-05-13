@@ -91,6 +91,52 @@ public sealed class PhotographersController(
         return await UploadProfilePhoto(request.File, "cover", ct);
     }
 
+    [HttpPut("personal-info")]
+    [ProducesResponseType(typeof(Photographer), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdatePersonalInfo(
+        [FromBody] UpdatePhotographerPersonalInfoRequest request,
+        CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var existing = await photographerRepository.GetByIdAsync(id, cancellationToken);
+        if (existing is null) return NotFound();
+
+        var updated = new Photographer
+        {
+            Id                            = existing.Id,
+            Phone                         = request.Phone?.Trim() ?? existing.Phone,
+            Email                         = request.Email?.Trim() ?? existing.Email,
+            DisplayName                   = existing.DisplayName,
+            Bio                           = existing.Bio,
+            Quote                         = existing.Quote,
+            NationalId                    = request.NationalId?.Trim() ?? existing.NationalId,
+            PersonalAddress               = request.PersonalAddress?.Trim() ?? existing.PersonalAddress,
+            VerificationDocumentFrontUrl  = request.VerificationDocumentFrontUrl ?? existing.VerificationDocumentFrontUrl,
+            VerificationDocumentBackUrl   = request.VerificationDocumentBackUrl ?? existing.VerificationDocumentBackUrl,
+            VerificationPortraitUrl       = request.VerificationPortraitUrl ?? existing.VerificationPortraitUrl,
+            AvatarUrl                     = existing.AvatarUrl,
+            CoverPhotoUrl                 = existing.CoverPhotoUrl,
+            InstagramUrl                  = existing.InstagramUrl,
+            MinBudget                     = existing.MinBudget,
+            MaxBudget                     = existing.MaxBudget,
+            AcceptsInstantBooking         = existing.AcceptsInstantBooking,
+            Region                        = existing.Region,
+            Rating                        = existing.Rating,
+            IsPremium                     = existing.IsPremium,
+            IsAvailable                   = existing.IsAvailable,
+            VerificationStatus            = existing.VerificationStatus,
+            PasswordHash                  = existing.PasswordHash,
+            GoogleId                      = existing.GoogleId,
+            CreatedAt                     = existing.CreatedAt,
+            UpdatedAt                     = DateTime.UtcNow,
+            PortfolioEmbeddings           = existing.PortfolioEmbeddings
+        };
+
+        await photographerRepository.UpsertAsync(updated, cancellationToken);
+        return Ok(updated);
+    }
+
     [HttpPost("verify")]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

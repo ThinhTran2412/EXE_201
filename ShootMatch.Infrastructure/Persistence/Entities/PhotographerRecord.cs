@@ -11,6 +11,11 @@ public sealed class PhotographerRecord
     public string CoverPhotoUrl { get; set; } = string.Empty;
     public string Bio { get; set; } = string.Empty;
     public string Quote { get; set; } = string.Empty;
+    public string? NationalId { get; set; }
+    public string? PersonalAddress { get; set; }
+    public string? VerificationDocumentFrontUrl { get; set; }
+    public string? VerificationDocumentBackUrl { get; set; }
+    public string? VerificationPortraitUrl { get; set; }
     public string? InstagramUrl { get; set; }
     public decimal MinBudget { get; set; }
     public decimal MaxBudget { get; set; }

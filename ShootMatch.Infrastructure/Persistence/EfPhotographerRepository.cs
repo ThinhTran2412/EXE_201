@@ -83,6 +83,11 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
             existing.VerificationStatus   = photographer.VerificationStatus;
             existing.PasswordHash         = photographer.PasswordHash ?? existing.PasswordHash;
             existing.GoogleId             = photographer.GoogleId ?? existing.GoogleId;
+            existing.NationalId           = photographer.NationalId ?? existing.NationalId;
+            existing.PersonalAddress      = photographer.PersonalAddress ?? existing.PersonalAddress;
+            existing.VerificationDocumentFrontUrl = photographer.VerificationDocumentFrontUrl ?? existing.VerificationDocumentFrontUrl;
+            existing.VerificationDocumentBackUrl  = photographer.VerificationDocumentBackUrl ?? existing.VerificationDocumentBackUrl;
+            existing.VerificationPortraitUrl      = photographer.VerificationPortraitUrl ?? existing.VerificationPortraitUrl;
             existing.UpdatedAt            = DateTime.UtcNow;
             existing.DeletedAt            = photographer.DeletedAt;
         }
@@ -103,6 +108,11 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
         CoverPhotoUrl        = r.CoverPhotoUrl,
         Bio                  = r.Bio,
         Quote                = r.Quote,
+        NationalId           = r.NationalId,
+        PersonalAddress      = r.PersonalAddress,
+        VerificationDocumentFrontUrl = r.VerificationDocumentFrontUrl,
+        VerificationDocumentBackUrl  = r.VerificationDocumentBackUrl,
+        VerificationPortraitUrl      = r.VerificationPortraitUrl,
         InstagramUrl         = r.InstagramUrl,
         MinBudget            = r.MinBudget,
         MaxBudget            = r.MaxBudget,
@@ -136,6 +146,11 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
         CoverPhotoUrl        = p.CoverPhotoUrl,
         Bio                  = p.Bio,
         Quote                = p.Quote,
+        NationalId           = p.NationalId,
+        PersonalAddress      = p.PersonalAddress,
+        VerificationDocumentFrontUrl = p.VerificationDocumentFrontUrl,
+        VerificationDocumentBackUrl  = p.VerificationDocumentBackUrl,
+        VerificationPortraitUrl      = p.VerificationPortraitUrl,
         InstagramUrl         = p.InstagramUrl,
         MinBudget            = p.MinBudget,
         MaxBudget            = p.MaxBudget,

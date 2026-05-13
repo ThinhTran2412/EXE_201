@@ -5,7 +5,10 @@ export interface PhotographerProfile {
   id:                 string;
   displayName:        string;
   phone:              string;
+  email:              string;
   region:             string;
+  personalAddress?: string;
+  nationalId?:        string;
   bio:                string;
   quote:              string;
   avatarUrl:          string;
@@ -19,6 +22,9 @@ export interface PhotographerProfile {
   verificationStatus: string;
   portfolioPhotos:    string[];
   acceptsInstantBooking: boolean;
+  verificationDocumentFrontUrl?: string;
+  verificationDocumentBackUrl?: string;
+  verificationPortraitUrl?: string;
 }
 
 export interface PBooking {
@@ -36,8 +42,10 @@ export interface PBooking {
 export async function getPhotographerProfile(): Promise<PhotographerProfile | null> {
   const data = await gql<{ photographerProfile: PhotographerProfile | null }>(`
     query { photographerProfile {
-      id displayName phone region bio quote avatarUrl coverPhotoUrl instagramUrl
+      id displayName phone email region bio quote avatarUrl coverPhotoUrl instagramUrl
       minBudget maxBudget rating isPremium isAvailable verificationStatus portfolioPhotos acceptsInstantBooking
+      nationalId personalAddress
+      verificationDocumentFrontUrl verificationDocumentBackUrl verificationPortraitUrl
     }}
   `);
   return data.photographerProfile;
@@ -45,6 +53,18 @@ export async function getPhotographerProfile(): Promise<PhotographerProfile | nu
 
 export async function updateProfile(payload: Partial<PhotographerProfile>) {
   await apiClient.put('/api/photographers/profile', payload);
+}
+
+export async function updatePersonalInfo(payload: {
+  nationalId?: string;
+  phone?: string;
+  email?: string;
+  personalAddress?: string;
+  verificationDocumentFrontUrl?: string;
+  verificationDocumentBackUrl?: string;
+  verificationPortraitUrl?: string;
+}) {
+  await apiClient.put('/api/photographers/personal-info', payload);
 }
 
 export async function uploadProfileImage(uri: string, mimeType: string, kind: 'avatar' | 'cover') {

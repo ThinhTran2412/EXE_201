@@ -18,6 +18,7 @@ import PProfileScreen        from '../../features/photographer/screens/PProfileS
 import PChatScreen from '../../features/photographer/screens/PChatScreen';
 import ServiceManagementScreen from '../../features/photographer/screens/ServiceManagementScreen';
 import BookingCalendarScreen from '../../features/photographer/screens/BookingCalendarScreen';
+import PersonalInfoScreen from '../../features/photographer/screens/PersonalInfoScreen';
 
 const Tab   = createBottomTabNavigator<PhotographerTabParamList>();
 const Stack = createNativeStackNavigator();
@@ -66,6 +67,7 @@ export default function PhotographerTabs() {
       <Stack.Screen name="Chat" component={PChatScreen} />
       <Stack.Screen name="ServiceManagement" component={ServiceManagementScreen} />
       <Stack.Screen name="BookingCalendar" component={BookingCalendarScreen} />
+      <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
     </Stack.Navigator>
   );
 }
