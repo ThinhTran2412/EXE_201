@@ -37,7 +37,7 @@ npm install
 npm start
 ```
 
-## Tài liệu trong Vault_ShootMatch
+## Tài liệu trong `Vault_ShootMatch`
 Các ghi chú và tài liệu chi tiết được lưu trong thư mục `Vault_ShootMatch`.
 
 ### Tổng quan và kiến trúc
@@ -62,6 +62,8 @@ Các ghi chú và tài liệu chi tiết được lưu trong thư mục `Vault_S
 - [Kiến trúc tổng thể](Vault_ShootMatch/[SHOOTMATCH]_architecture.md)
 - [API reference](Vault_ShootMatch/[SHOOTMATCH]_API-reference.md)
 - [Migration đa auth và DB](Vault_ShootMatch/[SHOOTMATCH]_multi-auth-db-migration.md)
+- [Tiến độ hằng ngày](Vault_ShootMatch/daily progress/summary.md)
+- [Tiến độ ngày 14-05-2026](Vault_ShootMatch/daily progress/14-05-2026.md)
 
 ## Trạng thái hiện tại
 - Phần mobile đã có các màn hình chính cho khách hàng và nhiếp ảnh gia.
@@ -72,3 +74,19 @@ Các ghi chú và tài liệu chi tiết được lưu trong thư mục `Vault_S
 - Một số dữ liệu mock vẫn đang dùng để demo giao diện.
 - Nên đồng bộ lại các luồng update profile để tránh ghi đè dữ liệu nhạy cảm.
 - Khi thêm file sinh tự động, hãy cập nhật `.gitignore` phù hợp.
+
+## Quy tắc dành cho AI khi bắt đầu làm việc
+Nếu một AI mới mở `README.md`, hãy làm theo thứ tự sau:
+1. Đọc toàn bộ phần **Mục tiêu dự án**, **Tính năng chính hiện có** và **Cấu trúc dự án** để hiểu phạm vi của project.
+2. Đọc mục **Tài liệu trong `Vault_ShootMatch`** trước khi sửa code để nắm kiến trúc, luồng nghiệp vụ và tiến độ gần nhất.
+3. Đọc file **Tiến độ hằng ngày** trong `Vault_ShootMatch/daily progress/summary.md` để biết trạng thái hiện tại và việc đã làm gần đây.
+4. Chỉ khi đã hiểu bối cảnh mới bắt đầu sửa code hoặc đề xuất thay đổi.
+5. Sau khi hoàn thành một việc, cập nhật lại file tiến độ hằng ngày và nếu có thay đổi lớn thì cập nhật thêm các tài liệu liên quan trong `Vault_ShootMatch`.
+6. Không tự ý tạo tài liệu mới ở ngoài cấu trúc đã có nếu chưa cần thiết.
+7. Ưu tiên giữ nội dung, tên file và tài liệu bằng tiếng Việt để dễ theo dõi trong GitHub và Vault.
+
+## Nguyên tắc làm việc chuẩn
+- Đọc trước, sửa sau.
+- Không làm thay đổi ngoài phạm vi yêu cầu.
+- Luôn kiểm tra lại lint/build sau khi chỉnh sửa.
+- Nếu thay đổi ảnh hưởng tới hành vi hoặc nghiệp vụ, phải ghi lại trong `Vault_ShootMatch/daily progress/summary.md`.
