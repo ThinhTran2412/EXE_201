@@ -1,0 +1,75 @@
+using Microsoft.Extensions.Configuration;
+using Supabase.Storage;
+using Client = Supabase.Client;
+using ShootMatch.Application.Abstractions;
+
+namespace ShootMatch.Infrastructure.Storage;
+
+/// <summary>
+/// Uploads files to Supabase Storage bucket "portfolio".
+/// Bucket is created automatically on first use if it does not exist.
+/// </summary>
+public sealed class SupabaseStorageService : IStorageService
+{
+    private const string BucketName = "portfolio";
+    private readonly Client _client;
+
+    public SupabaseStorageService(IConfiguration config)
+    {
+        var url    = config["Supabase:Url"]    ?? throw new InvalidOperationException("Supabase:Url not configured");
+        var key    = config["Supabase:ServiceKey"] ?? throw new InvalidOperationException("Supabase:ServiceKey not configured");
+        _client = new Client(url, key);
+    }
+
+    /// <summary>Ensures the bucket exists. Called once per upload.</summary>
+    private async Task EnsureBucketAsync()
+    {
+        try
+        {
+            await _client.Storage.GetBucket(BucketName);
+        }
+        catch
+        {
+            // Bucket not found — create it as public so URLs are directly accessible
+            await _client.Storage.CreateBucket(BucketName, new BucketUpsertOptions { Public = true });
+        }
+    }
+
+    public async Task<string> UploadAsync(
+        Stream   fileStream,
+        string   fileName,
+        string   contentType,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureBucketAsync();
+
+        // Read bytes
+        using var ms = new MemoryStream();
+        await fileStream.CopyToAsync(ms, cancellationToken);
+        var bytes = ms.ToArray();
+
+        // Unique path: portfolio/{guid}-{filename}
+        var path = $"{Guid.NewGuid():N}-{fileName}";
+
+        await _client.Storage
+            .From(BucketName)
+            .Upload(bytes, path, new Supabase.Storage.FileOptions { ContentType = contentType, Upsert = true });
+
+        // Return the public URL
+        return _client.Storage
+            .From(BucketName)
+            .GetPublicUrl(path);
+    }
+
+    public async Task DeleteAsync(string publicUrl, CancellationToken cancellationToken = default)
+    {
+        // Extract path from public URL
+        // URL format: https://<project>.supabase.co/storage/v1/object/public/portfolio/<path>
+        var marker = $"/object/public/{BucketName}/";
+        var idx    = publicUrl.IndexOf(marker, StringComparison.Ordinal);
+        if (idx < 0) return;
+
+        var path = publicUrl[(idx + marker.Length)..];
+        await _client.Storage.From(BucketName).Remove([path]);
+    }
+}
