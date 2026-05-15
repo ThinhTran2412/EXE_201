@@ -113,6 +113,63 @@ export async function getSwipeFeed(searchId: string): Promise<PhotographerCard[]
   return data.swipeFeed ?? [];
 }
 
+export interface PortfolioFeedItem {
+  photoId:          string;
+  imageUrl:         string;
+  photographerId:   string;
+  photographerName: string;
+  avatarUrl?:       string;
+  createdAt:        string;
+}
+
+export interface FeaturedPhotographerCard {
+  id:            string;
+  displayName:   string;
+  region:        string;
+  avatarUrl?:    string;
+  rating:        number;
+  isPremium:     boolean;
+  previewPhotos: string[];
+}
+
+export interface CustomerHomeFeed {
+  featured:     FeaturedPhotographerCard[];
+  latestPhotos: PortfolioFeedItem[];
+}
+
+export interface CustomerProfile {
+  id:          string;
+  displayName: string;
+  phone:       string;
+  email:       string;
+  region:      string;
+  avatarUrl:   string;
+  isVerified:  boolean;
+}
+
+export async function getCustomerProfile(): Promise<CustomerProfile | null> {
+  const data = await gql<{ me: CustomerProfile | null }>(`
+    query { me { id displayName phone email region avatarUrl isVerified } }
+  `);
+  return data.me;
+}
+
+export async function getCustomerHomeFeed(): Promise<CustomerHomeFeed> {
+  const data = await gql<{ customerHomeFeed: CustomerHomeFeed }>(`
+    query {
+      customerHomeFeed(photosPerPhotographer: 5, latestPhotoLimit: 20) {
+        featured {
+          id displayName region avatarUrl rating isPremium previewPhotos
+        }
+        latestPhotos {
+          photoId imageUrl photographerId photographerName avatarUrl createdAt
+        }
+      }
+    }
+  `);
+  return data.customerHomeFeed ?? { featured: [], latestPhotos: [] };
+}
+
 export async function getPhotographers(): Promise<Photographer[]> {
   const data = await gql<{ photographers: Photographer[] }>(`
     query { photographers {

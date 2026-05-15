@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ShootMatch.Application.Abstractions;
+using ShootMatch.Application.Contracts;
 using ShootMatch.Domain.Entities;
 using ShootMatch.Infrastructure.Persistence.Entities;
 
@@ -7,6 +8,63 @@ namespace ShootMatch.Infrastructure.Persistence;
 
 public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotographerRepository
 {
+    public async Task<CustomerHomeFeed> GetCustomerHomeFeedAsync(
+        int photosPerPhotographer = 5,
+        int latestPhotoLimit = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var perPhotographer = Math.Clamp(photosPerPhotographer, 1, 5);
+        var latestLimit = Math.Clamp(latestPhotoLimit, 1, 50);
+
+        var photographers = await db.Photographers
+            .AsNoTracking()
+            .Include(x => x.PortfolioPhotos)
+            .Where(x => x.DeletedAt == null && x.PortfolioPhotos.Count > 0)
+            .OrderByDescending(x => x.Rating)
+            .ThenByDescending(x => x.UpdatedAt)
+            .ToListAsync(cancellationToken);
+
+        var featured = photographers
+            .Select(p => new FeaturedPhotographerCard
+            {
+                Id = p.Id,
+                DisplayName = p.DisplayName,
+                Region = p.Region,
+                AvatarUrl = string.IsNullOrWhiteSpace(p.AvatarUrl) ? null : p.AvatarUrl,
+                Rating = p.Rating,
+                IsPremium = p.IsPremium,
+                PreviewPhotos = p.PortfolioPhotos
+                    .OrderByDescending(ph => ph.CreatedAt)
+                    .Take(perPhotographer)
+                    .Select(ph => ph.ImageUrl)
+                    .ToList()
+            })
+            .ToList();
+
+        var latestPhotos = await db.PortfolioPhotos
+            .AsNoTracking()
+            .Include(x => x.Photographer)
+            .Where(x => x.Photographer.DeletedAt == null)
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(latestLimit)
+            .Select(x => new PortfolioFeedItem
+            {
+                PhotoId = x.Id,
+                ImageUrl = x.ImageUrl,
+                PhotographerId = x.PhotographerId,
+                PhotographerName = x.Photographer.DisplayName,
+                AvatarUrl = string.IsNullOrWhiteSpace(x.Photographer.AvatarUrl) ? null : x.Photographer.AvatarUrl,
+                CreatedAt = x.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        return new CustomerHomeFeed
+        {
+            Featured = featured,
+            LatestPhotos = latestPhotos
+        };
+    }
+
     public async Task<IReadOnlyList<Photographer>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var records = await db.Photographers

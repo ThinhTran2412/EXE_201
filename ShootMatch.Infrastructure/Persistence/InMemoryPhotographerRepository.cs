@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using ShootMatch.Application.Abstractions;
+using ShootMatch.Application.Contracts;
 using ShootMatch.Domain.Entities;
 
 namespace ShootMatch.Infrastructure.Persistence;
@@ -31,6 +32,47 @@ public sealed class InMemoryPhotographerRepository : IPhotographerRepository
         };
         _photographers[demo1.Id] = demo1;
         _photographers[demo2.Id] = demo2;
+    }
+
+    public Task<CustomerHomeFeed> GetCustomerHomeFeedAsync(
+        int photosPerPhotographer = 5,
+        int latestPhotoLimit = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var perPhotographer = Math.Clamp(photosPerPhotographer, 1, 5);
+        var latestLimit = Math.Clamp(latestPhotoLimit, 1, 50);
+
+        var active = _photographers.Values.Where(p => p.DeletedAt == null).ToList();
+        var featured = active
+            .Where(p => p.PortfolioPhotos.Count > 0)
+            .OrderByDescending(p => p.Rating)
+            .Select(p => new FeaturedPhotographerCard
+            {
+                Id = p.Id,
+                DisplayName = p.DisplayName,
+                Region = p.Region,
+                AvatarUrl = string.IsNullOrWhiteSpace(p.AvatarUrl) ? null : p.AvatarUrl,
+                Rating = p.Rating,
+                IsPremium = p.IsPremium,
+                PreviewPhotos = p.PortfolioPhotos.Take(perPhotographer).ToList()
+            })
+            .ToList();
+
+        var latest = active
+            .SelectMany(p => p.PortfolioPhotos.Select(url => new PortfolioFeedItem
+            {
+                PhotoId = Guid.NewGuid(),
+                ImageUrl = url,
+                PhotographerId = p.Id,
+                PhotographerName = p.DisplayName,
+                AvatarUrl = p.AvatarUrl,
+                CreatedAt = p.UpdatedAt
+            }))
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(latestLimit)
+            .ToList();
+
+        return Task.FromResult(new CustomerHomeFeed { Featured = featured, LatestPhotos = latest });
     }
 
     public Task<IReadOnlyList<Photographer>> GetAllAsync(CancellationToken cancellationToken = default)

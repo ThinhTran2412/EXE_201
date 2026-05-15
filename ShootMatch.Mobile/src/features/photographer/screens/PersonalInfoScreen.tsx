@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../../app/theme/colors';
+import { REGION_OPTIONS, formatRegion } from '../../../shared/constants/regions';
 import { getPhotographerProfile, updatePersonalInfo, uploadProfileImage } from '../api';
 
 export default function PersonalInfoScreen() {
@@ -24,16 +25,18 @@ export default function PersonalInfoScreen() {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [locked, setLocked] = useState(false);
+  const [locked, setLocked] = useState(true);
   const [form, setForm] = useState({
     nationalId: '',
     phone: '',
     email: '',
+    region: '',
     personalAddress: '',
     verificationDocumentFrontUrl: '',
     verificationDocumentBackUrl: '',
     verificationPortraitUrl: '',
   });
+  const [regionPickerOpen, setRegionPickerOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -44,6 +47,7 @@ export default function PersonalInfoScreen() {
             nationalId: profile.nationalId || '',
             phone: profile.phone || '',
             email: profile.email || '',
+            region: profile.region || '',
             personalAddress: profile.personalAddress || '',
             verificationDocumentFrontUrl: profile.verificationDocumentFrontUrl || '',
             verificationDocumentBackUrl: profile.verificationDocumentBackUrl || '',
@@ -115,10 +119,24 @@ export default function PersonalInfoScreen() {
               <Text style={styles.sectionTitle}>Thông tin thiết yếu</Text>
               <Text style={styles.lockState}>{locked ? 'Đang khóa' : 'Đang mở'}</Text>
             </View>
-            <Field label="Căn cước / CCCD" value={form.nationalId} placeholder="Nhập số căn cước" onChangeText={(nationalId: string) => setForm(prev => ({ ...prev, nationalId }))} icon="card-outline" locked={locked} />
-            <Field label="Số điện thoại liên lạc" value={form.phone} placeholder="Nhập số điện thoại" onChangeText={(phone: string) => setForm(prev => ({ ...prev, phone }))} icon="call-outline" keyboardType="phone-pad" locked={locked} />
-            <Field label="Email cụ thể" value={form.email} placeholder="Nhập email" onChangeText={(email: string) => setForm(prev => ({ ...prev, email }))} icon="mail-outline" keyboardType="email-address" autoCapitalize="none" locked={locked} />
-            <Field label="Địa chỉ cụ thể" value={form.personalAddress} placeholder="Nhập địa chỉ" onChangeText={(personalAddress: string) => setForm(prev => ({ ...prev, personalAddress }))} icon="location-outline" multiline locked={locked} />
+            <Field label="Căn cước / CCCD" value={form.nationalId} placeholder="Nhập số căn cước" onChangeText={(nationalId) => setForm(prev => ({ ...prev, nationalId }))} icon="card-outline" locked={locked} />
+            <Field label="Số điện thoại liên lạc" value={form.phone} placeholder="Nhập số điện thoại" onChangeText={(phone) => setForm(prev => ({ ...prev, phone }))} icon="call-outline" keyboardType="phone-pad" locked={locked} />
+            <Field label="Email cụ thể" value={form.email} placeholder="Nhập email" onChangeText={(email) => setForm(prev => ({ ...prev, email }))} icon="mail-outline" keyboardType="email-address" autoCapitalize="none" locked={locked} />
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Tỉnh / Thành phố</Text>
+              <Pressable
+                style={[styles.inputWrap, locked && styles.inputLocked]}
+                onPress={() => !locked && setRegionPickerOpen(true)}
+                disabled={locked}
+              >
+                <View style={styles.inputIcon}><Ionicons name="map-outline" size={14} color="#F7E7D2" /></View>
+                <Text style={[styles.regionValue, !form.region && styles.regionPlaceholder]}>
+                  {form.region ? formatRegion(form.region) : 'Chọn tỉnh / thành phố'}
+                </Text>
+                {!locked && <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.35)" />}
+              </Pressable>
+            </View>
+            <Field label="Địa chỉ cụ thể" value={form.personalAddress} placeholder="Số nhà, đường, phường/xã..." onChangeText={(personalAddress) => setForm(prev => ({ ...prev, personalAddress }))} icon="location-outline" multiline locked={locked} />
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(180).duration(500)} style={styles.card}>
@@ -143,6 +161,28 @@ export default function PersonalInfoScreen() {
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {regionPickerOpen && (
+        <View style={styles.regionOverlay}>
+          <Pressable style={styles.regionBackdrop} onPress={() => setRegionPickerOpen(false)} />
+          <View style={styles.regionSheet}>
+            <Text style={styles.regionSheetTitle}>Chọn tỉnh / thành phố</Text>
+            {REGION_OPTIONS.map(({ code, label }) => (
+              <Pressable
+                key={code}
+                style={[styles.regionOption, form.region === code && styles.regionOptionActive]}
+                onPress={() => {
+                  setForm(prev => ({ ...prev, region: code }));
+                  setRegionPickerOpen(false);
+                }}
+              >
+                <Text style={[styles.regionOptionText, form.region === code && styles.regionOptionTextActive]}>{label}</Text>
+                {form.region === code && <Ionicons name="checkmark" size={18} color={colors.primary} />}
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -212,4 +252,15 @@ const styles = StyleSheet.create({
   saveBtn: { borderRadius: 16, overflow: 'hidden', marginTop: 4 },
   saveBtnGradient: { paddingVertical: 14, alignItems: 'center' },
   saveBtnText: { color: '#fff', fontWeight: '900', fontSize: 13 },
+  inputLocked: { opacity: 0.85 },
+  regionValue: { flex: 1, color: '#FFFBF0', fontSize: 13, fontWeight: '600' },
+  regionPlaceholder: { color: 'rgba(255,255,255,0.35)', fontWeight: '400' },
+  regionOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end', zIndex: 20 },
+  regionBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
+  regionSheet: { backgroundColor: '#1b1726', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 16, paddingBottom: 28, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', maxHeight: '55%' },
+  regionSheetTitle: { color: '#FFFBF0', fontSize: 16, fontWeight: '800', marginBottom: 12 },
+  regionOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12 },
+  regionOptionActive: { backgroundColor: 'rgba(230,126,34,0.12)' },
+  regionOptionText: { color: 'rgba(255,251,240,0.85)', fontSize: 14, fontWeight: '600' },
+  regionOptionTextActive: { color: colors.primary },
 });

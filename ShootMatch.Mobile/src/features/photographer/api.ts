@@ -7,8 +7,11 @@ export interface PhotographerProfile {
   phone:              string;
   email:              string;
   region:             string;
-  personalAddress?: string;
   nationalId?:        string;
+  personalAddress?:   string;
+  verificationDocumentFrontUrl?: string;
+  verificationDocumentBackUrl?:  string;
+  verificationPortraitUrl?:      string;
   bio:                string;
   quote:              string;
   avatarUrl:          string;
@@ -22,9 +25,6 @@ export interface PhotographerProfile {
   verificationStatus: string;
   portfolioPhotos:    string[];
   acceptsInstantBooking: boolean;
-  verificationDocumentFrontUrl?: string;
-  verificationDocumentBackUrl?: string;
-  verificationPortraitUrl?: string;
 }
 
 export interface PBooking {
@@ -42,10 +42,11 @@ export interface PBooking {
 export async function getPhotographerProfile(): Promise<PhotographerProfile | null> {
   const data = await gql<{ photographerProfile: PhotographerProfile | null }>(`
     query { photographerProfile {
-      id displayName phone email region bio quote avatarUrl coverPhotoUrl instagramUrl
-      minBudget maxBudget rating isPremium isAvailable verificationStatus portfolioPhotos acceptsInstantBooking
+      id displayName phone email region
       nationalId personalAddress
       verificationDocumentFrontUrl verificationDocumentBackUrl verificationPortraitUrl
+      bio quote avatarUrl coverPhotoUrl instagramUrl
+      minBudget maxBudget rating isPremium isAvailable verificationStatus portfolioPhotos acceptsInstantBooking
     }}
   `);
   return data.photographerProfile;
@@ -59,6 +60,7 @@ export async function updatePersonalInfo(payload: {
   nationalId?: string;
   phone?: string;
   email?: string;
+  region?: string;
   personalAddress?: string;
   verificationDocumentFrontUrl?: string;
   verificationDocumentBackUrl?: string;

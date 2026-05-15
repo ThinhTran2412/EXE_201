@@ -14,8 +14,21 @@ public sealed class LocalDiskStorageService : IStorageService
 
     public LocalDiskStorageService(IConfiguration configuration)
     {
-        _uploadRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-        Directory.CreateDirectory(_uploadRoot);
+        _uploadRoot = configuration["Storage:LocalPath"] ?? @"D:\pic_Stogare";
+        if (!Directory.Exists(_uploadRoot))
+        {
+            try
+            {
+                Directory.CreateDirectory(_uploadRoot);
+            }
+            catch
+            {
+                // Fallback nếu máy không có ổ D (chẳng hạn Mac/Linux)
+                _uploadRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                Directory.CreateDirectory(_uploadRoot);
+            }
+        }
+        
         _publicBaseUrl = (configuration["Storage:PublicBaseUrl"] ?? "http://localhost:5062").TrimEnd('/');
     }
 
