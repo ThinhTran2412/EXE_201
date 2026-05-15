@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getPhotographerProfile, updateProfile, updatePersonalInfo, uploadProfileImage, submitVerification } from '../api';
+import { formatRegion } from '../../../shared/constants/regions';
 import { colors } from '../../../app/theme/colors';
 import { spacing } from '../../../app/theme/spacing';
 
@@ -50,8 +51,15 @@ export default function PProfileScreen() {
   const [profile, setProfile] = useState<any>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [personalInfoModalVisible, setPersonalInfoModalVisible] = useState(false);
+  const [personalInfoVisible, setPersonalInfoVisible] = useState(true);
   const [editForm, setEditForm] = useState({ displayName: '', bio: '', quote: '' });
-  const [personalForm, setPersonalForm] = useState({ phone: '', email: '', personalAddress: '', nationalId: '' });
+  const [personalForm, setPersonalForm] = useState({
+    phone: '',
+    email: '',
+    region: '',
+    personalAddress: '',
+    nationalId: '',
+  });
 
   const loadProfile = React.useCallback(async () => {
     setLoading(true);
@@ -63,6 +71,7 @@ export default function PProfileScreen() {
         setPersonalForm({
           phone: p.phone || '',
           email: p.email || '',
+          region: p.region || '',
           personalAddress: p.personalAddress || '',
           nationalId: p.nationalId || '',
         });
@@ -238,8 +247,8 @@ export default function PProfileScreen() {
 
           <View style={styles.badgeRow}>
             <View style={styles.regionBadge}>
-              <Ionicons name="location" size={12} color={colors.primary} />
-              <Text style={styles.regionText}>{profile?.region}</Text>
+              <Ionicons name="location" size={12} color="#FFFBF0" />
+              <Text style={styles.regionText}>{formatRegion(profile?.region) || 'Chưa cập nhật'}</Text>
             </View>
             <View style={styles.ratingBadge}>
               <Ionicons name="star" size={12} color="#FFD700" />
@@ -291,16 +300,31 @@ export default function PProfileScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
-              <Pressable style={styles.personalEditBtn} onPress={() => navigation.navigate('PersonalInfo')}>
-                <Ionicons name="create-outline" size={16} color="#F7E7D2" />
-              </Pressable>
+              <View style={styles.personalActions}>
+                <Pressable
+                  style={styles.personalEditBtn}
+                  onPress={() => setPersonalInfoVisible(v => !v)}
+                  accessibilityLabel={personalInfoVisible ? 'Ẩn thông tin cá nhân' : 'Hiện thông tin cá nhân'}
+                >
+                  <Ionicons name={personalInfoVisible ? 'eye-off-outline' : 'eye-outline'} size={16} color="#F7E7D2" />
+                </Pressable>
+                <Pressable style={styles.personalEditBtn} onPress={() => navigation.navigate('PersonalInfo')}>
+                  <Ionicons name="create-outline" size={16} color="#F7E7D2" />
+                </Pressable>
+              </View>
             </View>
-            <View style={styles.personalInfoCard}>
-              <PersonalInfoRow icon="card-outline" label="CCCD" value={personalForm.nationalId || 'Chưa cập nhật'} />
-              <PersonalInfoRow icon="call-outline" label="SĐT" value={personalForm.phone || 'Chưa cập nhật'} />
-              <PersonalInfoRow icon="mail-outline" label="Email" value={personalForm.email || 'Chưa cập nhật'} />
-              <PersonalInfoRow icon="location-outline" label="Địa chỉ" value={personalForm.personalAddress || 'Chưa cập nhật'} />
-            </View>
+            {personalInfoVisible ? (
+              <View style={styles.personalInfoCard}>
+                <PersonalInfoRow icon="call-outline" label="SĐT" value={personalForm.phone || 'Chưa cập nhật'} />
+                <PersonalInfoRow icon="mail-outline" label="Email" value={personalForm.email || 'Chưa cập nhật'} />
+                <PersonalInfoRow icon="map-outline" label="Tỉnh / Thành phố" value={formatRegion(personalForm.region) || 'Chưa cập nhật'} />
+              </View>
+            ) : (
+              <View style={styles.personalInfoHidden}>
+                <Ionicons name="lock-closed-outline" size={16} color="rgba(255,251,240,0.45)" />
+                <Text style={styles.personalInfoHiddenText}>Thông tin cá nhân đang được ẩn</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -374,8 +398,10 @@ export default function PProfileScreen() {
               <TextInput style={styles.inputField} value={personalForm.phone} onChangeText={(t) => setPersonalForm(prev => ({ ...prev, phone: t }))} placeholder="Nhập số điện thoại" placeholderTextColor={colors.textMuted} keyboardType="phone-pad" />
               <Text style={styles.inputLabel}>Email cụ thể</Text>
               <TextInput style={styles.inputField} value={personalForm.email} onChangeText={(t) => setPersonalForm(prev => ({ ...prev, email: t }))} placeholder="Nhập email" placeholderTextColor={colors.textMuted} keyboardType="email-address" autoCapitalize="none" />
+              <Text style={styles.inputLabel}>Tỉnh / Thành phố</Text>
+              <TextInput style={styles.inputField} value={formatRegion(personalForm.region)} editable={false} placeholder="Cập nhật tại màn Thông tin cá nhân" placeholderTextColor={colors.textMuted} />
               <Text style={styles.inputLabel}>Địa chỉ cụ thể</Text>
-              <TextInput style={[styles.inputField, styles.textArea]} value={personalForm.personalAddress} onChangeText={(t) => setPersonalForm(prev => ({ ...prev, personalAddress: t }))} placeholder="Nhập địa chỉ liên hệ" placeholderTextColor={colors.textMuted} multiline />
+              <TextInput style={[styles.inputField, styles.textArea]} value={personalForm.personalAddress} onChangeText={(t) => setPersonalForm(prev => ({ ...prev, personalAddress: t }))} placeholder="Số nhà, đường, phường/xã..." placeholderTextColor={colors.textMuted} multiline />
               <Pressable
                 style={styles.saveBtn}
                 onPress={async () => {
@@ -451,8 +477,11 @@ const styles = StyleSheet.create({
   verifyBtnGradient: { paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
   verifyBtnText: { color: '#fff', fontWeight: '700' },
   badgeRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  regionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(230, 126, 34, 0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  regionText: { color: colors.primary, fontSize: 13, fontWeight: '600' },
+  regionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0, 0, 0, 0.35)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.12)' },
+  regionText: { color: '#FFFBF0', fontSize: 13, fontWeight: '600' },
+  personalActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  personalInfoHidden: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(30, 28, 38, 0.55)', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' },
+  personalInfoHiddenText: { color: 'rgba(255,251,240,0.55)', fontSize: 13, fontWeight: '600' },
   ratingBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255, 215, 0, 0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   ratingText: { color: '#FFD700', fontSize: 13, fontWeight: '600' },
   quoteSection: { width: '100%', marginBottom: 6 },

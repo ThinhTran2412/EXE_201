@@ -73,6 +73,19 @@ public sealed class MatchingQuery
         return await photographerRepository.GetAllAsync(cancellationToken);
     }
 
+    /// <summary>Customer home feed — featured photographer previews + latest portfolio photos.</summary>
+    public async Task<CustomerHomeFeed> CustomerHomeFeed(
+        [Service] IPhotographerRepository photographerRepository,
+        CancellationToken cancellationToken,
+        int photosPerPhotographer = 5,
+        int latestPhotoLimit = 20)
+    {
+        return await photographerRepository.GetCustomerHomeFeedAsync(
+            photosPerPhotographer,
+            latestPhotoLimit,
+            cancellationToken);
+    }
+
     // ── Photographer Self-Profile ─────────────────────────────────────────────
 
     /// <summary>Returns the authenticated photographer's own profile.</summary>

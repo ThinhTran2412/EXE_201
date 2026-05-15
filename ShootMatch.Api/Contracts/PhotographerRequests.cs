@@ -31,6 +31,7 @@ public sealed record UpdatePhotographerPersonalInfoRequest(
     string? NationalId,
     string? Phone,
     string? Email,
+    string? Region,
     string? PersonalAddress,
     string? VerificationDocumentFrontUrl,
     string? VerificationDocumentBackUrl,
