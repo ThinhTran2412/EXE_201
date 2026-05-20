@@ -1,6 +1,6 @@
 # SHOOTMATCH — Codebase Map (File & Entity Index)
 
-> Cập nhật lần cuối: 2026-05-03
+> Cập nhật lần cuối: **2026-05-20** — quét toàn project + mobile tree
 > Mục đích: Bản đồ đầy đủ tất cả file, entity, aggregate, contract trong solution.
 
 ---
@@ -46,8 +46,8 @@ ShootMatch/
 
 | Entity | Table (PostgreSQL) | Fields chính |
 |---|---|---|
-| **Photographer** | `photographers` | `Id`, `DisplayName`, `Phone`, `Email`, `Region`, `AvatarUrl`, `CoverPhotoUrl`, `Bio`, `InstagramUrl`, `MinBudget`, `MaxBudget`, `Rating`, `IsPremium`, `IsAvailable`, `AcceptsInstantBooking`, `VerificationStatus` (Unverified/Pending/Verified), `CreatedAt`, `UpdatedAt`, `DeletedAt?` |
-| **Customer** | `customers` | `Id`, `DisplayName`, `Phone`, `Email`, `Region`, `AvatarUrl`, `IsVerified`, `PreferredBudgetMin?`, `PreferredBudgetMax?`, `IsActive`, `CreatedAt`, `LastSeenAt?`, `DeletedAt?` |
+| **Photographer** | `photographers` | Trên + `Quote`, `NationalId?`, `PersonalAddress?`, `PasswordHash?`, `GoogleId?`, `PortfolioPhotos[]`, verification doc URLs |
+| **Customer** | `customers` | `Id`, `DisplayName`, `Phone`, `Email`, `Region`, `AvatarUrl`, `CoverPhotoUrl`, `HighlightPhoto1Url`, `HighlightPhoto2Url`, `HighlightPhoto3Url`, `RollPreviewPhotos` (phim bản thảo nháp), `PreferredStyles` (gu ảnh ưa thích), `IsVerified`, `PreferredBudgetMin?`, `PreferredBudgetMax?`, `IsActive`, `PasswordHash?`, `GoogleId?`, `CreatedAt`, `LastSeenAt?`, `DeletedAt?` |
 | **Match** | `matches` | `Id`, `CustomerId`, `PhotographerId`, `SearchSessionId`, `Status` (Pending/Active/Closed), `MatchedAt`, `ClosedAt?` |
 | **Booking** | `bookings` | `Id`, `CustomerId`, `PhotographerId`, `MatchId`, `ServicePackageId?`, `Status` (Pending/Confirmed/Completed/Cancelled/Disputed), `AgreedPrice`, `Commission`, `EscrowStatus` (Held/Released/Refunded), `ScheduledAt`, `CreatedAt`, `CompletedAt?`, `CancelledAt?`, `CancellationReason?` |
 | **Review** | `reviews` | `Id`, `BookingId`, `AuthorCustomerId`, `TargetPhotographerId`, `Rating` (1-5), `Comment`, `CreatedAt` |
@@ -102,7 +102,7 @@ ShootMatch/
 
 | Interface | Methods chính |
 |---|---|
-| `IPhotographerRepository` | `GetAllAsync`, `GetByIdAsync`, `GetByPhoneAsync`, `UpsertAsync` |
+| `IPhotographerRepository` | `GetAllAsync`, `GetByIdAsync`, `GetByPhoneAsync`, `UpsertAsync`, **`GetCustomerHomeFeedAsync`** |
 | `ICustomerRepository` | `GetByIdAsync`, `GetByPhoneAsync`, `UpsertAsync` |
 | `IMatchRepository` | `SaveAsync`, `GetByIdAsync`, `FindAsync`, `GetByCustomerIdAsync`, `GetByPhotographerIdAsync` |
 | `IBookingRepository` | `SaveAsync`, `GetByIdAsync`, `GetByMatchIdAsync`, `GetByCustomerIdAsync`, `GetByPhotographerIdAsync` |
@@ -150,21 +150,29 @@ ShootMatch/
 |---|---|
 | `StubSiglipEncoder.cs` | `float[768]` ngẫu nhiên deterministic theo URL hash |
 
-### `Persistence/` — In-memory repos (11 files)
+### `Persistence/` — EF Core repositories (production path)
+
+| File | Entity |
+|---|---|
+| `EfCustomerRepository.cs` | Customer |
+| `EfPhotographerRepository.cs` | Photographer + **CustomerHomeFeed** |
+| `EfMatchRepository.cs` | Match |
+| `EfBookingRepository.cs` | Booking |
+| `EfReviewRepository.cs` | Review |
+| `EfConversationRepository.cs` | Conversation, Message |
+| `EfAuthSessionRepository.cs` | AuthSession |
+| `EfVerificationRequestRepository.cs` | VerificationRequest |
+
+### `Persistence/` — In-memory (còn lại)
 
 | File | Ghi chú |
 |---|---|
-| `InMemoryPhotographerRepository.cs` | Seed data 2 demo photographers |
-| `InMemorySwipeActionRepository.cs` | `HasPhotographerSwipedRightAsync`: query thật trên dict; **`DevFeatures:AllowAutoMatch=true`** (appsettings.Development.json) bypass mutual check cho dev testing |
-| `InMemoryMatchRepository.cs` | — |
-| `InMemoryBookingRepository.cs` | — |
-| `InMemoryReviewRepository.cs` | — |
-| `InMemoryConversationRepository.cs` | Inbox sorted by LastMessageAt |
-| `InMemoryVerificationRequestRepository.cs` | Audit trail cho admin approval |
-| `InMemoryCustomerRepository.cs` | — |
-| `InMemoryAuthSessionRepository.cs` | — |
-| `InMemorySearchSessionRepository.cs` | — |
-| `InMemoryMatchResultStore.cs` | — |
+| `InMemorySearchSessionRepository.cs` | Search session |
+| `InMemorySwipeActionRepository.cs` | Swipe actions |
+| `InMemoryMatchResultStore.cs` | Kết quả ranking feed |
+| `InMemoryOtpService.cs` | OTP dev stub |
+
+> Các `InMemory*Repository` cũ (Photographer, Match, …) vẫn trong repo nhưng **không đăng ký DI** — `DependencyInjection.cs` dùng EF.
 
 ### `Persistence/` — EF Core
 
@@ -197,14 +205,15 @@ ShootMatch/
 | `AuthController` | `/api/auth` | Public | POST otp/send, otp/verify, refresh |
 | `PhotographerAuthController` | `/api/photographer-auth` | Public | POST otp/send, otp/verify, refresh |
 | `CustomersController` | `/api/customers` | `customer` | POST profile |
-| `PhotographersController` | `/api/photographers` | `photographer` | GET me, PUT profile, PATCH availability, POST verify |
+| `PhotographersController` | `/api/photographers` | `photographer` | GET me, PUT profile, **PUT personal-info**, POST avatar/cover upload, PATCH availability, POST verify |
+| `PortfolioController` | `/api/photographers/portfolio` | `photographer` | GET, POST upload, DELETE |
 | `MatchingController` | `/api/matching` | `customer` | POST searches |
 | `SwipesController` | `/api/matching` | `customer` | POST swipes |
 | `BookingsController` | `/api/bookings` | mixed | POST (customer), POST {id}/confirm, {id}/complete (photographer), {id}/cancel (both) |
 | `ReviewsController` | `/api/reviews` | `customer` | POST |
 | `AdminController` | `/api/admin` | `admin` | GET photographers, GET verification-requests, POST {id}/verify (audit trail), POST {id}/revoke-premium |
 
-### `GraphQL/` — 18 queries (`MatchingQuery.cs`)
+### `GraphQL/` — 19 queries (`MatchingQuery.cs`)
 
 | Query | Auth | Returns |
 |---|---|---|
@@ -212,7 +221,8 @@ ShootMatch/
 | `me` | `customer` | `CustomerProfile?` |
 | `photographer(id)` | Public | `Photographer?` |
 | `photographers` | Public | `[Photographer]` |
-| `photographerProfile` | `photographer` | `Photographer?` |
+| **`customerHomeFeed`** | Public | `CustomerHomeFeed` (featured + latestPhotos) |
+| `photographerProfile` | `photographer` | `Photographer?` (+ nationalId, personalAddress, portfolioPhotos) |
 | `myMatches` | `customer` | `[MatchAggregate]` |
 | `match(id)` | Authenticated | `MatchAggregate?` |
 | `myMatchesAsPhotographer` | `photographer` | `[MatchAggregate]` |
@@ -242,14 +252,21 @@ ShootMatch/
 
 ## 🗄️ Database (PostgreSQL — Supabase)
 
-### Migrations (4 tổng)
+### Migrations (7+)
 
 | Migration | Nội dung |
 |---|---|
 | `InitialPublic` | Schema ban đầu |
-| `SchemaExpansionV2` | Photographer, Customer, SearchSession, SwipeAction, AuthSession + 6 entity |
-| `AddAvailabilityAndOtp` | `photographer_availability` + `otp_records` |
-| `AddConversationAndMessage` | `conversations` (unique idx matchId) + `messages` (idx conversationId+sentAt, conversationId+readAt) |
+| `SchemaExpansionV2` | Core entities |
+| `AddAvailabilityAndOtp` | availability + otp |
+| `AddConversationAndMessage` | chat tables |
+| `AddPasswordHashAndGoogleId` | auth mở rộng |
+| `AddPhotographerQuote` | Quote |
+| `AddPhotographerPersonalInfo` | NationalId, PersonalAddress |
+| `AddCustomerCoverPhoto` | Thêm cột ảnh bìa `CoverPhotoUrl` |
+| `AddCustomerHighlightPhotos` | Thêm cột `HighlightPhoto2Url`, `HighlightPhoto3Url`, ngân sách và kích hoạt |
+| `AddCustomerHighlightPhoto1` | Thêm cột `HighlightPhoto1Url` |
+| `AddCustomerPreferredStyles` | Thêm cột `PreferredStyles` |
 
 ### Tables (16 tổng)
 
@@ -275,3 +292,60 @@ ShootMatch/
 | `Microsoft.EntityFrameworkCore` | 9.0.10 | ORM |
 | `Npgsql.EntityFrameworkCore.PostgreSQL` | 9.0.4 | PostgreSQL provider |
 | `System.IdentityModel.Tokens.Jwt` | — | JWT generation |
+
+### `Storage/`
+| File | Vai trò |
+|---|---|
+| `SupabaseStorageService.cs` | Upload public URL (khi config Supabase) |
+| `LocalDiskStorageService.cs` | Fallback lưu disk + serve static |
+
+---
+
+## 📱 ShootMatch.Mobile (`src/` — 64+ files)
+
+### Navigation
+| File | Vai trò |
+|---|---|
+| `AuthNavigator.tsx` | Splash → login/register/OTP |
+| `RoleNavigator.tsx` | customer \| photographer |
+| `CustomerTabs.tsx` | 5 tabs + stack (Profile, Checkout, Chat, …) |
+| `PhotographerTabs.tsx` | 5 tabs + PersonalInfo, ServiceManagement, … |
+
+### Customer feature
+| Path | Ghi chú |
+|---|---|
+| `screens/HomeScreen.tsx` | Feed PicKic, GraphQL home feed |
+| `screens/DiscoverScreen.tsx` | Swipe, ProgressBar đếm thẻ, verified badge, stamp LIKE/NOPE |
+| `screens/ProfileScreen.tsx` | Hồ sơ cá nhân: Viewfinder cover hero, Polaroid Asymmetric Highlights, Filmstrip Roll Preview |
+| `screens/EditProfileScreen.tsx` | Chỉnh sửa buồng tối Darkroom: Viewfinder header, 3-frame collage editor, minimal input, sequential upload roll preview, style description |
+| `screens/CustomerFavoritesScreen.tsx` | Trang lưu các photographer/mood yêu thích |
+| `screens/CustomerSharedMediaScreen.tsx` | Trang lưu ảnh cá nhân được share có sự đồng ý của khách hàng |
+| `screens/PhotographerPortfolioScreen.tsx` | Xem ảnh Masonry 2 cột thác nước, slide viewer toàn màn hình + cuộn thumbnail chân trang |
+| `shared/components/PortfolioImageCell.tsx` | Component hiển thị ảnh portfolio chống ô xám lỗi tải |
+| `components/home/*` | Hero, FeaturedStrip, StoryViewer, Editorial, Discovery, QuickActions |
+| `components/PortfolioMasonry.tsx` | Khoảnh Khắc — 2 cột masonry |
+| `utils/homeMedia.ts` | buildFeaturedDisplay, buildMomentDisplay + local fallback |
+| `utils/masonryLayout.ts` | buildTwoColumnMasonry |
+| `api.ts` | gql + REST customer |
+
+### Photographer feature
+| Screen | Ghi chú |
+|---|---|
+| `PProfileScreen.tsx` | Hồ sơ + portfolio preview grid |
+| `PersonalInfoScreen.tsx` | CCCD, địa chỉ, region |
+| `UploadPortfolioScreen.tsx` | Masonry gallery + upload |
+| `ServiceManagementScreen.tsx` | Gói dịch vụ |
+| `DashboardScreen.tsx` | Mosaic portfolio preview |
+
+### Shared
+| File | Vai trò |
+|---|---|
+| `shared/assets/localPictures.ts` | 43 ảnh `picture/*.jpg` |
+| `shared/utils/resolveImageSource.ts` | URI \| require() |
+| `shared/api/client.ts` | Axios + JWT |
+| `features/chat/ChatHub.ts` | SignalR client |
+
+### Assets ngoài `src/`
+- `ShootMatch.Mobile/picture/` — ảnh demo local
+- `ShootMatch.Mobile/.env` — `EXPO_PUBLIC_API_URL`
+- `ShootMatch.Mobile/scripts/run-expo.js` — ANDROID_HOME wrapper

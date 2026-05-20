@@ -1,8 +1,23 @@
 # ShootMatch — API Reference (Đầy đủ)
 
-> Cập nhật: 2026-05-03  
-> Base URL Dev: `http://192.168.1.7:5062`  
+> Cập nhật: **2026-05-15**  
+> Base URL Dev: `EXPO_PUBLIC_API_URL` hoặc `http://<LAN-IP>:5062`  
 > Auth: JWT Bearer — `Authorization: Bearer <token>`
+
+### Bổ sung gần đây (xem chi tiết bên dưới trong doc)
+
+| Loại | Tên | Mô tả |
+|------|-----|--------|
+| GraphQL | `customerHomeFeed` | Featured photographers + latest portfolio photos |
+| REST | `GET /api/customers/me` | Lấy profile cá nhân của khách hàng |
+| REST | `POST /api/customers/profile` | Tạo hoặc cập nhật thông tin cá nhân khách hàng (hỗ trợ merge/fallback thông minh) |
+| REST | `POST /api/customers/profile/*/upload` | 6 endpoint upload ảnh chuyên biệt cho khách hàng (avatar, cover, highlight-1/2/3, roll-preview) |
+| REST | `PUT /api/photographers/personal-info` | Cập nhật CCCD, địa chỉ, region, SĐT, email và tài liệu xác minh của nhiếp ảnh gia |
+| REST | `PATCH /api/photographers/availability` | Cập nhật trạng thái rảnh/bận (availability) của nhiếp ảnh gia |
+| REST | `POST /api/photographers/profile/avatar/upload` | Upload avatar cho nhiếp ảnh gia |
+| REST | `POST /api/photographers/profile/cover/upload` | Upload cover cho nhiếp ảnh gia |
+| REST | `GET/POST/DELETE /api/photographers/portfolio` | Quản lý ảnh portfolio của nhiếp ảnh gia |
+| GraphQL | `photographerProfile` | Trả thêm `nationalId`, `personalAddress`, `quote`, `portfolioPhotos` |
 
 ---
 
@@ -202,40 +217,173 @@ Booking phải `Completed`. Không được review lại lần 2.
 
 ---
 
-## 📸 Photographers Self-manage `/api/photographers`  🔒 photographer
+## 👤 Customers Self-manage `/api/customers`  🔒 customer
 
-### PUT `/api/photographers/me`
-
-Cập nhật đầy đủ profile.
+### GET `/api/customers/me`
+Lấy chi tiết thông tin hồ sơ của khách hàng hiện tại (dựa trên token).
 
 ```json
+// Response: 200 OK
+{
+  "id": "uuid-customer",
+  "displayName": "Thịnh Trần",
+  "phone": "+84900000000",
+  "email": "customer@gmail.com",
+  "region": "HCM",
+  "avatarUrl": "https://...",
+  "coverPhotoUrl": "https://...",
+  "highlightPhoto1Url": "https://...",
+  "highlightPhoto2Url": "https://...",
+  "highlightPhoto3Url": "https://...",
+  "rollPreviewPhotos": "url1.jpg,url2.jpg,url3.jpg",
+  "preferredStyles": "Portrait, Film look",
+  "isVerified": true,
+  "createdAt": "2026-05-20T13:33:53Z"
+}
+```
+
+---
+
+### POST `/api/customers/profile`
+Tạo mới hoặc cập nhật toàn bộ profile của khách hàng.
+> [!IMPORTANT]
+> **Quy tắc Merge/Fallback thông minh:** Khi gọi cập nhật, nếu các trường thông tin chữ (`DisplayName`, `Phone`, `Email`, `Region`, `AvatarUrl`, `CoverPhotoUrl`, `HighlightPhoto1Url`, `HighlightPhoto2Url`, `HighlightPhoto3Url`, `RollPreviewPhotos`, `PreferredStyles`) được gửi lên trống (null hoặc khoảng trắng), backend sẽ giữ nguyên (fallback) giá trị hiện tại có trong cơ sở dữ liệu thay vì ghi đè bằng giá trị trống.
+
+```json
+// Request Body (UpsertCustomerProfileRequest)
+{
+  "displayName": "Thịnh Trần",
+  "phone": "+84900000000",
+  "email": "customer@gmail.com",
+  "region": "HCM",
+  "avatarUrl": "https://...",
+  "coverPhotoUrl": "https://...",
+  "highlightPhoto1Url": "https://...",
+  "highlightPhoto2Url": "https://...",
+  "highlightPhoto3Url": "https://...",
+  "rollPreviewPhotos": "url1.jpg,url2.jpg",
+  "preferredStyles": "Portrait, Editorial"
+}
+
+// Response: 200 OK (CustomerProfile)
+{
+  "id": "uuid-customer",
+  "displayName": "Thịnh Trần",
+  "phone": "+84900000000",
+  "email": "customer@gmail.com",
+  "region": "HCM",
+  "avatarUrl": "https://...",
+  "coverPhotoUrl": "https://...",
+  "highlightPhoto1Url": "https://...",
+  "highlightPhoto2Url": "https://...",
+  "highlightPhoto3Url": "https://...",
+  "rollPreviewPhotos": "url1.jpg,url2.jpg",
+  "preferredStyles": "Portrait, Editorial",
+  "isVerified": true,
+  "createdAt": "2026-05-20T13:33:53Z"
+}
+```
+
+---
+
+### POST `/api/customers/profile/*/upload`
+Các endpoint tải lên hình ảnh dạng `multipart/form-data`.
+- `/api/customers/profile/avatar/upload` (Upload avatar)
+- `/api/customers/profile/cover/upload` (Upload ảnh bìa)
+- `/api/customers/profile/highlight-1/upload` (Upload ảnh nổi bật 1)
+- `/api/customers/profile/highlight-2/upload` (Upload ảnh nổi bật 2)
+- `/api/customers/profile/highlight-3/upload` (Upload ảnh nổi bật 3)
+- `/api/customers/profile/roll-preview/upload` (Upload ảnh cuộn phim nháp bản thảo)
+
+> [!NOTE]
+> **Quy định Validate:** Định dạng ảnh bắt buộc phải thuộc một trong các loại `image/jpeg`, `image/png`, `image/webp`, `image/heic`. Kích thước tệp lớn hơn 0.
+> **Quy tắc Lưu Trữ:** File ảnh được lưu trữ tại `customers/{kind}/{customerId}/{uuid}{ext}` trên Supabase Storage hoặc đĩa cứng cục bộ.
+
+```json
+// Request: Form data
+// File: image.jpg (nhập vào field 'File')
+
+// Response: 200 OK
+{
+  "photoUrl": "https://supabase.co/storage/v1/object/public/shootmatch/customers/avatar/uuid/abc.jpg"
+}
+
+// Response: 400 Bad Request (Nếu sai định dạng ảnh hoặc tệp trống)
+{
+  "error": "Only JPEG, PNG, WebP or HEIC files are allowed."
+}
+```
+
+---
+
+## 📸 Photographers Self-manage `/api/photographers`  🔒 photographer
+
+### GET `/api/photographers/me`
+Lấy chi tiết hồ sơ nhiếp ảnh gia hiện tại.
+
+---
+
+### PUT `/api/photographers/profile`
+Cập nhật thông tin profile cơ bản.
+
+```json
+// Request body (UpdatePhotographerProfileRequest)
 {
   "displayName": "Nguyễn Minh Khoa",
   "bio": "10 năm kinh nghiệm chụp cưới và sự kiện",
-  "region": "Hà Nội",
-  "minBudget": 1000000,
-  "maxBudget": 5000000,
+  "quote": "Bắt trọn khoảnh khắc vàng",
   "avatarUrl": "https://...",
   "coverPhotoUrl": "https://...",
   "instagramUrl": "https://instagram.com/...",
+  "minBudget": 1000000,
+  "maxBudget": 5000000,
   "acceptsInstantBooking": true
 }
-// Response: 204 No Content
+// Response: 200 OK (Trả về Photographer entity đầy đủ đã cập nhật)
 ```
 
-### PATCH `/api/photographers/me/availability`
+---
+
+### PUT `/api/photographers/personal-info`
+Cập nhật thông tin định danh và tài liệu xác minh danh tính.
 
 ```json
-{ "isAvailable": true }
-// Response: 204 No Content
+// Request body (UpdatePhotographerPersonalInfoRequest)
+{
+  "nationalId": "012345678901",
+  "phone": "+84911111111",
+  "email": "khoanm@gmail.com",
+  "region": "HN",
+  "personalAddress": "123 Đường Láng, Đống Đa, Hà Nội",
+  "verificationDocumentFrontUrl": "https://...",
+  "verificationDocumentBackUrl": "https://...",
+  "verificationPortraitUrl": "https://..."
+}
+// Response: 200 OK (Trả về Photographer entity đầy đủ đã cập nhật)
 ```
 
+---
+
+### PATCH `/api/photographers/availability`
+Cập nhật nhanh trạng thái rảnh/bận để cho phép/hoặc không cho phép khách hàng vuốt thấy trong Discover Feed.
+
+```json
+// Request body (SetAvailabilityRequest)
+{ "isAvailable": true }
+
+// Response: 200 OK (Trả về Photographer entity đầy đủ)
+```
+
+---
+
 ### POST `/api/photographers/verify`
+Gửi yêu cầu xác minh hồ sơ lên Admin.
+> [!NOTE]
+> **Business Logic:** Trạng thái xác minh (`VerificationStatus`) chuyển thành `"Pending"`. Logic API bảo toàn các thông tin cá nhân và tài liệu xác minh đã có trước đó của photographer thay vì xóa trống. Admin sẽ phê duyệt yêu cầu này thông qua endpoint của Admin.
 
-Gửi yêu cầu xác minh CCCD/Passport → status = `"Pending"`.  
-Admin duyệt tiếp qua `/api/admin/photographers/{id}/verify`.
-
-`202 Accepted`
+```json
+// Response: 202 Accepted
+```
 
 ---
 
@@ -452,6 +600,23 @@ await connection.stop();
 ## 📦 Data Models (TypeScript)
 
 ```typescript
+interface CustomerProfile {
+  id: string;
+  displayName: string;
+  phone: string;
+  email: string;
+  region: string;
+  avatarUrl: string;
+  coverPhotoUrl: string;
+  highlightPhoto1Url: string;
+  highlightPhoto2Url: string;
+  highlightPhoto3Url: string;
+  rollPreviewPhotos: string;         // Comma-separated list of photo URLs
+  preferredStyles: string;
+  isVerified: boolean;
+  createdAt: string;                 // ISO 8601
+}
+
 interface Photographer {
   id: string;
   phone: string;

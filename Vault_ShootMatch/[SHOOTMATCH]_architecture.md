@@ -12,7 +12,7 @@ ShootMatch/
 │   └── Services (MatchingOrchestrator)
 ├── ShootMatch.Infrastructure
 │   ├── Ai (StubSiglipEncoder -> thay bằng FastAPI SigLIP)
-│   └── Persistence (InMemory repositories -> thay bằng Postgres/pgvector)
+│   └── Persistence (EF PostgreSQL + một số InMemory: search/swipe/OTP)
 └── ShootMatch.Api
     ├── Controllers (REST POST commands)
     └── GraphQL (GET queries for swipe feed)
@@ -40,7 +40,7 @@ Current implementation:
 | `photographer` | `ClaimTypes.Role = "photographer"`, `photographer_id` | `POST /api/photographer-auth/otp/verify` |
 | `admin` | `ClaimTypes.Role = "admin"`, `user_id` | Manually issue (chưa có UI) |
 
-## 2d) Full REST API (2026-04-24)
+## 2d) Full REST API (2026-05-20)
 
 ### Customer endpoints
 | Method | Path | Auth |
@@ -48,7 +48,14 @@ Current implementation:
 | POST | `/api/auth/otp/send` | Public |
 | POST | `/api/auth/otp/verify` | Public → returns `customer` token |
 | POST | `/api/auth/refresh` | Public |
+| GET | `/api/customers/me` | customer |
 | POST | `/api/customers/profile` | customer |
+| POST | `/api/customers/profile/avatar/upload` | customer |
+| POST | `/api/customers/profile/cover/upload` | customer |
+| POST | `/api/customers/profile/highlight-1/upload` | customer |
+| POST | `/api/customers/profile/highlight-2/upload` | customer |
+| POST | `/api/customers/profile/highlight-3/upload` | customer |
+| POST | `/api/customers/profile/roll-preview/upload` | customer |
 | POST | `/api/matching/searches` | customer |
 | POST | `/api/matching/swipes` | customer |
 | POST | `/api/bookings` | customer |
@@ -63,6 +70,7 @@ Current implementation:
 | POST | `/api/photographer-auth/refresh` | Public |
 | GET | `/api/photographers/me` | photographer |
 | PUT | `/api/photographers/profile` | photographer |
+| PUT | `/api/photographers/personal-info` | photographer |
 | PATCH | `/api/photographers/availability` | photographer |
 | POST | `/api/photographers/verify` | photographer |
 | POST | `/api/bookings/{id}/confirm` | photographer |
@@ -132,5 +140,25 @@ Current implementation:
 - Adapter hóa AI encoder và data stores để dễ thay thế.
 
 ## 7) Migration status
-- Migration `InitPostgres` đã generate thành công trong `ShootMatch.Infrastructure/Persistence/Migrations`.
-- `database update` lên Supabase hiện chưa thành công do lỗi resolve host (DNS/network), cần xác nhận lại endpoint kết nối.
+- Toàn bộ các migration cơ sở từ `InitPostgres` đến `AddPhotographerPersonalInfo` đã đồng bộ hoàn chỉnh trên cơ sở dữ liệu PostgreSQL.
+- Bổ sung **4 migration liên tiếp mở rộng trường thông tin cá nhân hóa của Khách hàng (Customer)**:
+  1. `20260518093044_AddCustomerCoverPhoto.cs` (Cột `CoverPhotoUrl`).
+  2. `20260518165816_AddCustomerHighlightPhotos.cs` (Cột `HighlightPhoto2Url`, `HighlightPhoto3Url`, `PreferredBudgetMin`, `PreferredBudgetMax`, `IsVerified`, `IsActive`, `PasswordHash`, `GoogleId`).
+  3. `20260519190108_AddCustomerHighlightPhoto1.cs` (Cột `HighlightPhoto1Url`).
+  4. `20260519195021_AddCustomerPreferredStyles.cs` (Cột `PreferredStyles`).
+- Tích hợp công cụ vá nóng database cục bộ tại `scripts/` (`add_roll_preview_column.py`, `apply_highlight_columns.py`) dùng Python `psycopg2` để tự động đọc cấu hình connection string và cập nhật schema cơ sở dữ liệu trực tiếp trong môi trường phát triển nhanh.
+
+---
+
+## 8) Upload ảnh đa nhiệm & Design System
+### Cơ chế Upload ảnh tuần tự (Sequential Multi-Image Upload)
+- Trên mobile client (`EditProfileScreen.tsx`), 3 khung ảnh featured (collage) và các ảnh cuộn phim nháp bản thảo (roll preview, từ 4-8 ảnh) được xử lý tải lên tuần tự (sequential) thay vì đồng thời (parallel) nhằm kiểm soát băng thông thiết bị di động tốt hơn, theo dõi trạng thái tải lên thời gian thực của từng tệp và tránh ghi đè lỗi/xung đột dữ liệu.
+- Trước khi tải lên, hình ảnh được nén dung lượng và định cỡ (resize) thông qua `expo-image-manipulator` nhằm tối ưu hóa dung lượng truyền tải.
+- Mỗi ảnh được gửi tới các endpoint upload chuyên biệt (`POST /api/customers/profile/*/upload`) dưới dạng `multipart/form-data`.
+- Backend nhận file, validate định dạng nghiêm ngặt (JPEG, PNG, WebP, HEIC), kết xuất tên file an toàn theo định dạng `customers/{kind}/{customerId}/{guid}{ext}` lưu trữ lên Supabase Storage/LocalDisk và trả về Public URL của ảnh.
+
+### Hệ thống thiết kế Buồng tối & Khung ngắm (Darkroom Viewfinder Design System)
+- **Viewfinder Header/Frame:** Sử dụng concept kỹ thuật buồng tối nghệ thuật. Phần header của profile mô phỏng thanh thông số máy ảnh chuyên nghiệp (RAW, ISO 100, F/2.8, [•] REC) kết hợp với các đường cắt góc (Viewfinder corner lines) tạo cảm giác như đang chụp ảnh trực tiếp.
+- **Rotating Polaroid Collage:** Thiết kế collage 3 ảnh bất đối xứng xoay các góc ngẫu nhiên (`-6°`, `2°`, `6°`) sử dụng CSS Transform `rotate` trong React Native, đem lại hiệu ứng chiều sâu 3D và hơi hướng biên tập nghệ thuật (Editorial Layout).
+- **Filmstrip Roll Preview:** Danh sách ảnh nháp bản thảo được đặt bên trong khung mô phỏng cuộn phim nhựa (Film strip) màu đen mờ nhám, hỗ trợ cuộn ngang mượt mà.
+- **Pill & Description Gu Ảnh:** Các tag gu ảnh dạng hạt viên nhộng phát sáng nhẹ khi kích hoạt, đi kèm một thẻ card chú giải chi tiết nghệ thuật mô tả trực quan phong cách ảnh chụp (chẳng hạn như Film look, Portrait, Golden hour...) khi bấm vào.

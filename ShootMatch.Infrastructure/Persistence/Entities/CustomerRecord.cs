@@ -8,6 +8,12 @@ public sealed class CustomerRecord
     public string Email { get; set; } = string.Empty;
     public string Region { get; set; } = string.Empty;
     public string AvatarUrl { get; set; } = string.Empty;
+    public string CoverPhotoUrl { get; set; } = string.Empty;
+    public string HighlightPhoto1Url { get; set; } = string.Empty;
+    public string HighlightPhoto2Url { get; set; } = string.Empty;
+    public string HighlightPhoto3Url { get; set; } = string.Empty;
+    public string RollPreviewPhotos { get; set; } = string.Empty;
+    public string PreferredStyles { get; set; } = string.Empty;
     public bool IsVerified { get; set; }
     public decimal? PreferredBudgetMin { get; set; }
     public decimal? PreferredBudgetMax { get; set; }

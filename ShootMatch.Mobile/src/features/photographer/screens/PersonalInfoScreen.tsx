@@ -119,9 +119,9 @@ export default function PersonalInfoScreen() {
               <Text style={styles.sectionTitle}>Thông tin thiết yếu</Text>
               <Text style={styles.lockState}>{locked ? 'Đang khóa' : 'Đang mở'}</Text>
             </View>
-            <Field label="Căn cước / CCCD" value={form.nationalId} placeholder="Nhập số căn cước" onChangeText={(nationalId) => setForm(prev => ({ ...prev, nationalId }))} icon="card-outline" locked={locked} />
-            <Field label="Số điện thoại liên lạc" value={form.phone} placeholder="Nhập số điện thoại" onChangeText={(phone) => setForm(prev => ({ ...prev, phone }))} icon="call-outline" keyboardType="phone-pad" locked={locked} />
-            <Field label="Email cụ thể" value={form.email} placeholder="Nhập email" onChangeText={(email) => setForm(prev => ({ ...prev, email }))} icon="mail-outline" keyboardType="email-address" autoCapitalize="none" locked={locked} />
+            <Field label="Căn cước / CCCD" value={form.nationalId} placeholder="Nhập số căn cước" onChangeText={(nationalId: string) => setForm(prev => ({ ...prev, nationalId }))} icon="card-outline" locked={locked} />
+            <Field label="Số điện thoại liên lạc" value={form.phone} placeholder="Nhập số điện thoại" onChangeText={(phone: string) => setForm(prev => ({ ...prev, phone }))} icon="call-outline" keyboardType="phone-pad" locked={locked} />
+            <Field label="Email cụ thể" value={form.email} placeholder="Nhập email" onChangeText={(email: string) => setForm(prev => ({ ...prev, email }))} icon="mail-outline" keyboardType="email-address" autoCapitalize="none" locked={locked} />
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Tỉnh / Thành phố</Text>
               <Pressable
@@ -136,7 +136,7 @@ export default function PersonalInfoScreen() {
                 {!locked && <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.35)" />}
               </Pressable>
             </View>
-            <Field label="Địa chỉ cụ thể" value={form.personalAddress} placeholder="Số nhà, đường, phường/xã..." onChangeText={(personalAddress) => setForm(prev => ({ ...prev, personalAddress }))} icon="location-outline" multiline locked={locked} />
+            <Field label="Địa chỉ cụ thể" value={form.personalAddress} placeholder="Số nhà, đường, phường/xã..." onChangeText={(personalAddress: string) => setForm(prev => ({ ...prev, personalAddress }))} icon="location-outline" multiline locked={locked} />
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(180).duration(500)} style={styles.card}>

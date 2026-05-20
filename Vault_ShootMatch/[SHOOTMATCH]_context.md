@@ -1,61 +1,76 @@
-# SHOOTMATCH
+# SHOOTMATCH — Context
+
+> Cập nhật: **2026-05-20**
 
 ## Stack
-- **Frontend**: Mobile Swipe App (planned)
-- **Backend**: C# / ASP.NET Core (.NET 9)
-- **Database**: PostgreSQL + pgvector (planned)
-- **GraphQL/REST**: **GET = GraphQL**, **POST = REST** (implemented in MVP skeleton)
-- **AI Inference**: SigLIP-SO400M (target), CLIP ViT-L/14 (fallback), FastAPI serving (planned)
 
-## Mục tiêu
-SHOOTMATCH kết nối khách hàng với photographer dựa trên phong cách ảnh tham khảo, không phụ thuộc chọn tag thủ công. Hệ thống encode 3-5 ảnh reference thành vector phong cách, sau đó tìm photographer có portfolio tương đồng nhất để đưa vào swipe feed.
+| Layer | Công nghệ |
+|-------|-----------|
+| Mobile | React Native, Expo SDK 54, TypeScript |
+| API | ASP.NET Core .NET 9 |
+| DB | PostgreSQL (Npgsql + EF Core) |
+| Realtime | SignalR (`/hubs/chat`) |
+| Read API | GraphQL (HotChocolate) |
+| Write API | REST |
+| Storage | Supabase Storage hoặc local disk |
+| AI (kế hoạch) | SigLIP / CLIP + pgvector |
 
-## Constraints
-- GPU mục tiêu 6GB VRAM.
-- Ưu tiên time-to-market: MVP chạy với encoder stub/CLIP trước, giữ nguyên hợp đồng để thay SigLIP sau.
-- Luồng API hybrid bắt buộc: Query/read qua GraphQL, command/write qua REST.
+## Mục tiêu sản phẩm
 
-## Decisions đã chốt
-- [x] Áp dụng Clean Architecture: Domain / Application / Infrastructure / API.
-- [x] Áp dụng pattern [[skills/patterns#Architecture — Hybrid Fetching & Reliability Fallback|Hybrid Fetching]] ở backend contract level: GraphQL cho read feed, REST cho write/search command.
-- [x] Áp dụng hướng [[skills/patterns#AI Architecture — Async Analysis & Real-time Safety Alerts|Async AI Analysis]] cho offline indexing pipeline (giai đoạn production).
-- [x] Ưu tiên style triển khai tương thích Smart-Service (DI extension pattern, services orchestration, clear interfaces).
+Kết nối khách hàng với nhiếp ảnh gia theo phong cách ảnh (matching), đặt lịch, chat, đánh giá — không phụ thuộc chọn tag thủ công.
 
-## Trạng thái triển khai hiện tại (2026-05-03)
-- [x] Bootstrap solution 4 layer. Swagger UI `/swagger`.
-- [x] Role-based Auth: JWT `customer` / `photographer` / `admin`.
-- [x] **Auth flows**: Customer + Photographer OTP login, refresh token.
-- [x] **REST API đầy đủ**: 22 endpoints (Customer, Photographer, Admin, Booking lifecycle, Review).
-- [x] **GraphQL**: 18 queries (swipeFeed, me, photographers, matches, bookings, reviews, conversations, messages).
-- [x] **Swipe → Mutual Match → Conversation**: end-to-end flow hoàn chỉnh.
-- [x] **MatchCreatedHandler**: tạo Conversation tự động khi match confirmed.
-- [x] **SignalR ChatHub** tại `/hubs/chat`: JoinConversation, SendMessage, SendImageMessage, participant enforcement.
-- [x] **Booking lifecycle**: Pending → Confirmed → Completed → Cancelled, tất cả endpoints.
-- [x] **Review flow**: enforce Completed booking invariant.
-- [x] **Admin**: list photographers, GET pending verifications, approve (với audit trail), revoke premium.
-- [x] IMatchRepository, IBookingRepository, IReviewRepository, IConversationRepository, IVerificationRequestRepository — tất cả in-memory.
-- [ ] PostgreSQL repositories (production).
-- [ ] SigLIP thật + pgvector.
-- [ ] Payment gateway + escrow.
-- [ ] Notification (FCM).
-- [x] Bootstrap solution `ShootMatch.sln` với 4 layer chuẩn.
-- [x] Implement use-case `MatchingOrchestrator`: encode -> mean pool -> cosine -> rerank.
-- [x] Swagger UI (Swashbuckle 7.3.1) tại `/swagger`.
-- [x] **Role-based Auth**: JWT claims `role` (customer/photographer/admin), `[Authorize(Roles = "...")]` trên tất cả endpoints.
-- [x] **Customer Auth**: `POST /api/auth/otp/*`, `POST /api/auth/refresh`.
-- [x] **Photographer Auth**: `POST /api/photographer-auth/otp/*`, `POST /api/photographer-auth/refresh`.
-- [x] **Customer APIs**: profile, search, swipe, booking create, review.
-- [x] **Photographer APIs**: GET/PUT profile, PATCH availability, POST verify, confirm/complete/cancel booking.
-- [x] **Admin APIs**: list photographers, approve verification, revoke premium.
-- [x] **Booking lifecycle**: Pending → Confirmed → Completed → Cancelled/Disputed — tất cả endpoint.
-- [x] **GraphQL**: 15 queries (swipeFeed, me, photographer, photographers, photographerProfile, myMatches, match, myMatchesAsPhotographer, myBookings, booking, myBookingsAsPhotographer, myReviews, myReviewsReceived, photographerReviews).
-- [x] `IMatchRepository`, `IBookingRepository`, `IReviewRepository` abstractions + in-memory implementations đầy đủ.
-- [ ] Chưa nối inference SigLIP thật.
-- [ ] Chưa tích hợp PostgreSQL/pgvector runtime repository.
+## Quyết định đã chốt
 
-## Retrospective
-- [[projects/SHOOTMATCH/[SHOOTMATCH]_architecture|Chi tiết kiến trúc triển khai]]
-- [[projects/SHOOTMATCH/[SHOOTMATCH]_implementation-log|Nhật ký triển khai chi tiết (Entity + nghiệp vụ + migration)]]
+- Clean Architecture: Domain / Application / Infrastructure / Api.
+- Hybrid API: **GET/read → GraphQL**, **POST/write → REST**.
+- JWT role-based: `customer`, `photographer`, `admin`.
+- Mobile feature-based: `auth`, `customer`, `photographer`, `chat`, `shared`.
+
+## Trạng thái triển khai (2026-05-20)
+
+### Backend ✅
+- [x] Solution 4 project + Swagger.
+- [x] EF PostgreSQL: Customer, Photographer, Match, Booking, Review, Conversation, AuthSession, Portfolio photos.
+- [x] 4 Migration mở rộng trường cá nhân hóa cho Khách hàng đến `20260519195021_AddCustomerPreferredStyles`.
+- [x] Script vá nóng đồng bộ database cục bộ (`scripts/add_roll_preview_column.py` và `apply_highlight_columns.py`).
+- [x] CustomersController: profile (merge/fallback thông minh), 6 endpoint upload ảnh (avatar, cover, highlight 1/2/3, roll-preview).
+- [x] PhotographersController: profile, avatar/cover upload, personal-info, availability PATCH, verify (giữ nguyên thông tin cũ khi Pending).
+- [x] PortfolioController: list / upload / delete.
+- [x] GraphQL: swipeFeed, me, photographers, photographerProfile, **customerHomeFeed**, matches, bookings, reviews, conversations, messages.
+- [x] SignalR ChatHub.
+- [x] Domain events + MatchCreated → Conversation handler.
+
+### Backend ⏳
+- [ ] EF cho SearchSession, SwipeAction (hiện in-memory).
+- [ ] SigLIP encoder thật (đang `StubSiglipEncoder`).
+- [ ] pgvector similarity search thực tế cho gu ảnh & portfolio.
+- [ ] Payment gateway + escrow production.
+
+### Mobile ✅
+- [x] Auth: Splash, RoleSelect, OTP, Email login, Register, Google.
+- [x] Customer tabs + stack (Home, Discover, Chat, Bookings, Profile + detail screens).
+- [x] Photographer tabs + stack (Dashboard, Bookings, Chat, Portfolio, PProfile + PersonalInfo, ServiceManagement, Calendar).
+- [x] Customer Home PicKic: Hero, Nổi Bật + StoryViewer, Portfolio Mới, Discovery, Quick actions, Khoảnh Khắc masonry.
+- [x] Local images `ShootMatch.Mobile/picture/` + API fallback.
+- [x] Màn hình Hồ Sơ Khách Hàng (`ProfileScreen.tsx`): Viewfinder Frame, 3D HeroPolaroid Collage xoay góc bất đối xứng, Filmstrip Roll Preview chạy ngang mượt mà.
+- [x] Màn hình Buồng Tối Chỉnh Sửa (`EditProfileScreen.tsx`): Viewfinder Header thông số máy ảnh, 3 khung ảnh featured frame upload tuần tự nén qua `expo-image-manipulator`, identity form gạch dưới phát sáng, gu ảnh interactive pills.
+- [x] Màn hình Khám Phá Discover: ProgressBar đếm card, verified badge, LIKE/NOPE stamps.
+- [x] Màn hình Hồ Sơ Photographer: Spec Badges gu ảnh, Stats Card, Schedule Grid hiển thị lịch rảnh bận theo ngày trực quan dạng Grid 4 cột.
+- [x] Trang Portfolio chuyên sâu (`PhotographerPortfolioScreen.tsx`): Bố cục Masonry 2 cột tính tỷ lệ ảnh thực tế, Slide viewer toàn màn hình kèm thanh cuộn thumbnail chân trang.
+- [x] Màn hình phụ: `CustomerFavoritesScreen`, `CustomerSharedMediaScreen`.
+
+### Mobile ⏳
+- [ ] Notifications thật (FCM).
+- [ ] Thanh toán production.
+
+## Liên kết Vault
+
+- Kiến trúc: [[SHOOTMATCH]_architecture]]
+- Code map: [[SHOOTMATCH]_codebase-map]]
+- API: [[SHOOTMATCH]_API-reference]]
+- UI: [[SHOOTMATCH]_UI-progress]]
+- Index: [INDEX.md](./INDEX.md)
 
 ## Status
-- 🚧 MVP skeleton implemented, ready for production hardening.
+
+🚧 **MVP nâng cao** — DB + mobile UI chính đã chạy; cần hardening matching AI, search persistence, thanh toán.

@@ -14,6 +14,7 @@ import { getPhotographerProfile, updateProfile, updatePersonalInfo, uploadProfil
 import { formatRegion } from '../../../shared/constants/regions';
 import { colors } from '../../../app/theme/colors';
 import { spacing } from '../../../app/theme/spacing';
+import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -41,7 +42,8 @@ async function prepareImage(uri: string, kind: 'avatar' | 'cover') {
 }
 
 export default function PProfileScreen() {
-  const photoSize = (SCREEN_WIDTH - spacing[5] * 2 - spacing[2] * 2) / 3;
+  const photoSize = Math.floor((SCREEN_WIDTH - spacing[5] * 2 - spacing[2] * 2) / 3);
+  const gridGap = spacing[2];
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
@@ -335,14 +337,45 @@ export default function PProfileScreen() {
               </Pressable>
             </View>
             <View style={styles.photoGrid}>
-              {photos.slice(0, 6).map((url: string, i: number) => (
-                <Image key={i} source={{ uri: formatPhotoUrl(url) }} style={[styles.gridPhoto, { width: photoSize, height: photoSize }]} resizeMode="cover" />
-              ))}
-              {photos.length === 0 && (
+              {photos.length === 0 ? (
                 <Pressable style={[styles.addPhotoPlaceholder, { width: photoSize, height: photoSize }]} onPress={() => navigation.navigate('Portfolio')}>
                   <Ionicons name="add" size={32} color={colors.primary} />
                   <Text style={styles.addPhotoText}>Thêm ảnh</Text>
                 </Pressable>
+              ) : (
+                [0, 1, 2].map(row => (
+                  <View
+                    key={`pgrid-${row}`}
+                    style={{
+                      flexDirection: 'row',
+                      marginBottom: row < 2 ? gridGap : 0,
+                    }}
+                  >
+                    {[0, 1, 2].map(col => {
+                      const idx = row * 3 + col;
+                      const url = photos[idx];
+                      return (
+                        <View
+                          key={`p-${row}-${col}`}
+                          style={{
+                            width: photoSize,
+                            height: photoSize,
+                            marginRight: col < 2 ? gridGap : 0,
+                          }}
+                        >
+                          {url ? (
+                            <PortfolioImageCell
+                              uri={url}
+                              style={{ width: photoSize, height: photoSize }}
+                              borderRadius={12}
+                              onPress={() => navigation.navigate('Portfolio')}
+                            />
+                          ) : null}
+                        </View>
+                      );
+                    })}
+                  </View>
+                ))
               )}
             </View>
           </View>
@@ -510,7 +543,7 @@ const styles = StyleSheet.create({
   personalRowBody: { flex: 1 },
   personalRowLabel: { color: 'rgba(255,251,240,0.55)', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   personalRowValue: { color: '#FFFBF0', fontSize: 13, fontWeight: '600', lineHeight: 18, marginTop: 2 },
-  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
+  photoGrid: { alignItems: 'flex-start' },
   gridPhoto: { borderRadius: 12, backgroundColor: '#2a2636' },
   addPhotoPlaceholder: { borderRadius: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(230, 126, 34, 0.3)', justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: 'rgba(230, 126, 34, 0.05)' },
   addPhotoText: { color: colors.primary, fontSize: 12, fontWeight: '600' },

@@ -14,6 +14,8 @@ public sealed class CustomerService(ICustomerRepository customerRepository)
 
     public async Task<CustomerProfile> UpsertProfileAsync(CustomerProfile profile, CancellationToken cancellationToken)
     {
+        var existing = await customerRepository.GetByIdAsync(profile.Id, cancellationToken);
+
         var customer = new Customer
         {
             Id = profile.Id,
@@ -22,8 +24,21 @@ public sealed class CustomerService(ICustomerRepository customerRepository)
             Email = profile.Email,
             Region = profile.Region,
             AvatarUrl = profile.AvatarUrl,
-            IsVerified = profile.IsVerified,
-            CreatedAt = profile.CreatedAt
+            CoverPhotoUrl = profile.CoverPhotoUrl,
+            HighlightPhoto1Url = profile.HighlightPhoto1Url,
+            HighlightPhoto2Url = profile.HighlightPhoto2Url,
+            HighlightPhoto3Url = profile.HighlightPhoto3Url,
+            RollPreviewPhotos = profile.RollPreviewPhotos,
+            PreferredStyles = profile.PreferredStyles,
+            IsVerified = existing?.IsVerified ?? profile.IsVerified,
+            IsActive = existing?.IsActive ?? true,
+            PasswordHash = existing?.PasswordHash,
+            GoogleId = existing?.GoogleId,
+            PreferredBudgetMin = existing?.PreferredBudgetMin,
+            PreferredBudgetMax = existing?.PreferredBudgetMax,
+            CreatedAt = existing?.CreatedAt ?? profile.CreatedAt,
+            LastSeenAt = existing?.LastSeenAt,
+            DeletedAt = existing?.DeletedAt,
         };
 
         await customerRepository.UpsertAsync(customer, cancellationToken);
@@ -38,6 +53,12 @@ public sealed class CustomerService(ICustomerRepository customerRepository)
         Email = customer.Email,
         Region = customer.Region,
         AvatarUrl = customer.AvatarUrl,
+        CoverPhotoUrl = customer.CoverPhotoUrl,
+        HighlightPhoto1Url = customer.HighlightPhoto1Url,
+        HighlightPhoto2Url = customer.HighlightPhoto2Url,
+        HighlightPhoto3Url = customer.HighlightPhoto3Url,
+        RollPreviewPhotos = customer.RollPreviewPhotos,
+        PreferredStyles = customer.PreferredStyles,
         IsVerified = customer.IsVerified,
         CreatedAt = customer.CreatedAt
     };

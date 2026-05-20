@@ -1,6 +1,39 @@
 # SHOOTMATCH — Backlog & Technical Debt
 
-> Cập nhật lần cuối: 2026-04-23
+> Cập nhật lần cuối: **2026-05-20**
+
+---
+
+## 🔜 Ưu tiên gần (2026-05)
+
+| # | Hạng mục | Ghi chú |
+|---|----------|---------|
+| 1 | EF `SearchSession` + `SwipeAction` | Thay in-memory, persist swipe history |
+| 2 | SigLIP + pgvector | Thay `StubSiglipEncoder` |
+| 3 | Customer Home — bỏ fallback local khi API đủ data | `local-featured-*` ids |
+| 4 | Thống nhất `formatImageUrl` / `formatPhotoUrl` | Một helper shared mobile |
+| 5 | `.gitignore` bin/obj, `.env` không commit | Repo hygiene |
+| 6 | FCM notifications | Push booking/chat |
+| 7 | Payment + escrow thật | Sau booking confirm |
+| 8 | Admin UI | Duyệt verification |
+
+---
+
+## ✅ Đã hoàn thành — Customer Profile & Personalized Experience Overhaul (2026-05-20)
+
+### Hạng mục mới và bổ sung
+- **Mở rộng Schema Khách hàng:** Cấu trúc thành công 9 trường thông tin mới cho `Customer` / `CustomerRecord` (`CoverPhotoUrl`, 3 ảnh `HighlightPhotoUrl`, `RollPreviewPhotos` dưới dạng comma-separated, `PreferredStyles` dạng gu ảnh, `IsVerified`, ngân sách).
+- **EF Core Migrations:** Áp dụng liên tục 4 EF migrations (`AddCustomerCoverPhoto`, `AddCustomerHighlightPhotos`, `AddCustomerHighlightPhoto1`, `AddCustomerPreferredStyles`).
+- **Python DB Hotfix Scripts:** Viết các script vá nóng PostgreSQL cục bộ (`add_roll_preview_column.py`, `apply_highlight_columns.py`) để đồng bộ schema nhanh mà không cần build lại migrations.
+- **REST Endpoints:** Triển khai API lấy profile hiện tại (`GET /api/customers/me`), lưu profile hỗ trợ merge/fallback thông minh khi cập nhật (`POST /api/customers/profile`), và 6 endpoint upload ảnh chuyên biệt hỗ trợ `multipart/form-data`.
+- **Artistic Mobile UI:**
+  - Redesign `ProfileScreen.tsx` & `EditProfileScreen.tsx` theo phong cách Darkroom Viewfinder (khung ngắm chụp ảnh chuyên nghiệp, collage 3D Polaroid `rotate` bất đối xứng `-6°`, `2°`, `6°`, cuộn phim nháp bản thảo Filmstrip Roll Preview 4-8 ảnh mượt mà).
+  - Tích hợp nén và resize ảnh tuần tự qua `expo-image-manipulator` trước khi upload hàng loạt tránh xung đột.
+  - Interactive Gu ảnh: 5 pill phong cách (`Portrait`, `Golden hour`, `Film look`, `Lifestyle`, `Editorial`) kèm card mô tả chi tiết trực quan khi chạm vào.
+  - Masonry Portfolio Screen (`PhotographerPortfolioScreen.tsx`): 2 cột thác nước đo tỷ lệ ảnh thật kèm slide viewer toàn màn hình và cuộn thumbnail chân trang.
+  - Schedule Grid (`PhotographerProfileScreen.tsx`): Lưới 4 cột lịch rảnh bận theo ngày trực quan của nhiếp ảnh gia.
+  - ProgressBar & Stamp LIKE/NOPE, verified badge trên Discover Screen.
+  - Thêm màn hình lưu trữ: `CustomerFavoritesScreen`, `CustomerSharedMediaScreen`.
 
 ---
 

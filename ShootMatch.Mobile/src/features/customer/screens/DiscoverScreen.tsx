@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Dimensions, Image, StyleSheet, Text, View, Pressable, Alert, ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming,
   runOnJS, interpolate, Extrapolation,
@@ -11,14 +11,21 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { createSearch, getSwipeFeed, recordSwipe, PhotographerCard } from '../api';
-import { colors } from '../../../app/theme/colors';
-import { fontSizes, fontWeights } from '../../../app/theme/typography';
-import { radius, spacing } from '../../../app/theme/spacing';
+import { getPhotographers, Photographer } from '../api';
+import { addFavorite } from '../utils/favorites';
 
 const { width: W, height: H } = Dimensions.get('window');
-const CARD_W = W - spacing[6] * 2;
+const CARD_W = W - 24;
+const CARD_H = H * 0.65;
 const SWIPE_THRESHOLD = W * 0.35;
+
+const THEME = {
+  primary: '#ff4200',
+  backgroundLight: '#fff7e1',
+  accent: '#1a1a0f',
+  success: '#22c55e',
+  danger: '#ef4444',
+};
 
 const REGIONS: Record<string, string> = {
   HN: 'Hà Nội', HCM: 'TP.HCM', DN: 'Đà Nẵng', HP: 'Hải Phòng', CT: 'Cần Thơ',
@@ -32,7 +39,7 @@ function SwipeCard({
   isTop,
   stackIndex,
 }: {
-  photographer: PhotographerCard;
+  photographer: Photographer;
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
   isTop: boolean;
@@ -41,7 +48,12 @@ function SwipeCard({
   const navigation = useNavigation<any>();
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
-  const scale      = useSharedValue(1 - stackIndex * 0.04);
+  const scale = useSharedValue(1 - stackIndex * 0.05);
+  
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const photos = photographer?.portfolioPhotos?.length
+    ? photographer.portfolioPhotos
+    : (photographer?.avatarUrl ? [photographer.avatarUrl] : []);
 
   const gesture = Gesture.Pan()
     .enabled(isTop)
@@ -71,7 +83,7 @@ function SwipeCard({
         { translateX: translateX.value },
         { translateY: translateY.value },
         { rotate: `${rotate}deg` },
-        { scale: scale.value },
+        { scale: isTop ? 1 : scale.value },
       ],
     };
   });
@@ -84,65 +96,99 @@ function SwipeCard({
     opacity: interpolate(translateX.value, [-SWIPE_THRESHOLD / 2, 0], [1, 0], Extrapolation.CLAMP),
   }));
 
-  const stackOffset = stackIndex * 8;
+  const stackOffset = isTop ? 0 : stackIndex * 12;
+
+  const handleTap = (e: any) => {
+    if (!isTop) return;
+    const x = e.nativeEvent.locationX;
+    if (x < CARD_W / 2) {
+      if (currentSlide > 0) setCurrentSlide(currentSlide - 1);
+    } else {
+      if (currentSlide < photos.length - 1) setCurrentSlide(currentSlide + 1);
+    }
+  };
+
+  const getFullUrl = (url: string) => {
+    if (!url) return '';
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL || '';
+    const ipMatch = apiUrl.match(/http:\/\/((\d+\.){3}\d+)/);
+    if (ipMatch && (url.includes('localhost') || url.includes('127.0.0.1'))) {
+      return url.replace(/localhost|127\.0\.0\.1/, ipMatch[1]);
+    }
+    return url;
+  };
 
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View style={[styles.card, { top: stackOffset, zIndex: 10 - stackIndex }, cardStyle]}>
-        {/* Photo */}
+        {/* Photo Carousel */}
         <Pressable
-          onPress={() => isTop && navigation.navigate('PhotographerProfile', { photographerId: photographer.photographerId })}
+          onPress={(e) => handleTap(e)}
           style={styles.cardImageWrap}
         >
-          {photographer.avatarUrl
-            ? <Image source={{ uri: photographer.avatarUrl }} style={styles.cardImage} />
+          {photos.length > 0
+            ? <Image source={{ uri: getFullUrl(photos[currentSlide]) }} style={styles.cardImage} />
             : <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
-                <Text style={styles.cardImageLetter}>{photographer.displayName?.[0] ?? '?'}</Text>
+                <Text style={styles.cardImageLetter}>{photographer?.displayName?.[0] ?? '?'}</Text>
               </View>
           }
           <LinearGradient
-            colors={['transparent', 'rgba(26,26,15,0.82)']}
+            colors={['transparent', 'rgba(26,26,15,0.7)', 'rgba(26,26,15,0.95)']}
             style={styles.cardGradient}
           />
 
-          {/* LIKE stamp */}
-          <Animated.View style={[styles.stamp, styles.stampLike, likeOpacity]}>
-            <Text style={styles.stampText}>MATCH ✓</Text>
+          {/* Carousel Indicators */}
+          {photos.length > 1 && (
+            <View style={styles.carouselIndicators}>
+              {photos.map((_, i) => (
+                <View key={i} style={[styles.carouselDot, i === currentSlide && styles.carouselDotActive]} />
+              ))}
+            </View>
+          )}
+
+          {/* LIKE overlay */}
+          <Animated.View style={[styles.swipeOverlay, likeOpacity, { backgroundColor: 'rgba(0,0,0,0.4)' }]} pointerEvents="none">
+            <View style={[styles.stamp, { borderColor: '#fff' }]}>
+              <Ionicons name="heart-outline" size={28} color="#fff" />
+              <Text style={styles.stampText}>YÊU THÍCH</Text>
+            </View>
           </Animated.View>
 
-          {/* NOPE stamp */}
-          <Animated.View style={[styles.stamp, styles.stampNope, nopeOpacity]}>
-            <Text style={styles.stampText}>PASS ✕</Text>
+          {/* NOPE overlay */}
+          <Animated.View style={[styles.swipeOverlay, nopeOpacity, { backgroundColor: 'rgba(0,0,0,0.4)' }]} pointerEvents="none">
+            <View style={[styles.stamp, { borderColor: '#fff' }]}>
+              <Ionicons name="close-outline" size={32} color="#fff" />
+              <Text style={styles.stampText}>BỎ QUA</Text>
+            </View>
           </Animated.View>
 
           {/* Info overlay */}
           <View style={styles.cardInfo}>
-            <View style={styles.cardNameRow}>
-              <Text style={styles.cardName}>{photographer.displayName}</Text>
-              {photographer.isPremium && (
-                <View style={styles.premiumBadge}>
-                  <Ionicons name="star" size={11} color={colors.background} />
-                  <Text style={styles.premiumText}>PRO</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.cardRegion}>
-              <Ionicons name="location" size={12} color="rgba(255,247,225,0.8)" />
-              {' '}{REGIONS[photographer.region] ?? photographer.region}
-            </Text>
-            <View style={styles.cardStats}>
-              <View style={styles.cardStat}>
-                <Ionicons name="star" size={13} color="#f4c430" />
-                <Text style={styles.cardStatText}>{photographer.rating?.toFixed(1)}</Text>
+            {photographer?.isPremium && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="checkmark-circle" size={14} color="#4ade80" />
+                <Text style={styles.verifiedText}>Verified</Text>
               </View>
-              <View style={styles.cardStatDivider} />
-              <Text style={styles.cardStatText}>
-                {photographer.minBudget?.toLocaleString('vi-VN')}đ+
-              </Text>
-              <View style={styles.cardStatDivider} />
-              <Text style={styles.cardStatText}>
-                {Math.round(photographer.finalScore * 100)}% phù hợp
-              </Text>
+            )}
+            <Text style={styles.cardName}>{photographer?.displayName || 'Nhiếp ảnh gia'}</Text>
+            <Text style={styles.cardSub}>
+              {(photographer?.displayName || '').toUpperCase()} STUDIO · {REGIONS[photographer?.region || ''] ?? photographer?.region ?? 'Khác'}
+            </Text>
+
+            <View style={styles.cardStatsRow}>
+              <View style={styles.cardStatItem}>
+                <Text style={styles.statIcon}>★</Text>
+                <Text style={styles.statValue}>{photographer?.rating?.toFixed(1) || '0.0'}</Text>
+              </View>
+              <View style={styles.cardStatItem}>
+                <Ionicons name="cash-outline" size={12} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.statValue}>{photographer?.minBudget?.toLocaleString('vi-VN') || 0} VNĐ</Text>
+              </View>
+            </View>
+
+            <View style={styles.tagsRow}>
+              <View style={styles.tag}><Text style={styles.tagText}>Khám phá</Text></View>
+              <View style={styles.tag}><Text style={styles.tagText}>Chụp cá nhân</Text></View>
             </View>
           </View>
         </Pressable>
@@ -154,206 +200,207 @@ function SwipeCard({
 // ── Main DiscoverScreen ────────────────────────────────────────────────────────
 export default function DiscoverScreen() {
   const navigation = useNavigation<any>();
-  const [cards,     setCards]     = useState<PhotographerCard[]>([]);
-  const [searchId,  setSearchId]  = useState<string | null>(null);
-  const [loading,   setLoading]   = useState(true);
-  const [matchMsg,  setMatchMsg]  = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
+  const [cards, setCards] = useState<Photographer[]>([]);
+  const [totalCards, setTotalCards] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   async function init() {
+    setLoading(true);
     try {
-      const sid = await createSearch('HCM', 500000);
-      setSearchId(sid);
-      const feed = await getSwipeFeed(sid);
+      const feed = await getPhotographers();
       setCards(feed);
+      setTotalCards(feed.length);
     } catch (e) {
-      Alert.alert('Lỗi', 'Không thể tải feed. Kiểm tra kết nối.');
+      Alert.alert('Lỗi', 'Không thể tải danh sách nhiếp ảnh gia.');
     }
     setLoading(false);
   }
 
   useEffect(() => { init(); }, []);
 
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 2000);
+  };
+
   const handleSwipeLeft = useCallback(async () => {
     const top = cards[0];
-    if (!top || !searchId) return;
+    if (!top) return;
     setCards((c) => c.slice(1));
-    try { await recordSwipe(searchId, top.photographerId, 'Left'); } catch {}
-  }, [cards, searchId]);
+    // TODO: Ghi nhận bỏ qua (nếu cần)
+  }, [cards]);
 
   const handleSwipeRight = useCallback(async () => {
     const top = cards[0];
-    if (!top || !searchId) return;
+    if (!top) return;
     setCards((c) => c.slice(1));
-    try {
-      await recordSwipe(searchId, top.photographerId, 'Right');
-      setMatchMsg(`🎉 Match với ${top.displayName}!`);
-      setTimeout(() => setMatchMsg(null), 2500);
-    } catch {}
-  }, [cards, searchId]);
+    showToast(`❤️ Đã lưu ${top?.displayName || 'Nhiếp ảnh gia'} vào Yêu Thích!`);
+    await addFavorite(top);
+  }, [cards]);
 
   const handleButtonSwipe = (dir: 'Left' | 'Right') => {
+    if (cards.length === 0) return;
     if (dir === 'Right') handleSwipeRight();
-    else                  handleSwipeLeft();
+    else handleSwipeLeft();
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.accent} />
-          <Text style={styles.loadingText}>AI đang tìm nhiếp ảnh gia phù hợp...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={THEME.accent} />
+        <Text style={styles.loadingText}>Đang tải danh sách nhiếp ảnh gia...</Text>
+      </View>
     );
   }
 
+  const currentIdx = totalCards - cards.length + 1;
+  const progressPct = totalCards > 0 ? (currentIdx / totalCards) * 100 : 0;
+
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={[styles.safe, { paddingTop: Math.max(insets.top, 16) }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Khám phá</Text>
-        <Pressable onPress={init} style={styles.refreshBtn}>
-          <Ionicons name="refresh" size={20} color={colors.dark} />
+        <Pressable onPress={() => navigation.goBack()} style={styles.headerBtn}>
+          <Ionicons name="arrow-back" size={20} color={THEME.accent} />
+        </Pressable>
+        <Text style={{ fontSize: 22, fontWeight: '900', fontStyle: 'italic', color: THEME.accent }}>PicKic</Text>
+        <Pressable onPress={() => {}} style={styles.headerBtn}>
+          <Ionicons name="options-outline" size={20} color={THEME.accent} />
         </Pressable>
       </View>
 
-      {/* Match toast */}
-      {matchMsg && (
-        <Animated.View style={styles.matchToast}>
-          <Text style={styles.matchToastText}>{matchMsg}</Text>
-        </Animated.View>
-      )}
+      {/* Progress */}
+      <View style={styles.progressContainer}>
+        <View style={styles.progressHeader}>
+          <Text style={styles.progressLabel}>PHOTOGRAPHER</Text>
+          <Text style={styles.progressCount}>{Math.min(currentIdx, totalCards)} / {totalCards}</Text>
+        </View>
+        <View style={styles.progressBarBg}>
+          <LinearGradient
+            colors={[THEME.accent, 'rgba(26,26,15,0.7)']}
+            style={[styles.progressBarFill, { width: `${progressPct}%` }]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          />
+        </View>
+      </View>
 
-      {/* Card Stack */}
-      <View style={styles.stack}>
+      {/* Card Stack Area */}
+      <View style={styles.stackArea}>
         {cards.length === 0 ? (
-          <View style={styles.emptyStack}>
-            <Text style={styles.emptyEmoji}>🎞</Text>
-            <Text style={styles.emptyTitle}>Đã xem hết rồi!</Text>
-            <Text style={styles.emptySub}>Làm mới để tải thêm nhiếp ảnh gia</Text>
-            <Pressable onPress={init} style={styles.refreshFab}>
-              <Text style={styles.refreshFabText}>Tải lại</Text>
+          <View style={styles.emptyState}>
+            <Ionicons name="images-outline" size={64} color="rgba(26,26,15,0.2)" />
+            <Text style={styles.emptyTitle}>Hết rồi!</Text>
+            <Text style={styles.emptySub}>Bạn đã lướt hết các nhiếp ảnh gia hiện có</Text>
+            <Pressable onPress={init} style={styles.btnReset}>
+              <Text style={styles.btnResetText}>Khám phá lại</Text>
             </Pressable>
           </View>
         ) : (
-          cards.slice(0, 3).map((p, i) => (
-            <SwipeCard
-              key={p.photographerId}
-              photographer={p}
-              isTop={i === 0}
-              stackIndex={i}
-              onSwipeLeft={handleSwipeLeft}
-              onSwipeRight={handleSwipeRight}
-            />
-          ))
+          <View style={styles.stack}>
+            {cards.slice(0, 3).map((p, i) => (
+              <SwipeCard
+                key={p.id}
+                photographer={p}
+                isTop={i === 0}
+                stackIndex={i}
+                onSwipeLeft={handleSwipeLeft}
+                onSwipeRight={handleSwipeRight}
+              />
+            ))}
+          </View>
         )}
       </View>
 
       {/* Action Buttons */}
-      {cards.length > 0 && (
-        <View style={styles.actions}>
-          {/* Pass */}
-          <Pressable style={[styles.actionBtn, styles.actionPass]} onPress={() => handleButtonSwipe('Left')}>
-            <Ionicons name="close" size={32} color={colors.accent} />
-          </Pressable>
+      <View style={[styles.actions, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+        <Pressable style={[styles.actionBtn, styles.btnNope]} onPress={() => handleButtonSwipe('Left')}>
+          <LinearGradient colors={['#fff7e1', '#ffe8c0']} style={styles.btnGradient} />
+          <Ionicons name="close" size={28} color={THEME.accent} />
+        </Pressable>
+        <Pressable
+          style={[styles.actionBtn, styles.btnInfo]}
+          onPress={() => cards.length > 0 && navigation.navigate('PhotographerProfile', { photographerId: cards[0]?.id })}
+        >
+          <LinearGradient colors={['#fff7e1', '#ffe8c0']} style={styles.btnGradient} />
+          <Ionicons name="information" size={22} color={THEME.accent} />
+        </Pressable>
+        <Pressable style={[styles.actionBtn, styles.btnLike]} onPress={() => handleButtonSwipe('Right')}>
+          <LinearGradient colors={['#fff7e1', '#ffe8c0']} style={styles.btnGradient} />
+          <Ionicons name="heart" size={28} color={THEME.primary} />
+        </Pressable>
+      </View>
 
-          {/* Profile shortcut */}
-          <Pressable
-            style={[styles.actionBtn, styles.actionInfo]}
-            onPress={() => navigation.navigate('PhotographerProfile', { photographerId: cards[0]?.photographerId })}
-          >
-            <Ionicons name="information" size={22} color={colors.dark} />
-          </Pressable>
-
-          {/* Like */}
-          <Pressable style={[styles.actionBtn, styles.actionLike]} onPress={() => handleButtonSwipe('Right')}>
-            <Ionicons name="heart" size={32} color={colors.success} />
-          </Pressable>
-        </View>
-      )}
-
-      {/* Progress */}
-      {cards.length > 0 && (
-        <Text style={styles.progress}>{cards.length} nhiếp ảnh gia còn lại</Text>
-      )}
-    </SafeAreaView>
+      {/* Toast */}
+      <Animated.View style={[styles.toast, toastMsg ? styles.toastShow : styles.toastHide]} pointerEvents="none">
+        <Text style={styles.toastText}>{toastMsg}</Text>
+      </Animated.View>
+    </View>
   );
 }
 
-const CARD_H = H * 0.58;
-
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: colors.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing[4] },
-  loadingText: { color: colors.textMuted, fontSize: fontSizes.sm, textAlign: 'center', paddingHorizontal: spacing[8] },
+  safe: { flex: 1, backgroundColor: THEME.backgroundLight },
+  loadingText: { color: 'rgba(26,26,15,0.6)', marginTop: 16, fontSize: 13, fontWeight: '500' },
+  
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
+  headerBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(26,26,15,0.1)', alignItems: 'center', justifyContent: 'center' },
 
-  header:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing[6], paddingVertical: spacing[4] },
-  headerTitle: { fontSize: fontSizes.xl, fontWeight: fontWeights.bold, color: colors.dark },
-  refreshBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
+  progressContainer: { paddingHorizontal: 24, paddingBottom: 8 },
+  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  progressLabel: { fontSize: 9, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: 1.5, color: 'rgba(26,26,15,0.4)' },
+  progressCount: { fontSize: 9, fontFamily: 'monospace', color: THEME.accent },
+  progressBarBg: { height: 2, backgroundColor: 'rgba(26,26,15,0.1)', borderRadius: 2, overflow: 'hidden' },
+  progressBarFill: { height: '100%', borderRadius: 2 },
 
-  matchToast: {
-    marginHorizontal: spacing[6], marginBottom: spacing[2],
-    padding: spacing[3], borderRadius: radius.lg,
-    backgroundColor: colors.success,
-    alignItems: 'center',
-  },
-  matchToastText: { color: '#fff', fontWeight: fontWeights.bold, fontSize: fontSizes.md },
+  stackArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  stack: { width: CARD_W, height: CARD_H, alignItems: 'center', justifyContent: 'center' },
 
-  stack: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    marginHorizontal: spacing[6],
-  },
+  card: { position: 'absolute', width: CARD_W, height: CARD_H, borderRadius: 24, backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 30, elevation: 12 },
+  cardImageWrap: { width: '100%', height: '100%', borderRadius: 24, overflow: 'hidden' },
+  cardImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  cardImagePlaceholder: { backgroundColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center' },
+  cardImageLetter: { fontSize: 80, fontWeight: '900', color: '#cbd5e1' },
+  cardGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%' },
 
-  card: {
-    position: 'absolute',
-    width: CARD_W,
-    height: CARD_H,
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    backgroundColor: colors.surface,
-    shadowColor: colors.dark,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 12,
-  },
-  cardImageWrap: { width: '100%', height: '100%' },
-  cardImage:     { width: '100%', height: '100%', resizeMode: 'cover' },
-  cardImagePlaceholder: { backgroundColor: colors.clay, alignItems: 'center', justifyContent: 'center' },
-  cardImageLetter: { fontSize: fontSizes['4xl'], fontWeight: fontWeights.bold, color: colors.dark },
-  cardGradient:  { position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%' },
+  carouselIndicators: { position: 'absolute', top: 16, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 4, zIndex: 20 },
+  carouselDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.5)' },
+  carouselDotActive: { width: 20, backgroundColor: 'rgba(255,255,255,0.95)' },
 
-  stamp:      { position: 'absolute', top: 32, borderRadius: radius.sm, paddingVertical: 8, paddingHorizontal: 16, borderWidth: 3 },
-  stampLike:  { left: 24, borderColor: colors.success, transform: [{ rotate: '-15deg' }] },
-  stampNope:  { right: 24, borderColor: colors.accent, transform: [{ rotate: '15deg' }] },
-  stampText:  { fontSize: fontSizes.xl, fontWeight: fontWeights.extrabold, color: colors.white, letterSpacing: 2 },
+  swipeOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 30, borderRadius: 24 },
+  stamp: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 2, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, transform: [{ rotate: '-15deg' }] },
+  stampText: { fontSize: 20, fontWeight: '500', color: '#fff', letterSpacing: 2 },
 
-  cardInfo:    { position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing[5], gap: spacing[2] },
-  cardNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
-  cardName:    { fontSize: fontSizes.xl, fontWeight: fontWeights.extrabold, color: colors.background, flex: 1 },
-  premiumBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.accentOrange, borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 3 },
-  premiumText:  { fontSize: fontSizes.xs, fontWeight: fontWeights.bold, color: colors.background },
-  cardRegion:   { fontSize: fontSizes.sm, color: 'rgba(255,247,225,0.8)' },
-  cardStats:    { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
-  cardStat:     { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  cardStatText: { fontSize: fontSizes.xs, color: 'rgba(255,247,225,0.9)', fontWeight: fontWeights.medium },
-  cardStatDivider: { width: 1, height: 12, backgroundColor: 'rgba(255,247,225,0.3)' },
+  cardInfo: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 24, paddingTop: 40 },
+  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
+  verifiedText: { color: '#fff', fontSize: 10, fontWeight: '600', letterSpacing: 0.5 },
+  cardName: { color: '#fff', fontSize: 28, fontWeight: '800', fontStyle: 'italic', marginBottom: 4 },
+  cardSub: { color: 'rgba(255,255,255,0.8)', fontSize: 10, fontFamily: 'monospace', letterSpacing: 2, marginBottom: 12 },
+  cardStatsRow: { flexDirection: 'row', gap: 16, marginBottom: 12 },
+  cardStatItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statIcon: { color: '#fbbf24', fontSize: 12 },
+  statValue: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  tag: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  tagText: { color: '#fff', fontSize: 9, fontWeight: '600' },
 
-  emptyStack:  { alignItems: 'center', gap: spacing[3] },
-  emptyEmoji:  { fontSize: 64 },
-  emptyTitle:  { fontSize: fontSizes.xl, fontWeight: fontWeights.bold, color: colors.dark },
-  emptySub:    { fontSize: fontSizes.sm, color: colors.textMuted, textAlign: 'center' },
-  refreshFab:  { marginTop: spacing[3], paddingHorizontal: spacing[6], paddingVertical: spacing[3], backgroundColor: colors.dark, borderRadius: radius.full },
-  refreshFabText: { color: colors.background, fontWeight: fontWeights.semibold },
+  emptyState: { alignItems: 'center', padding: 40 },
+  emptyTitle: { fontSize: 24, fontStyle: 'italic', fontWeight: '800', color: 'rgba(26,26,15,0.6)', marginTop: 16, marginBottom: 8 },
+  emptySub: { fontSize: 13, color: 'rgba(26,26,15,0.4)', marginBottom: 24, textAlign: 'center' },
+  btnReset: { backgroundColor: THEME.primary, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 30 },
+  btnResetText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 
-  actions:    { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing[5], paddingHorizontal: spacing[6], paddingBottom: spacing[2] },
-  actionBtn:  { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', shadowColor: colors.dark, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 6 },
-  actionPass: { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.accent + '30' },
-  actionInfo: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  actionLike: { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.success + '30' },
+  actions: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, paddingTop: 16 },
+  actionBtn: { justifyContent: 'center', alignItems: 'center', borderRadius: 32, shadowColor: 'rgba(26,26,15,0.2)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 1, shadowRadius: 24, elevation: 8, overflow: 'hidden' },
+  btnGradient: { ...StyleSheet.absoluteFillObject },
+  btnNope: { width: 64, height: 64 },
+  btnInfo: { width: 48, height: 48, borderRadius: 24 },
+  btnLike: { width: 64, height: 64 },
 
-  progress:   { textAlign: 'center', fontSize: fontSizes.xs, color: colors.textLight, paddingBottom: spacing[2] },
+  toast: { position: 'absolute', bottom: 120, left: 24, right: 24, alignItems: 'center', zIndex: 9999 },
+  toastShow: { opacity: 1 },
+  toastHide: { opacity: 0 },
+  toastText: { backgroundColor: THEME.accent, color: THEME.backgroundLight, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 30, fontSize: 12, fontWeight: '600', overflow: 'hidden' },
 });

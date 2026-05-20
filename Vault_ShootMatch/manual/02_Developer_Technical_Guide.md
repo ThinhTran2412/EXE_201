@@ -1,5 +1,21 @@
 # SHOOTMATCH — Hướng dẫn Kỹ thuật cho Developer
 
+> Cập nhật: **2026-05-15**
+
+## 0. Chạy nhanh
+
+```bash
+# API (cần PostgreSQL connection string trong appsettings)
+dotnet run --project ShootMatch.Api/ShootMatch.Api.csproj
+
+# Mobile
+cd ShootMatch.Mobile && npm install && npm start
+# .env: EXPO_PUBLIC_API_URL=http://<IP-LAN>:5062
+# Android: scripts/run-expo.js hoặc set ANDROID_HOME
+```
+
+**Vault:** [../INDEX.md](../INDEX.md)
+
 ## 1. Triết lý Kiến trúc (Clean Architecture & DDD)
 Dự án áp dụng mô hình **Clean Architecture** chia làm 4 lớp để đảm bảo tính dễ bảo trì và mở rộng.
 

@@ -1,23 +1,59 @@
-# SHOOTMATCH — Tổng quan dự án (Project Overview)
+# ShootMatch — Tổng quan dự án
 
-## 1. Giới thiệu
-ShootMatch là một nền tảng kết nối (matching) chuyên nghiệp giữa **Khách hàng** (người có nhu cầu chụp ảnh) và **Nhiếp ảnh gia** (người cung cấp dịch vụ). 
-Dự án được xây dựng với mục tiêu tối ưu hóa quy trình tìm kiếm, đặt lịch, và thanh toán cho các dịch vụ nhiếp ảnh thông qua cơ chế "quẹt" (swipe), kết hợp với các bộ lọc thông minh.
+> Cập nhật: **2026-05-15**
 
-## 2. Các tính năng cốt lõi
-- **Hệ thống Đăng nhập Đa phương thức (Multi-Auth):** Hỗ trợ Email/Password, Google OAuth, và Số điện thoại (OTP). 
-- **Matching System:** Khách hàng có thể lướt xem portfolio của nhiếp ảnh gia và "quẹt" để thả tim hoặc bỏ qua. Nếu cả hai bên đồng ý, một "Match" sẽ được tạo ra.
-- **Booking & Scheduling:** Hệ thống cho phép khách hàng đặt lịch trực tiếp dựa trên các gói dịch vụ (Service Packages) và lịch rảnh (Availability) của nhiếp ảnh gia.
-- **Chat & Messaging:** Sau khi Match hoặc Booking được tạo, hai bên có thể trao đổi trực tiếp qua hệ thống tin nhắn thời gian thực (SignalR).
-- **Reviews & Rating:** Khách hàng có thể đánh giá và để lại nhận xét sau khi hoàn thành buổi chụp.
+## Giới thiệu
 
-## 3. Các thực thể chính (Key Entities)
-- [[projects/SHOOTMATCH/manual/Roles_and_Permissions#Khách hàng|Customer]]
-- [[projects/SHOOTMATCH/manual/Roles_and_Permissions#Nhiếp ảnh gia|Photographer]]
-- [[projects/SHOOTMATCH/manual/Detailed_Feature_Guide#Booking Lifecycle|Booking]]
-- [[projects/SHOOTMATCH/manual/API_Architecture_and_Endpoints#Match|Match]]
+**ShootMatch** là nền tảng kết nối **Khách hàng** và **Nhiếp ảnh gia**: khám phá theo phong cách ảnh, swipe/match, đặt lịch, chat realtime, đánh giá sau buổi chụp.
 
----
-*Xem thêm:*
-- [[projects/SHOOTMATCH/manual/02_Developer_Technical_Guide]]
-- [[projects/SHOOTMATCH/manual/Detailed_Feature_Guide]]
+## Vai trò người dùng
+
+| Vai trò | Ứng dụng | Chức năng chính |
+|---------|----------|-----------------|
+| Khách hàng | Mobile (tab Customer) | Home feed, Discover, match, booking, chat, review |
+| Nhiếp ảnh gia | Mobile (tab Photographer) | Dashboard, portfolio, dịch vụ/giá, lịch, xác minh |
+| Admin | API (chưa có app) | Duyệt verification, premium |
+
+## Kiến trúc solution
+
+```
+ShootMatch.Domain          → Entities, Aggregates, ValueObjects, Domain events
+ShootMatch.Application     → Services, Commands/Queries, Abstractions
+ShootMatch.Infrastructure  → EF Core, Auth, Storage, AI stub
+ShootMatch.Api             → REST + GraphQL + SignalR + Swagger
+ShootMatch.Mobile          → Expo React Native (2 role)
+Vault_ShootMatch/          → Tài liệu dự án (repo)
+```
+
+## Tính năng đã có (mức MVP+)
+
+- Đăng nhập: OTP, email/password, Google.
+- Matching: tạo search session, swipe, mutual match → conversation.
+- Booking lifecycle: tạo → confirm → complete / cancel.
+- Chat SignalR.
+- Hồ sơ photographer: quote, bio, portfolio upload, thông tin cá nhân, availability.
+- Customer home feed (GraphQL).
+- Storage ảnh Supabase hoặc local disk.
+
+## Chạy nhanh
+
+**API**
+```bash
+dotnet run --project ShootMatch.Api/ShootMatch.Api.csproj
+```
+
+**Mobile**
+```bash
+cd ShootMatch.Mobile && npm install && npm start
+```
+
+## Tài liệu
+
+- Mục lục Vault: [../INDEX.md](../INDEX.md)
+- Dev: [02_Developer_Technical_Guide.md](./02_Developer_Technical_Guide.md)
+- Mobile: [04_Mobile_App_Architecture.md](./04_Mobile_App_Architecture.md)
+- API: [../[SHOOTMATCH]_API-reference.md](../[SHOOTMATCH]_API-reference.md)
+
+## Trạng thái
+
+Đang phát triển tích cực — backend PostgreSQL + mobile UI PicKic. AI matching vector và thanh toán chưa production.

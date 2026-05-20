@@ -16,11 +16,14 @@ import ProfileScreen    from '../../features/customer/screens/ProfileScreen';
 
 // Stack screens (pushed on top of tabs)
 import PhotographerProfileScreen from '../../features/customer/screens/PhotographerProfileScreen';
+import PhotographerPortfolioScreen from '../../features/customer/screens/PhotographerPortfolioScreen';
 import CheckoutScreen            from '../../features/customer/screens/CheckoutScreen';
 import BookingSuccessScreen      from '../../features/customer/screens/BookingSuccessScreen';
 import BookingDetailScreen       from '../../features/customer/screens/BookingDetailScreen';
 import NotificationsScreen       from '../../features/customer/screens/NotificationsScreen';
 import EditProfileScreen         from '../../features/customer/screens/EditProfileScreen';
+import CustomerFavoritesScreen   from '../../features/customer/screens/CustomerFavoritesScreen';
+import CustomerSharedMediaScreen from '../../features/customer/screens/CustomerSharedMediaScreen';
 import ChatScreen                from '../../features/chat/screens/ChatScreen';
 
 const Tab   = createBottomTabNavigator<CustomerTabParamList>();
@@ -68,11 +71,14 @@ export default function CustomerTabs() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CustomerRoot"         component={CustomerTabNavigator} />
       <Stack.Screen name="PhotographerProfile"  component={PhotographerProfileScreen} />
+      <Stack.Screen name="PhotographerPortfolio" component={PhotographerPortfolioScreen} />
       <Stack.Screen name="Checkout"             component={CheckoutScreen} />
       <Stack.Screen name="BookingSuccess"       component={BookingSuccessScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="BookingDetail"        component={BookingDetailScreen} />
       <Stack.Screen name="Notifications"        component={NotificationsScreen} />
       <Stack.Screen name="EditProfile"          component={EditProfileScreen} />
+      <Stack.Screen name="CustomerFavorites"    component={CustomerFavoritesScreen} />
+      <Stack.Screen name="CustomerSharedMedia"  component={CustomerSharedMediaScreen} />
       <Stack.Screen name="Chat"                 component={ChatScreen} />
     </Stack.Navigator>
   );
