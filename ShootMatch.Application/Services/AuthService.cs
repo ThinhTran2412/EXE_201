@@ -121,10 +121,13 @@ public sealed class AuthService(
             DisplayName = displayName,
             Phone       = string.Empty,
             Region      = string.Empty,
-            AvatarUrl   = string.Empty,
-            IsVerified  = false,
-            PasswordHash = passwordHasher.Hash(password),
-            CreatedAt   = DateTime.UtcNow
+            AvatarUrl          = string.Empty,
+            CoverPhotoUrl      = string.Empty,
+            HighlightPhoto2Url = string.Empty,
+            HighlightPhoto3Url = string.Empty,
+            IsVerified         = false,
+            PasswordHash   = passwordHasher.Hash(password),
+            CreatedAt      = DateTime.UtcNow
         };
 
         await customerRepository.UpsertAsync(customer, cancellationToken);

@@ -1,6 +1,16 @@
 # SHOOTMATCH — Hệ tham chiếu toàn diện (API & Features)
 
+> Cập nhật: **2026-05-15** — xem thêm [[../[SHOOTMATCH]_API-reference.md]]
+
 Tài liệu này là bản tham chiếu cuối cùng về mối liên kết giữa API và các tính năng thực tế.
+
+## Tính năng mới (05/2026)
+
+| Tính năng | API | Ghi chú |
+|-----------|-----|---------|
+| Customer Home feed | GraphQL `customerHomeFeed` | Featured + latest photos |
+| Photographer personal info | `PUT /api/photographers/personal-info` | CCCD, địa chỉ, region |
+| Portfolio upload | `POST /api/photographers/portfolio/upload` | Supabase hoặc local disk |
 
 ## 1. Bản đồ Vai trò & API (Access Map)
 | Tính năng | API Endpoint | Role bắt buộc |

@@ -480,3 +480,37 @@
   - Nút `Chỉnh sửa gói` từng bị chìm màu trên nền tối, đã tách icon/text thành style sáng hơn.
 - Next:
   - Nếu cần, tiếp tục thống nhất tone màu cho toàn bộ Photographer mobile screens để cùng một visual system.
+
+## Session 2026-05-14/15 — Customer Home + Personal Info + Vault quét
+- Goal: Customer Home PicKic; photographer personal info end-to-end; đồng bộ Vault toàn project.
+- Changes:
+  - [API] Migration `AddPhotographerPersonalInfo`; `PUT /api/photographers/personal-info`.
+  - [API] `CustomerHomeFeed` contract + `GetCustomerHomeFeedAsync`; GraphQL `customerHomeFeed`.
+  - [API] GraphQL `photographerProfile` expose `nationalId`, `personalAddress`, `portfolioPhotos`.
+  - [Mobile] `HomeScreen`: Hero, Nổi Bật + `StoryViewer`, Editorial, Discovery, QuickActions, Khoảnh Khắc.
+  - [Mobile] `localPictures.ts` (43 ảnh), `homeMedia.ts`, `PortfolioMasonry` (2 cột giống Upload Portfolio).
+  - [Mobile] `PProfileScreen`: ẩn/hiện personal info; region badge; bỏ CCCD/địa chỉ trên card công khai.
+  - [Mobile] `PersonalInfoScreen` + navigation stack.
+  - [Vault] Quét project 15/05: INDEX.md, context, codebase-map, UI-progress, API-ref, manual 01/04, daily progress.
+- Risks/Next:
+  - EF cho SearchSession/SwipeAction; giảm phụ thuộc fallback `local-*` ids trên Home.
+
+## Session 2026-05-20 — Đại Trùng Tu Customer Profile, API Upload & DB Migration
+- Goal: Triển khai toàn bộ cấu trúc cá nhân hóa nâng cao cho khách hàng, bổ sung 4 DB migration mới, viết REST Upload API, và đồng bộ UI mobile cực kỳ nghệ thuật.
+- Changes:
+  - [Domain] Thêm cột/trường vào `Customer.cs` và `CustomerRecord.cs`: `CoverPhotoUrl`, `HighlightPhoto1Url`, `HighlightPhoto2Url`, `HighlightPhoto3Url`, `RollPreviewPhotos`, `PreferredStyles`, `IsVerified`, `PreferredBudgetMin`, `PreferredBudgetMax`.
+  - [Infrastructure/Migrations] Thêm 4 EF core DB migration: `AddCustomerCoverPhoto`, `AddCustomerHighlightPhotos`, `AddCustomerHighlightPhoto1`, `AddCustomerPreferredStyles`.
+  - [Infrastructure/Persistence] Đồng bộ mapping mapper trong `EfCustomerRepository.cs` cho toàn bộ 9 trường cá nhân hóa mới.
+  - [API/Controllers] `CustomersController.cs` — bổ sung REST `POST /api/customers/profile` (merge partial upsert an toàn) + **6 endpoint upload ảnh chuyên dụng** hỗ trợ stream file lên Supabase/LocalDisk và lấy Public URL (`profile/avatar/upload`, `cover/upload`, `highlight-1/upload`, `highlight-2/upload`, `highlight-3/upload`, `roll-preview/upload`).
+  - [API/Controllers] `PhotographersController.cs` — thêm endpoint PATCH `/api/photographers/availability` và sửa `/api/photographers/verify` giữ thông tin cá nhân.
+  - [Mobile] `ProfileScreen.tsx` — Đại trùng tu theo theme PicKic: Viewfinder Hero với viền mỏng thanh lịch, Polaroid Asymmetric Highlights (3 khung ảnh xoay nhẹ góc 3D), Filmstrip Roll Preview, gu ảnh dạng tag, thay thế "Contact sheet" bằng "Thông tin cơ bản" dạng thu/phóng (toggle), xóa cài đặt "Thông báo".
+  - [Mobile] `EditProfileScreen.tsx` — Chỉnh sửa buồng tối Darkroom: Viewfinder Header thông số máy ảnh, 3-frame collage editor tích hợp picker resize manipulation, minimal input fields, phim bản thảo nháp riêng (sequential upload progress bar), gu ảnh nghệ thuật có giải thích.
+  - [Mobile] `DiscoverScreen.tsx` — Nâng cấp ProgressBar đếm thẻ, verified badge, stamp LIKE/NOPE khi swipe, tích hợp tự động lưu AsyncStorage khi quẹt phải (yêu thích).
+  - [Mobile] `PhotographerProfileScreen.tsx` — Đổi mới bố cục báo chí thời trang: hero lớn, stats card, spec badges, equipment list, calendar schedule grid trực quan rảnh bận theo ngày dạng lưới 4 cột, heart favorite toggle liên kết AsyncStorage.
+  - [Mobile] Màn hình mới: `PhotographerPortfolioScreen.tsx` (Masonry 2 cột thác nước so le tỉ lệ ảnh thật, Fullscreen slide viewer với thumbnail chân trang), `CustomerFavoritesScreen.tsx` (Hiển thị thẻ nhiếp ảnh gia dạng khung ảnh in matted chữ nhật dọc siêu mỏng tinh tế, load từ `favorites.ts` local storage), `CustomerSharedMediaScreen.tsx` (approved shared photos).
+  - [Mobile] Component & Utils mới: `PortfolioImageCell.tsx`, `favorites.ts` (quản lý lưu trữ local nhiếp ảnh gia yêu thích bằng `@react-native-async-storage/async-storage`).
+  - [Scripts] Thêm `add_roll_preview_column.py` và `apply_highlight_columns.py` vá nóng cơ sở dữ liệu dev/staging.
+- Risks/Next:
+  - pgvector thực tế cho PreferredStyles và portfolio embeddings.
+  - Chuyển đổi các repo in-memory còn lại (`SearchSession`, `SwipeAction`, `Otp`).
+

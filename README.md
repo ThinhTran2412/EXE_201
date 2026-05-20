@@ -40,6 +40,8 @@ npm start
 ## Tài liệu trong `Vault_ShootMatch`
 Các ghi chú và tài liệu chi tiết được lưu trong thư mục `Vault_ShootMatch`.
 
+**Bắt đầu tại:** [Vault_ShootMatch/INDEX.md](Vault_ShootMatch/INDEX.md) (mục lục 3 cấp: root / manual / daily progress)
+
 ### Tổng quan và kiến trúc
 - [Tổng quan dự án](Vault_ShootMatch/manual/01_Project_Overview.md)
 - [Hướng dẫn kỹ thuật cho developer](Vault_ShootMatch/manual/02_Developer_Technical_Guide.md)
@@ -62,13 +64,15 @@ Các ghi chú và tài liệu chi tiết được lưu trong thư mục `Vault_S
 - [Kiến trúc tổng thể](Vault_ShootMatch/[SHOOTMATCH]_architecture.md)
 - [API reference](Vault_ShootMatch/[SHOOTMATCH]_API-reference.md)
 - [Migration đa auth và DB](Vault_ShootMatch/[SHOOTMATCH]_multi-auth-db-migration.md)
+- [Mục lục Vault (INDEX)](Vault_ShootMatch/INDEX.md)
 - [Tiến độ hằng ngày](Vault_ShootMatch/daily progress/summary.md)
 - [Tiến độ ngày 14-05-2026](Vault_ShootMatch/daily progress/14-05-2026.md)
+- [Tiến độ ngày 15-05-2026](Vault_ShootMatch/daily progress/15-05-2026.md)
 
 ## Trạng thái hiện tại
-- Phần mobile đã có các màn hình chính cho khách hàng và nhiếp ảnh gia.
-- Backend đang dùng REST cho command và GraphQL cho query.
-- Swagger đã được bật để kiểm tra API dễ hơn trong môi trường phát triển.
+- Mobile: Customer Home (PicKic), Photographer PProfile/Portfolio/PersonalInfo.
+- Backend: PostgreSQL + EF cho hầu hết entity; REST write + GraphQL read + SignalR chat.
+- Swagger tại `/swagger`; Vault quét cập nhật 15/05/2026.
 
 ## Ghi chú phát triển
 - Một số dữ liệu mock vẫn đang dùng để demo giao diện.

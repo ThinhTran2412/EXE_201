@@ -14,6 +14,7 @@ export interface PhotographerCard {
   similarityScore: number;
   finalScore:     number;
   avatarUrl?:     string;
+  portfolioPhotos?: string[];
 }
 
 export interface Photographer {
@@ -23,6 +24,7 @@ export interface Photographer {
   email:              string;
   region:             string;
   bio:                string;
+  quote:              string;
   avatarUrl:          string;
   coverPhotoUrl:      string;
   instagramUrl:       string;
@@ -32,6 +34,7 @@ export interface Photographer {
   isPremium:          boolean;
   isAvailable:        boolean;
   verificationStatus: string;
+  portfolioPhotos?:   string[];
 }
 
 export interface Match {
@@ -105,7 +108,7 @@ export async function getSwipeFeed(searchId: string): Promise<PhotographerCard[]
   const data = await gql<{ swipeFeed: PhotographerCard[] }>(`
     query SwipeFeed($searchId: UUID!) {
       swipeFeed(searchId: $searchId) {
-        photographerId displayName region
+        photographerId displayName region avatarUrl portfolioPhotos
         minBudget maxBudget rating isPremium finalScore
       }
     }
@@ -138,20 +141,86 @@ export interface CustomerHomeFeed {
 }
 
 export interface CustomerProfile {
-  id:          string;
-  displayName: string;
-  phone:       string;
-  email:       string;
-  region:      string;
-  avatarUrl:   string;
-  isVerified:  boolean;
+  id:            string;
+  displayName:   string;
+  phone:         string;
+  email:         string;
+  region:        string;
+  avatarUrl:          string;
+  coverPhotoUrl:      string;
+  highlightPhoto1Url: string;
+  highlightPhoto2Url: string;
+  highlightPhoto3Url: string;
+  rollPreviewPhotos?: string;
+  preferredStyles?:   string;
+  isVerified:         boolean;
+  /** ISO — từ GraphQL `me` */
+  createdAt?:    string;
 }
 
 export async function getCustomerProfile(): Promise<CustomerProfile | null> {
-  const data = await gql<{ me: CustomerProfile | null }>(`
-    query { me { id displayName phone email region avatarUrl isVerified } }
-  `);
-  return data.me;
+  try {
+    const { data } = await apiClient.get<CustomerProfile>('/api/customers/me');
+    return data ?? null;
+  } catch (restError) {
+    try {
+      const data = await gql<{ me: CustomerProfile | null }>(`
+        query { me { id displayName phone email region avatarUrl coverPhotoUrl highlightPhoto1Url highlightPhoto2Url highlightPhoto3Url rollPreviewPhotos preferredStyles isVerified createdAt } }
+      `);
+      return data.me;
+    } catch {
+      throw restError;
+    }
+  }
+}
+
+export type CustomerPhotoSlot = 'avatar' | 'cover' | 'highlight1' | 'highlight2' | 'highlight3';
+
+export async function updateCustomerProfile(payload: Partial<Pick<CustomerProfile,
+  'displayName' | 'phone' | 'email' | 'region' | 'avatarUrl' | 'coverPhotoUrl' | 'highlightPhoto1Url' | 'highlightPhoto2Url' | 'highlightPhoto3Url' | 'rollPreviewPhotos' | 'preferredStyles'>>) {
+  await apiClient.post('/api/customers/profile', payload);
+}
+
+export async function uploadCustomerRollPreviewPhoto(uri: string, mimeType: string) {
+  const filename = uri.split('/').pop() ?? `roll_preview_${Date.now()}.jpg`;
+  const form = new FormData();
+  form.append('file', {
+    uri,
+    name: filename,
+    type: mimeType ?? 'image/jpeg',
+  } as any);
+
+  const { data } = await apiClient.post<{ photoUrl: string }>('/api/customers/profile/roll-preview/upload', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+  return data.photoUrl;
+}
+
+const UPLOAD_ENDPOINTS: Record<CustomerPhotoSlot, string> = {
+  avatar:     '/api/customers/profile/avatar/upload',
+  cover:      '/api/customers/profile/cover/upload',
+  highlight1: '/api/customers/profile/highlight-1/upload',
+  highlight2: '/api/customers/profile/highlight-2/upload',
+  highlight3: '/api/customers/profile/highlight-3/upload',
+};
+
+export async function uploadCustomerProfileImage(uri: string, mimeType: string, kind: CustomerPhotoSlot) {
+  const filename = uri.split('/').pop() ?? `${kind}_${Date.now()}.jpg`;
+  const form = new FormData();
+  form.append('file', {
+    uri,
+    name: filename,
+    type: mimeType ?? 'image/jpeg',
+  } as any);
+
+  const endpoint = UPLOAD_ENDPOINTS[kind];
+
+  const { data } = await apiClient.post<{ photoUrl: string }>(endpoint, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+  return data.photoUrl;
 }
 
 export async function getCustomerHomeFeed(): Promise<CustomerHomeFeed> {
@@ -173,7 +242,7 @@ export async function getCustomerHomeFeed(): Promise<CustomerHomeFeed> {
 export async function getPhotographers(): Promise<Photographer[]> {
   const data = await gql<{ photographers: Photographer[] }>(`
     query { photographers {
-      id displayName region bio avatarUrl coverPhotoUrl
+      id displayName region bio quote avatarUrl coverPhotoUrl portfolioPhotos
       minBudget maxBudget rating isPremium isAvailable verificationStatus
     }}
   `);
@@ -184,7 +253,7 @@ export async function getPhotographer(id: string): Promise<Photographer | null> 
   const data = await gql<{ photographer: Photographer | null }>(`
     query GetPhotographer($id: UUID!) {
       photographer(id: $id) {
-        id displayName region bio avatarUrl coverPhotoUrl instagramUrl
+        id displayName region bio quote avatarUrl coverPhotoUrl instagramUrl portfolioPhotos
         minBudget maxBudget rating isPremium isAvailable verificationStatus
       }
     }

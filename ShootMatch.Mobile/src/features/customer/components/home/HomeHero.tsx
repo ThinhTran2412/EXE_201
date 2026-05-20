@@ -5,9 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../app/theme/colors';
 import { fontSizes, fontWeights } from '../../../../app/theme/typography';
 import { spacing } from '../../../../app/theme/spacing';
-import { ImageSourcePropType } from 'react-native';
+import { ImageSourcePropType, Dimensions } from 'react-native';
 import { localPicture } from '../../../../shared/assets/localPictures';
 import { resolveImageSource } from '../../../../shared/utils/resolveImageSource';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function HomeHero({
   coverSource,
@@ -50,9 +52,9 @@ export default function HomeHero({
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginBottom: spacing[5] },
+  wrap: { marginBottom: spacing[5], width: SCREEN_WIDTH },
   banner: {
-    width: '100%',
+    width: SCREEN_WIDTH,
     minHeight: 220,
     paddingVertical: spacing[10],
     paddingHorizontal: spacing[6],

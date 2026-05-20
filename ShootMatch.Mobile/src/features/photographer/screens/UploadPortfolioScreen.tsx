@@ -110,7 +110,7 @@ export default function UploadPortfolioScreen() {
       for (const asset of assets) {
         let width = asset.width;
         let height = asset.height;
-        let resizeAction = [];
+        let resizeAction: ImageManipulator.Action[] = [];
 
         // Nếu ảnh quá lớn (4K, 8K), thu nhỏ về chuẩn Full HD (1920px) để chống tràn RAM (OOM)
         if (width > 1920 || height > 1920) {
@@ -285,6 +285,36 @@ export default function UploadPortfolioScreen() {
           )}
         </Animated.View>
 
+        {!isSelecting && photoData.length > 0 && (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={styles.sectionLabel}>Xem nhanh</Text>
+            <Text style={styles.sectionHint}>Ảnh mới nhất — chạm để mở</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingVertical: 8 }}>
+              {[...photoData].reverse().slice(0, 12).map((item, idx) => (
+                <Pressable
+                  key={`quick-${item.originalIndex ?? idx}-${idx}`}
+                  style={{ width: 108, height: 148, borderRadius: 14, overflow: 'hidden', backgroundColor: THEME.dark2 }}
+                  onPress={() => setViewerIndex(item.originalIndex ?? 0)}
+                >
+                  <Image
+                    source={{ uri: formatPhotoUrl(item.url) }}
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                    resizeMethod="resize"
+                  />
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {!isSelecting && photoData.length > 0 && (
+          <View style={{ marginBottom: 12 }}>
+            <Text style={styles.sectionLabel}>Toàn bộ</Text>
+            <Text style={styles.sectionHint}>Masonry 2 cột — giữ nguyên tỷ lệ ảnh</Text>
+          </View>
+        )}
+
         {/* MASONRY GALLERY */}
         <View style={styles.galleryContainer}>
           {photoData.length > 0 ? (
@@ -293,7 +323,7 @@ export default function UploadPortfolioScreen() {
                 const isSelected = selectedUrls.includes(item.url);
                 return (
                   <Animated.View 
-                    key={item.url} 
+                    key={`m-${item.originalIndex ?? index}`} 
                     entering={FadeIn.delay(Math.min(index * 50, 500)).duration(400)}
                     style={{ position: 'absolute', top: item.top, left: item.left, width: colWidth, height: item.height }}
                   >
@@ -432,6 +462,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 36, fontWeight: '800', color: THEME.cream, letterSpacing: -1 },
   sub: { fontSize: 14, color: 'rgba(255,247,225,0.5)', marginTop: 4 },
   backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: THEME.glass, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: THEME.border },
+  sectionLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 2, textTransform: 'uppercase', color: 'rgba(255,247,225,0.45)' },
+  sectionHint: { fontSize: 12, color: 'rgba(255,247,225,0.32)', marginTop: 4, marginBottom: 2 },
   
   galleryContainer: { flex: 1 },
   masonryContainer: { flexDirection: 'row', justifyContent: 'space-between' },

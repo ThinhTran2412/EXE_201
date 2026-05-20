@@ -137,6 +137,54 @@ public sealed class PhotographersController(
         return Ok(updated);
     }
 
+    [HttpPatch("availability")]
+    [ProducesResponseType(typeof(Photographer), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateAvailability(
+        [FromBody] SetAvailabilityRequest request,
+        CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var existing = await photographerRepository.GetByIdAsync(id, cancellationToken);
+        if (existing is null) return NotFound();
+
+        var updated = new Photographer
+        {
+            Id                            = existing.Id,
+            Phone                         = existing.Phone,
+            Email                         = existing.Email,
+            DisplayName                   = existing.DisplayName,
+            Bio                           = existing.Bio,
+            Quote                         = existing.Quote,
+            NationalId                    = existing.NationalId,
+            Region                        = existing.Region,
+            PersonalAddress               = existing.PersonalAddress,
+            VerificationDocumentFrontUrl  = existing.VerificationDocumentFrontUrl,
+            VerificationDocumentBackUrl   = existing.VerificationDocumentBackUrl,
+            VerificationPortraitUrl       = existing.VerificationPortraitUrl,
+            AvatarUrl                     = existing.AvatarUrl,
+            CoverPhotoUrl                 = existing.CoverPhotoUrl,
+            InstagramUrl                  = existing.InstagramUrl,
+            MinBudget                     = existing.MinBudget,
+            MaxBudget                     = existing.MaxBudget,
+            AcceptsInstantBooking         = existing.AcceptsInstantBooking,
+            Rating                        = existing.Rating,
+            IsPremium                     = existing.IsPremium,
+            IsAvailable                   = request.IsAvailable,
+            VerificationStatus            = existing.VerificationStatus,
+            PasswordHash                  = existing.PasswordHash,
+            GoogleId                      = existing.GoogleId,
+            CreatedAt                     = existing.CreatedAt,
+            UpdatedAt                     = DateTime.UtcNow,
+            DeletedAt                     = existing.DeletedAt,
+            PortfolioEmbeddings           = existing.PortfolioEmbeddings,
+            PortfolioPhotos               = existing.PortfolioPhotos
+        };
+
+        await photographerRepository.UpsertAsync(updated, cancellationToken);
+        return Ok(updated);
+    }
+
     [HttpPost("verify")]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -154,26 +202,35 @@ public sealed class PhotographersController(
 
         var updated = new Photographer
         {
-            Id                    = existing.Id,
-            Phone                 = existing.Phone,
-            Email                 = existing.Email,
-            DisplayName           = existing.DisplayName,
-            Bio                   = existing.Bio,
-            Quote                 = existing.Quote,
-            AvatarUrl             = existing.AvatarUrl,
-            CoverPhotoUrl         = existing.CoverPhotoUrl,
-            InstagramUrl          = existing.InstagramUrl,
-            MinBudget             = existing.MinBudget,
-            MaxBudget             = existing.MaxBudget,
-            AcceptsInstantBooking = existing.AcceptsInstantBooking,
-            Region                = existing.Region,
-            Rating                = existing.Rating,
-            IsPremium             = existing.IsPremium,
-            IsAvailable           = existing.IsAvailable,
-            VerificationStatus    = "Pending",
-            CreatedAt             = existing.CreatedAt,
-            UpdatedAt             = DateTime.UtcNow,
-            PortfolioEmbeddings   = existing.PortfolioEmbeddings
+            Id                            = existing.Id,
+            Phone                         = existing.Phone,
+            Email                         = existing.Email,
+            DisplayName                   = existing.DisplayName,
+            Bio                           = existing.Bio,
+            Quote                         = existing.Quote,
+            NationalId                    = existing.NationalId,
+            Region                        = existing.Region,
+            PersonalAddress               = existing.PersonalAddress,
+            VerificationDocumentFrontUrl  = existing.VerificationDocumentFrontUrl,
+            VerificationDocumentBackUrl   = existing.VerificationDocumentBackUrl,
+            VerificationPortraitUrl       = existing.VerificationPortraitUrl,
+            AvatarUrl                     = existing.AvatarUrl,
+            CoverPhotoUrl                 = existing.CoverPhotoUrl,
+            InstagramUrl                  = existing.InstagramUrl,
+            MinBudget                     = existing.MinBudget,
+            MaxBudget                     = existing.MaxBudget,
+            AcceptsInstantBooking         = existing.AcceptsInstantBooking,
+            Rating                        = existing.Rating,
+            IsPremium                     = existing.IsPremium,
+            IsAvailable                   = existing.IsAvailable,
+            VerificationStatus            = "Pending",
+            PasswordHash                  = existing.PasswordHash,
+            GoogleId                      = existing.GoogleId,
+            CreatedAt                     = existing.CreatedAt,
+            UpdatedAt                     = DateTime.UtcNow,
+            DeletedAt                     = existing.DeletedAt,
+            PortfolioEmbeddings           = existing.PortfolioEmbeddings,
+            PortfolioPhotos               = existing.PortfolioPhotos
         };
 
         await photographerRepository.UpsertAsync(updated, cancellationToken);

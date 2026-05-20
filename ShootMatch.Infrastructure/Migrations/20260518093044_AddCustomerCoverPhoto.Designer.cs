@@ -12,8 +12,8 @@ using ShootMatch.Infrastructure.Persistence;
 namespace ShootMatch.Infrastructure.Migrations
 {
     [DbContext(typeof(ShootMatchDbContext))]
-    [Migration("20260514183000_AddPhotographerPersonalInfo")]
-    partial class AddPhotographerPersonalInfo
+    [Migration("20260518093044_AddCustomerCoverPhoto")]
+    partial class AddCustomerCoverPhoto
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -175,6 +175,11 @@ namespace ShootMatch.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("AvatarUrl")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("CoverPhotoUrl")
                         .IsRequired()
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
@@ -454,30 +459,18 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.Property<decimal>("MinBudget")
                         .HasColumnType("numeric(18,2)");
 
-
                     b.Property<string>("NationalId")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
-                    b.Property<string>("PersonalAddress")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
                     b.Property<string>("PasswordHash")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("PersonalAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
-                    b.Property<string>("VerificationDocumentBackUrl")
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
-
-                    b.Property<string>("VerificationDocumentFrontUrl")
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
-
-                    b.Property<string>("VerificationPortraitUrl")
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(25)
@@ -498,6 +491,18 @@ namespace ShootMatch.Infrastructure.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VerificationDocumentBackUrl")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("VerificationDocumentFrontUrl")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("VerificationPortraitUrl")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
 
                     b.Property<string>("VerificationStatus")
                         .IsRequired()

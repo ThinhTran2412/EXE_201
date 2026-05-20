@@ -1,23 +1,298 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View, Pressable, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  Pressable,
+  Alert,
+  Image,
+  ImageBackground,
+  ActivityIndicator,
+  RefreshControl,
+  Dimensions,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../auth/AuthContext';
-import { ClayCard } from '../../../shared/components/ClayCard';
 import { colors } from '../../../app/theme/colors';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { radius, spacing } from '../../../app/theme/spacing';
+import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
+import { localPictureSlice } from '../../../shared/assets/localPictures';
+import {
+  getCustomerProfile,
+  getMyBookings,
+  updateCustomerProfile,
+  uploadCustomerProfileImage,
+  type CustomerPhotoSlot,
+  type CustomerProfile,
+} from '../api';
 
-type MenuSection = {
-  title: string;
-  items: { icon: string; label: string; screen?: string; danger?: boolean; action?: () => void }[];
+const { width: W } = Dimensions.get('window');
+const PAD = spacing[5];
+const GAP = spacing[3];
+const COL = (W - PAD * 2 - GAP) / 2;
+
+const DEFAULT_STYLE_TAGS = ['Portrait', 'Golden hour', 'Film look', 'Lifestyle', 'Editorial'];
+
+const THEME = {
+  primary: '#fff7e1',
+  accent: '#1a1a0f',
+  orange: '#ff4200',
+  danger: '#ef4444',
 };
+
+async function prepareImage(uri: string) {
+  const actions = [{ resize: { width: 1024 } }];
+
+  const result = await ImageManipulator.manipulateAsync(uri, actions, {
+    compress: 0.75,
+    format: ImageManipulator.SaveFormat.JPEG,
+  });
+
+  return result.uri;
+}
+
+function displayOptional(s?: string | null) {
+  const t = s?.trim();
+  return t && t.length > 0 ? t : null;
+}
+
+function ViewfinderFrame() {
+  const c = 22;
+  const t = 2;
+  const color = 'rgba(255,247,225,0.55)';
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <View style={[vf.corner, { top: 12, left: 12, borderTopWidth: t, borderLeftWidth: t, width: c, height: c, borderColor: color }]} />
+      <View style={[vf.corner, { top: 12, right: 12, borderTopWidth: t, borderRightWidth: t, width: c, height: c, borderColor: color }]} />
+      <View style={[vf.corner, { bottom: 12, left: 12, borderBottomWidth: t, borderLeftWidth: t, width: c, height: c, borderColor: color }]} />
+      <View style={[vf.corner, { bottom: 12, right: 12, borderBottomWidth: t, borderRightWidth: t, width: c, height: c, borderColor: color }]} />
+    </View>
+  );
+}
+
+const vf = StyleSheet.create({ corner: { position: 'absolute' } });
+
+const POLAROID_W = Math.floor((W - PAD * 2 - spacing[3] * 2) / 3);
+const POLAROID_IMG_W = POLAROID_W - spacing[2] * 2;
+const POLAROID_IMG_H = Math.round(POLAROID_IMG_W * 1.18);
+
+function HeroPolaroid({
+  imageUri,
+  fallbackLetter,
+  localSource,
+  rotation,
+  onPress,
+  saving,
+}: {
+  imageUri?: string;
+  fallbackLetter?: string;
+  localSource?: ReturnType<typeof localPictureSlice>[number];
+  rotation: string;
+  onPress?: () => void;
+  saving?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={saving}
+      style={({ pressed }) => [
+        styles.heroPolaroid,
+        { width: POLAROID_W, transform: [{ rotate: rotation }] },
+        pressed && { opacity: 0.85 }
+      ]}
+    >
+      {saving ? (
+        <View style={styles.heroPolaroidFallback}>
+          <ActivityIndicator size="small" color={colors.accentOrange} />
+        </View>
+      ) : imageUri ? (
+        <Image source={{ uri: imageUri }} style={styles.heroPolaroidImg} />
+      ) : localSource ? (
+        <Image source={localSource} style={styles.heroPolaroidImg} resizeMode="cover" />
+      ) : (
+        <View style={styles.heroPolaroidFallback}>
+          <Text style={styles.heroPolaroidLetter}>{fallbackLetter ?? '+'}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+function ArchiveTile({
+  title,
+  caption,
+  count,
+  images,
+  tall,
+  wide,
+  dark,
+  onPress,
+}: {
+  title: string;
+  caption: string;
+  count?: number;
+  images: ReturnType<typeof localPictureSlice>;
+  tall?: boolean;
+  wide?: boolean;
+  dark?: boolean;
+  onPress: () => void;
+}) {
+  const h = wide ? 168 : tall ? 220 : 168;
+  const w = wide ? W - PAD * 2 : COL;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.archiveTile,
+        { width: w, height: h },
+        pressed && { opacity: 0.94, transform: [{ scale: 0.985 }] },
+      ]}
+    >
+      {images.length >= 2 && !wide ? (
+        <View style={styles.archiveSplit}>
+          <Image source={images[0]} style={styles.archiveHalf} resizeMode="cover" />
+          <Image source={images[1]} style={styles.archiveHalf} resizeMode="cover" />
+        </View>
+      ) : (
+        <ImageBackground source={images[0]} style={StyleSheet.absoluteFill} resizeMode="cover">
+          <View style={StyleSheet.absoluteFill} />
+        </ImageBackground>
+      )}
+      <LinearGradient
+        colors={dark ? ['transparent', 'rgba(10,10,6,0.92)'] : ['transparent', 'rgba(26,26,15,0.88)']}
+        style={StyleSheet.absoluteFill}
+      />
+      {count !== undefined && count > 0 ? (
+        <View style={styles.countBadge}>
+          <Text style={styles.countBadgeText}>{count}</Text>
+        </View>
+      ) : null}
+      <View style={styles.archiveCopy}>
+        <Text style={styles.archiveTitle}>{title}</Text>
+        <Text style={styles.archiveCaption} numberOfLines={2}>{caption}</Text>
+        <View style={styles.archiveArrow}>
+          <Ionicons name="arrow-forward" size={14} color="#fff7e1" />
+        </View>
+      </View>
+    </Pressable>
+  );
+}
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
-  const { session, logout } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { logout, session, initializing } = useAuth();
+
+  const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [completedShoots, setCompletedShoots] = useState(0);
+  const [savingImage, setSavingImage] = useState<CustomerPhotoSlot | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [styleTags, setStyleTags] = useState<string[]>(DEFAULT_STYLE_TAGS);
+  const [isBasicInfoExpanded, setIsBasicInfoExpanded] = useState(true);
+
+  const filmStrip = useMemo(() => localPictureSlice(2, 6), []);
+  const favImages = useMemo(() => localPictureSlice(8, 2), []);
+  const shootImages = useMemo(() => localPictureSlice(14, 2), []);
+  const sharedImages = useMemo(() => localPictureSlice(20, 3), []);
+
+  const rollPreviewPhotosSource = useMemo(() => {
+    if (!profile?.rollPreviewPhotos) return null;
+    const urls = profile.rollPreviewPhotos
+      .split(',')
+      .map(url => url.trim())
+      .filter(Boolean);
+    if (urls.length === 0) return null;
+    return urls.map(url => ({ uri: formatImageUrl(url) }));
+  }, [profile?.rollPreviewPhotos]);
+
+  const filmStripDisplay = useMemo(() => {
+    if (rollPreviewPhotosSource) {
+      return rollPreviewPhotosSource.map(x => ({ uri: x.uri, local: undefined }));
+    }
+    return filmStrip.map(src => ({ uri: undefined, local: src }));
+  }, [rollPreviewPhotosSource, filmStrip]);
+
+  const load = useCallback(async () => {
+    if (initializing) return;
+
+    if (!session?.accessToken || session.role !== 'customer') {
+      setError('Phiên đăng nhập không hợp lệ. Vui lòng đăng xuất và đăng nhập lại với tài khoản khách hàng.');
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
+    setError(null);
+    try {
+      const [me, bookings] = await Promise.all([
+        getCustomerProfile(),
+        getMyBookings().catch(() => []),
+      ]);
+      setProfile(me);
+      setCompletedShoots(bookings.filter(b => b.status === 'Completed').length);
+      if (!me) {
+        setError('Không tìm thấy hồ sơ khách hàng. Kéo để thử lại.');
+      }
+
+      // Load style preferences from profile first, fallback to AsyncStorage/defaults
+      const styleStr = me?.preferredStyles ?? '';
+      if (styleStr) {
+        const parsed = styleStr.split(',').map(s => s.trim()).filter(Boolean);
+        setStyleTags(parsed);
+      } else if (session?.userId) {
+        const stored = await AsyncStorage.getItem(`sm_customer_styles_${session.userId}`);
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setStyleTags(parsed);
+            } else {
+              setStyleTags(DEFAULT_STYLE_TAGS);
+            }
+          } catch {
+            setStyleTags(DEFAULT_STYLE_TAGS);
+          }
+        } else {
+          setStyleTags(DEFAULT_STYLE_TAGS);
+        }
+      } else {
+        setStyleTags(DEFAULT_STYLE_TAGS);
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '';
+      if (msg.toLowerCase().includes('network')) {
+        setError('Không kết nối được máy chủ. Kiểm tra API đang chạy và địa chỉ trong .env.');
+      } else if (msg.toLowerCase().includes('authorized') || msg.toLowerCase().includes('authenticated')) {
+        setError('Phiên đăng nhập đã hết hạn. Đăng xuất rồi đăng nhập lại.');
+      } else {
+        setError('Không tải được hồ sơ. Kéo để thử lại.');
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [initializing, session]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (initializing) return;
+      setLoading(true);
+      load();
+    }, [initializing, load]),
+  );
 
   function handleLogout() {
     Alert.alert('Đăng xuất', 'Bạn chắc chắn muốn đăng xuất?', [
@@ -26,91 +301,271 @@ export default function ProfileScreen() {
     ]);
   }
 
-  const MENU: MenuSection[] = [
-    {
-      title: 'Hoạt động',
-      items: [
-        { icon: 'calendar-outline',     label: 'Lịch hẹn của tôi',   screen: 'Bookings' },
-        { icon: 'chatbubble-outline',   label: 'Tin nhắn',           screen: 'Chat' },
-        { icon: 'star-outline',         label: 'Đánh giá của tôi',   screen: 'Reviews' },
-        { icon: 'heart-outline',        label: 'Đã lưu',             screen: 'Favorites' },
-      ],
-    },
-    {
-      title: 'Tài khoản',
-      items: [
-        { icon: 'create-outline',       label: 'Chỉnh sửa hồ sơ',   screen: 'EditProfile' },
-        { icon: 'notifications-outline', label: 'Thông báo',         screen: 'Notifications' },
-        { icon: 'settings-outline',     label: 'Cài đặt',            screen: 'Settings' },
-      ],
-    },
-    {
-      title: '',
-      items: [
-        { icon: 'log-out-outline', label: 'Đăng xuất', danger: true, action: handleLogout },
-      ],
-    },
-  ];
+  async function pickAndUploadImage(slot: CustomerPhotoSlot) {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Cần quyền truy cập', 'Cho phép truy cập thư viện ảnh để cập nhật hồ sơ.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const asset = result.assets[0];
+    setSavingImage(slot);
+
+    try {
+      const preparedUri = await prepareImage(asset.uri);
+      const uploadedUrl = await uploadCustomerProfileImage(preparedUri, asset.mimeType ?? 'image/jpeg', slot);
+      const patch =
+        slot === 'avatar' ? { avatarUrl: uploadedUrl }
+        : slot === 'highlight1' ? { highlightPhoto1Url: uploadedUrl }
+        : slot === 'highlight2' ? { highlightPhoto2Url: uploadedUrl }
+        : slot === 'highlight3' ? { highlightPhoto3Url: uploadedUrl }
+        : { coverPhotoUrl: uploadedUrl };
+      await updateCustomerProfile(patch);
+      setProfile(prev => (prev ? { ...prev, ...patch } : prev));
+    } catch {
+      Alert.alert('Lỗi', 'Không thể cập nhật ảnh. Vui lòng thử lại.');
+    } finally {
+      setSavingImage(null);
+    }
+  }
+
+
+  const avatarUri = formatImageUrl(profile?.avatarUrl);
+  const highlight1Uri = formatImageUrl(profile?.highlightPhoto1Url);
+  const highlight2Uri = formatImageUrl(profile?.highlightPhoto2Url);
+  const highlight3Uri = formatImageUrl(profile?.highlightPhoto3Url);
+  const coverUri = formatImageUrl(profile?.coverPhotoUrl);
+  const displayName = profile?.displayName?.trim() || 'Khách hàng';
+  const initial = displayName.charAt(0).toUpperCase();
+  const phone = displayOptional(profile?.phone);
+  const email = displayOptional(profile?.email);
+
+  const heroHeight = W * 0.72;
+
+  if (loading && !profile && !refreshing) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color={colors.accentOrange} />
+          <Text style={styles.loadingText}>Đang mở album…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Avatar Header */}
-        <Animated.View entering={FadeInUp.duration(600)} style={styles.hero}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarLetter}>
-              {session?.userId?.[0]?.toUpperCase() ?? 'U'}
-            </Text>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); load(); }}
+            tintColor={colors.accentOrange}
+          />
+        }
+      >
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Ionicons name="cloud-offline-outline" size={18} color={colors.accent} />
+            <Text style={styles.errorText}>{error}</Text>
           </View>
-          <Text style={styles.name}>Khách hàng</Text>
-          <View style={styles.rolePill}>
-            <View style={styles.roleDot} />
-            <Text style={styles.roleText}>Tài khoản khách hàng</Text>
-          </View>
-        </Animated.View>
+        ) : null}
 
-        {/* Stats */}
-        <Animated.View entering={FadeInDown.duration(500).delay(150)} style={styles.stats}>
-          {[
-            { label: 'Lịch hẹn', value: '0' },
-            { label: 'Matches',  value: '0' },
-            { label: 'Đánh giá', value: '0' },
-          ].map((s) => (
-            <View key={s.label} style={styles.stat}>
-              <Text style={styles.statValue}>{s.value}</Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
+        {/* ── COVER / VIEWFINDER HERO ── */}
+        <Animated.View entering={FadeInUp.duration(550)}>
+          <View style={[styles.hero, { height: heroHeight }]}>
+            {coverUri ? (
+              <Image source={{ uri: coverUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            ) : (
+              <ImageBackground
+                source={filmStrip[0]}
+                style={StyleSheet.absoluteFill}
+                blurRadius={avatarUri ? 0 : 8}
+              >
+                {avatarUri ? (
+                  <Image source={{ uri: avatarUri }} style={StyleSheet.absoluteFill} blurRadius={12} />
+                ) : null}
+              </ImageBackground>
+            )}
+            <LinearGradient
+              colors={['rgba(10,10,6,0.25)', 'rgba(10,10,6,0.45)', 'rgba(10,10,6,0.82)']}
+              locations={[0, 0.5, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.grain} pointerEvents="none" />
+            <ViewfinderFrame />
+
+            <View style={[styles.heroTop, { paddingTop: insets.top > 0 ? spacing[6] : spacing[8] }]}>
+              <Text style={styles.heroEyebrow}>MY ARCHIVE · SHOOTMATCH</Text>
+              <Pressable style={styles.gearBtn} onPress={() => navigation.navigate('EditProfile')} hitSlop={10}>
+                <Ionicons name="create-outline" size={20} color="#fff7e1" />
+              </Pressable>
             </View>
-          ))}
+
+            <View style={styles.heroBottom}>
+              <View style={styles.heroPolaroidRow}>
+                <HeroPolaroid
+                  imageUri={highlight1Uri}
+                  localSource={!highlight1Uri ? filmStrip[0] : undefined}
+                  rotation="-6deg"
+                  saving={savingImage === 'highlight1'}
+                  onPress={() => pickAndUploadImage('highlight1')}
+                />
+                <HeroPolaroid
+                  imageUri={highlight2Uri}
+                  localSource={!highlight2Uri ? filmStrip[1] : undefined}
+                  rotation="2deg"
+                  saving={savingImage === 'highlight2'}
+                  onPress={() => pickAndUploadImage('highlight2')}
+                />
+                <HeroPolaroid
+                  imageUri={highlight3Uri}
+                  localSource={!highlight3Uri ? filmStrip[2] : undefined}
+                  rotation="6deg"
+                  saving={savingImage === 'highlight3'}
+                  onPress={() => pickAndUploadImage('highlight3')}
+                />
+              </View>
+            </View>
+          </View>
         </Animated.View>
 
-        {/* Menu Sections */}
-        {MENU.map((sec, si) => (
-          <Animated.View key={si} entering={FadeInDown.duration(500).delay(200 + si * 80)} style={styles.section}>
-            {sec.title ? <Text style={styles.sectionTitle}>{sec.title}</Text> : null}
-            <ClayCard style={styles.menuCard}>
-              {sec.items.map((item, ii) => (
-                <React.Fragment key={item.label}>
-                  <Pressable
-                    style={({ pressed }) => [styles.menuRow, pressed && styles.menuRowPressed]}
-                    onPress={item.action ?? (() => item.screen && navigation.navigate(item.screen))}
-                  >
-                    <View style={[styles.menuIcon, item.danger && styles.menuIconDanger]}>
-                      <Ionicons name={item.icon as any} size={20} color={item.danger ? colors.accent : colors.dark} />
-                    </View>
-                    <Text style={[styles.menuLabel, item.danger && styles.menuLabelDanger]}>
-                      {item.label}
-                    </Text>
-                    {!item.danger && <Ionicons name="chevron-forward" size={16} color={colors.textLight} />}
-                  </Pressable>
-                  {ii < sec.items.length - 1 && <View style={styles.sep} />}
-                </React.Fragment>
-              ))}
-            </ClayCard>
-          </Animated.View>
-        ))}
+        <Animated.View entering={FadeInDown.delay(80).duration(450)} style={styles.avatarDock}>
+          <View style={styles.heroAvatarWrap}>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.heroAvatarImg} />
+            ) : (
+              <View style={styles.heroAvatarFallback}>
+                <Text style={styles.heroAvatarLetter}>{initial}</Text>
+              </View>
+            )}
+          </View>
+        </Animated.View>
 
-        <Text style={styles.footer}>ShootMatch v1.0 Beta</Text>
-        <View style={{ height: spacing[10] }} />
+        {/* ── FILM STRIP ── */}
+        <Animated.View entering={FadeInDown.delay(120).duration(450)} style={styles.filmBlock}>
+          <View style={styles.filmHeader}>
+            <Text style={styles.filmLabel}>ROLL PREVIEW</Text>
+            <Text style={styles.filmCounter}>36 EXP · {filmStripDisplay.length} FRAMES</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filmScroll}>
+            {filmStripDisplay.map((item, i) => (
+              <View key={i} style={styles.filmFrame}>
+                {item.uri ? (
+                  <Image source={{ uri: item.uri }} style={styles.filmImg} resizeMode="cover" />
+                ) : (
+                  <Image source={item.local} style={styles.filmImg} resizeMode="cover" />
+                )}
+                <Text style={styles.frameNo}>{String(i + 1).padStart(2, '0')}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        </Animated.View>
+
+        {/* ── PHONG CÁCH ── */}
+        <Animated.View entering={FadeInDown.delay(120).duration(450)} style={styles.section}>
+          <Text style={styles.sectionEyebrow}>Phong cách</Text>
+          <Text style={styles.sectionTitle}>Gu ảnh của bạn</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tagScroll}>
+            {styleTags.map(tag => (
+              <View key={tag} style={styles.styleTag}>
+                <Ionicons name="aperture-outline" size={12} color={colors.accentOrange} />
+                <Text style={styles.styleTagText}>{tag}</Text>
+              </View>
+            ))}
+          </ScrollView>
+          <Text style={styles.styleHint}>
+            Gợi ý phong cách dựa trên sở thích — sẽ đồng bộ khi bạn lưu photographer & buổi chụp.
+          </Text>
+        </Animated.View>
+
+        {/* ── ARCHIVE GRID ── */}
+        <Animated.View entering={FadeInDown.delay(160).duration(450)} style={styles.section}>
+          <Text style={styles.sectionEyebrow}>Album cá nhân</Text>
+          <Text style={styles.sectionTitle}>Không gian của bạn</Text>
+          <View style={styles.archiveGrid}>
+            <ArchiveTile
+              title="Yêu thích"
+              caption="Photographer & mood đã lưu"
+              images={favImages}
+              tall
+              onPress={() => navigation.navigate('CustomerFavorites')}
+            />
+            <ArchiveTile
+              title="Buổi đã chụp"
+              caption="Hoàn thành & kỷ niệm"
+              count={completedShoots}
+              images={shootImages}
+              dark
+              onPress={() => navigation.navigate('Bookings')}
+            />
+            <ArchiveTile
+              title="Ảnh của bạn"
+              caption="Chỉ hiện khi bạn đồng ý với photographer"
+              images={sharedImages}
+              wide
+              onPress={() => navigation.navigate('CustomerSharedMedia')}
+            />
+          </View>
+        </Animated.View>
+
+        {/* ── THÔNG TIN CƠ BẢN (expandable basic info section) ── */}
+        <Animated.View entering={FadeInDown.delay(200).duration(450)} style={styles.section}>
+          <Pressable
+            onPress={() => setIsBasicInfoExpanded(!isBasicInfoExpanded)}
+            style={({ pressed }) => [
+              styles.toggleHeader,
+              pressed && { opacity: 0.8 }
+            ]}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <View>
+                <Text style={styles.sectionEyebrow}>Hồ sơ</Text>
+                <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Thông tin cơ bản</Text>
+              </View>
+              <Ionicons
+                name={isBasicInfoExpanded ? "chevron-up" : "chevron-down"}
+                size={20}
+                color={colors.dark}
+              />
+            </View>
+          </Pressable>
+
+          {isBasicInfoExpanded && (
+            <Animated.View entering={FadeInDown.duration(200)} style={styles.contactSheet}>
+              <View style={styles.contactRow}>
+                <Text style={styles.contactKey}>TEL</Text>
+                <Text style={styles.contactVal}>{phone ?? 'Chưa cập nhật'}</Text>
+              </View>
+              <View style={styles.contactDivider} />
+              <View style={styles.contactRow}>
+                <Text style={styles.contactKey}>MAIL</Text>
+                <Text style={styles.contactVal} numberOfLines={1}>{email ?? 'Chưa cập nhật'}</Text>
+              </View>
+            </Animated.View>
+          )}
+        </Animated.View>
+
+        {/* ── SETTINGS ── */}
+        <Animated.View entering={FadeInDown.delay(240).duration(450)} style={styles.section}>
+          <Pressable style={[styles.settingsBtn, styles.settingsBtnDanger, { flex: 0, width: '100%' }]} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={20} color={colors.accent} />
+            <Text style={[styles.settingsBtnText, { color: colors.accent }]}>Đăng xuất</Text>
+          </Pressable>
+        </Animated.View>
+
+        <Text style={styles.footer}>SHOOTMATCH · CLIENT ARCHIVE</Text>
+        <View style={{ height: spacing[16] }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -119,30 +574,293 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
 
-  hero:         { alignItems: 'center', paddingVertical: spacing[8], gap: spacing[3] },
-  avatar:       { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.dark, alignItems: 'center', justifyContent: 'center', shadowColor: colors.clay, shadowOffset: { width: 6, height: 6 }, shadowOpacity: 1, shadowRadius: 12, elevation: 8 },
-  avatarLetter: { fontSize: fontSizes['3xl'], fontWeight: fontWeights.bold, color: colors.background },
-  name:         { fontSize: fontSizes.xl, fontWeight: fontWeights.bold, color: colors.dark },
-  rolePill:     { flexDirection: 'row', alignItems: 'center', gap: spacing[2], paddingHorizontal: spacing[4], paddingVertical: spacing[1.5], borderRadius: radius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  roleDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.info },
-  roleText:     { fontSize: fontSizes.xs, color: colors.textMuted, fontWeight: fontWeights.medium },
+  loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing[3] },
+  loadingText: { fontSize: fontSizes.sm, color: colors.textMuted, letterSpacing: 2, textTransform: 'uppercase' },
 
-  stats:     { flexDirection: 'row', marginHorizontal: spacing[6], marginBottom: spacing[6], padding: spacing[4], borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  stat:      { flex: 1, alignItems: 'center', gap: spacing[1] },
-  statValue: { fontSize: fontSizes.xl, fontWeight: fontWeights.bold, color: colors.dark },
-  statLabel: { fontSize: fontSizes.xs, color: colors.textMuted },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    marginHorizontal: PAD,
+    marginTop: spacing[2],
+    padding: spacing[3],
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(207,64,40,0.08)',
+  },
+  errorText: { flex: 1, fontSize: fontSizes.sm, color: colors.textMuted },
 
-  section:      { paddingHorizontal: spacing[6], marginBottom: spacing[4] },
-  sectionTitle: { fontSize: fontSizes.xs, fontWeight: fontWeights.semibold, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: spacing[3] },
+  hero: { width: '100%', position: 'relative', overflow: 'hidden' },
+  grain: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,247,225,0.03)',
+    opacity: 0.4,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: PAD,
+    zIndex: 2,
+  },
+  heroEyebrow: {
+    fontSize: 9,
+    fontWeight: fontWeights.bold,
+    letterSpacing: 3,
+    color: 'rgba(255,247,225,0.45)',
+  },
+  gearBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,247,225,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,247,225,0.15)',
+  },
+  heroBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: PAD,
+    paddingBottom: spacing[5],
+    zIndex: 20,
+    elevation: 20,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  avatarDock: {
+    marginTop: -spacing[16],
+    marginBottom: spacing[5],
+    alignItems: 'center',
+    zIndex: 40,
+    elevation: 40,
+  },
+  heroAvatarShell: {
+    width: '100%',
+    alignItems: 'center',
+    zIndex: 30,
+    elevation: 30,
+  },
+  heroAvatarWrap: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,247,225,0.8)',
+    backgroundColor: '#fff7e1',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  heroAvatarImg: { width: '100%', height: '100%' },
+  heroAvatarFallback: { flex: 1, backgroundColor: THEME.accent, alignItems: 'center', justifyContent: 'center' },
+  heroAvatarLetter: { fontSize: 48, fontWeight: '900', color: THEME.primary },
+  heroInfoSpacer: { height: 20 },
+  heroPolaroidRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: spacing[3],
+    width: '100%',
+    zIndex: 5,
+    elevation: 5,
+    marginBottom: spacing[2],
+  },
 
-  menuCard:        { overflow: 'hidden' },
-  menuRow:         { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing[4], paddingHorizontal: spacing[4], gap: spacing[3] },
-  menuRowPressed:  { backgroundColor: 'rgba(26,26,15,0.04)' },
-  menuIcon:        { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
-  menuIconDanger:  { backgroundColor: colors.accent + '15' },
-  menuLabel:       { flex: 1, fontSize: fontSizes.md, fontWeight: fontWeights.medium, color: colors.dark },
-  menuLabelDanger: { color: colors.accent },
-  sep:             { height: 1, marginHorizontal: spacing[4], backgroundColor: colors.border },
+  heroPolaroid: {
+    backgroundColor: '#fff7e1',
+    padding: spacing[2],
+    paddingBottom: spacing[3],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    elevation: 12,
+    position: 'relative',
+  },
+  heroPolaroidEditBtn: {
+    position: 'absolute',
+    top: spacing[2],
+    right: spacing[2],
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.accentOrange,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff7e1',
+  },
+  heroPolaroidImg: {
+    width: POLAROID_IMG_W,
+    height: POLAROID_IMG_H,
+    backgroundColor: colors.clay,
+  },
+  heroPolaroidFallback: {
+    width: POLAROID_IMG_W,
+    height: POLAROID_IMG_H,
+    backgroundColor: colors.dark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroPolaroidLetter: {
+    fontSize: 28,
+    fontWeight: fontWeights.bold,
+    color: colors.background,
+  },
+  filmBlock: { marginTop: -spacing[4], marginBottom: spacing[6] },
+  filmHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: PAD,
+    marginBottom: spacing[3],
+  },
+  filmLabel: { fontSize: 9, fontWeight: fontWeights.bold, letterSpacing: 2.5, color: colors.textMuted },
+  filmCounter: { fontSize: 9, color: colors.textLight, fontFamily: 'monospace' },
+  filmScroll: { paddingHorizontal: PAD, gap: spacing[2] },
+  filmFrame: {
+    width: 72,
+    height: 96,
+    borderRadius: 4,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: colors.dark,
+    backgroundColor: colors.dark,
+  },
+  filmImg: { width: '100%', height: '100%' },
+  frameNo: {
+    position: 'absolute',
+    bottom: 3,
+    right: 4,
+    fontSize: 8,
+    fontWeight: fontWeights.bold,
+    color: 'rgba(255,247,225,0.85)',
+    fontFamily: 'monospace',
+  },
 
-  footer: { textAlign: 'center', fontSize: fontSizes.xs, color: colors.textLight, marginTop: spacing[4] },
+  section: { paddingHorizontal: PAD, marginBottom: spacing[7] },
+  sectionEyebrow: {
+    fontSize: 9,
+    fontWeight: fontWeights.bold,
+    letterSpacing: 2.5,
+    color: colors.accentOrange,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  sectionTitle: {
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.extrabold,
+    color: colors.dark,
+    marginBottom: spacing[4],
+    letterSpacing: -0.3,
+  },
+  tagScroll: { gap: spacing[2], paddingBottom: spacing[2] },
+  styleTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[2],
+    borderRadius: radius.full,
+    backgroundColor: colors.dark,
+  },
+  styleTagText: {
+    fontSize: 11,
+    fontWeight: fontWeights.semibold,
+    color: colors.background,
+    letterSpacing: 0.5,
+  },
+  styleHint: {
+    marginTop: spacing[3],
+    fontSize: fontSizes.xs,
+    color: colors.textMuted,
+    lineHeight: 18,
+    fontStyle: 'italic',
+  },
+
+  archiveGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
+  archiveTile: { borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.dark },
+  archiveSplit: { ...StyleSheet.absoluteFillObject, flexDirection: 'row' },
+  archiveHalf: { flex: 1, height: '100%' },
+  countBadge: {
+    position: 'absolute',
+    top: spacing[3],
+    right: spacing[3],
+    minWidth: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.accentOrange,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  countBadgeText: { fontSize: fontSizes.md, fontWeight: fontWeights.extrabold, color: '#fff' },
+  archiveCopy: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: spacing[4] },
+  archiveTitle: { fontSize: fontSizes.lg, fontWeight: fontWeights.bold, color: '#fff7e1' },
+  archiveCaption: { fontSize: 10, color: 'rgba(255,247,225,0.65)', marginTop: 4, lineHeight: 14 },
+  archiveArrow: {
+    marginTop: spacing[2],
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,247,225,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
+
+  toggleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing[1],
+    marginBottom: spacing[2],
+  },
+  contactSheet: {
+    backgroundColor: colors.dark,
+    borderRadius: radius.lg,
+    padding: spacing[5],
+  },
+  contactRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[4] },
+  contactKey: {
+    width: 44,
+    fontSize: 10,
+    fontWeight: fontWeights.bold,
+    letterSpacing: 2,
+    color: colors.accentOrange,
+    fontFamily: 'monospace',
+  },
+  contactVal: { flex: 1, fontSize: fontSizes.md, fontWeight: fontWeights.semibold, color: '#fff7e1' },
+  contactDivider: { height: 1, backgroundColor: 'rgba(255,247,225,0.1)', marginVertical: spacing[4] },
+
+  settingsRow: { flexDirection: 'row', gap: spacing[3] },
+  settingsBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[2],
+    paddingVertical: spacing[4],
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  settingsBtnDanger: { backgroundColor: 'rgba(207,64,40,0.06)', borderColor: 'rgba(207,64,40,0.2)' },
+  settingsBtnText: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, color: colors.dark },
+
+  footer: {
+    textAlign: 'center',
+    fontSize: 9,
+    letterSpacing: 3,
+    color: colors.textLight,
+    fontWeight: fontWeights.bold,
+  },
 });

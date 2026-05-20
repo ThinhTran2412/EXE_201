@@ -8,6 +8,12 @@ public sealed class CustomerProfile
     public required string Email { get; init; }
     public required string Region { get; init; }
     public required string AvatarUrl { get; init; }
+    public required string CoverPhotoUrl { get; init; }
+    public required string HighlightPhoto1Url { get; init; }
+    public required string HighlightPhoto2Url { get; init; }
+    public required string HighlightPhoto3Url { get; init; }
+    public required string RollPreviewPhotos { get; init; }
+    public required string PreferredStyles { get; init; }
     public required bool IsVerified { get; init; }
     public required DateTime CreatedAt { get; init; }
 }

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using HotChocolate;
@@ -168,7 +169,19 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+// Serve default wwwroot static files
 app.UseStaticFiles();
+
+// Serve uploaded images from the configured upload directory via /uploads/**
+var uploadRoot = app.Configuration["Storage:LocalPath"] ?? @"D:\pic_Stogare";
+if (!Directory.Exists(uploadRoot))
+    uploadRoot = System.IO.Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads");
+Directory.CreateDirectory(uploadRoot); // ensure it exists
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider    = new PhysicalFileProvider(uploadRoot),
+    RequestPath     = "/uploads",
+});
 
 // CORS trước Auth để Expo Go request không bị block
 app.UseCors("MobileDevPolicy");
