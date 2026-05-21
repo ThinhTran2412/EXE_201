@@ -51,7 +51,7 @@ export default function AllChatScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Tin nhắn</Text>
         <Text style={styles.badge}>{convs.length}</Text>
@@ -67,7 +67,7 @@ export default function AllChatScreen() {
           <Animated.View entering={FadeInDown.duration(400).delay(index * 60)}>
             <Pressable
               style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-              onPress={() => navigation.navigate('Chat', { conversationId: c.id, name: c.photographerId })}
+              onPress={() => navigation.getParent()?.navigate('Chat', { conversationId: c.id, name: 'Nhiếp ảnh gia', participantName: 'Nhiếp ảnh gia' })}
             >
               <View style={styles.avatar}>
                 <Ionicons name="person" size={24} color={colors.textMuted} />
@@ -100,14 +100,12 @@ export default function AllChatScreen() {
 
 const styles = StyleSheet.create({
   safe:   { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[6], paddingVertical: spacing[4], borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[6], paddingVertical: spacing[4], borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: spacing[4] },
   title:  { fontSize: fontSizes.xl, fontWeight: fontWeights.bold, color: colors.dark, flex: 1 },
   badge:  { backgroundColor: colors.accent, fontSize: fontSizes.xs, fontWeight: fontWeights.bold, paddingHorizontal: spacing[2.5], paddingVertical: spacing[0.5], borderRadius: radius.full, overflow: 'hidden' },
-
   list:           { paddingTop: spacing[2] },
   emptyContainer: { flex: 1 },
   sep:            { height: 1, marginHorizontal: spacing[6], backgroundColor: colors.border },
-
   row:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[6], paddingVertical: spacing[4], gap: spacing[3] },
   rowPressed: { backgroundColor: 'rgba(26,26,15,0.04)' },
   avatar:    { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.clay, alignItems: 'center', justifyContent: 'center', position: 'relative' },
@@ -117,7 +115,6 @@ const styles = StyleSheet.create({
   rowName:   { fontSize: fontSizes.md, fontWeight: fontWeights.semibold, color: colors.dark, flex: 1 },
   rowTime:   { fontSize: fontSizes.xs, color: colors.textLight },
   rowPreview: { fontSize: fontSizes.sm, color: colors.textMuted },
-
   empty:      { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing[3], padding: spacing[10] },
   emptyEmoji: { fontSize: 56 },
   emptyTitle: { fontSize: fontSizes.xl, fontWeight: fontWeights.bold, color: colors.dark },

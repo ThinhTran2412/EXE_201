@@ -7,9 +7,7 @@ namespace ShootMatch.Infrastructure.Persistence;
 public sealed class InMemoryConversationRepository : IConversationRepository
 {
     private readonly ConcurrentDictionary<Guid, Conversation> _conversations = new();
-    private readonly ConcurrentDictionary<Guid, Message>      _messages      = new();
-
-    // ── Conversation ──────────────────────────────────────────────────────────
+    private readonly ConcurrentDictionary<Guid, Message> _messages = new();
 
     public Task SaveConversationAsync(Conversation conversation, CancellationToken cancellationToken = default)
     {
@@ -47,8 +45,6 @@ public sealed class InMemoryConversationRepository : IConversationRepository
         return Task.FromResult(result);
     }
 
-    // ── Messages ─────────────────────────────────────────────────────────────
-
     public Task SaveMessageAsync(Message message, CancellationToken cancellationToken = default)
     {
         _messages[message.Id] = message;
@@ -64,20 +60,56 @@ public sealed class InMemoryConversationRepository : IConversationRepository
         return Task.FromResult(result);
     }
 
+    public Task<IReadOnlyList<Message>> GetUnreadMessagesAsync(Guid conversationId, Guid recipientId, CancellationToken cancellationToken = default)
+    {
+        var result = (IReadOnlyList<Message>)_messages.Values
+            .Where(m => m.ConversationId == conversationId && m.SenderId != recipientId && m.ReadAt is null)
+            .OrderBy(m => m.SentAt)
+            .ToList();
+        return Task.FromResult(result);
+    }
+
+    public Task<int> MarkMessagesAsReadAsync(Guid conversationId, Guid readerId, DateTime readAt, CancellationToken cancellationToken = default)
+    {
+        var updated = 0;
+        foreach (var message in _messages.Values.Where(m => m.ConversationId == conversationId && m.SenderId != readerId && m.ReadAt is null).ToList())
+        {
+            _messages[message.Id] = new Message
+            {
+                Id = message.Id,
+                ConversationId = message.ConversationId,
+                SenderId = message.SenderId,
+                SenderRole = message.SenderRole,
+                Content = message.Content,
+                ContentType = message.ContentType,
+                SentAt = message.SentAt,
+                ReadAt = readAt
+            };
+            updated++;
+        }
+
+        return Task.FromResult(updated);
+    }
+
+    public Task<int> GetUnreadCountAsync(Guid conversationId, Guid recipientId, CancellationToken cancellationToken = default)
+    {
+        var count = _messages.Values.Count(m => m.ConversationId == conversationId && m.SenderId != recipientId && m.ReadAt is null);
+        return Task.FromResult(count);
+    }
+
     public Task TouchLastMessageAtAsync(Guid conversationId, DateTime sentAt, CancellationToken cancellationToken = default)
     {
         if (!_conversations.TryGetValue(conversationId, out var existing)) return Task.CompletedTask;
 
-        // Replace with updated LastMessageAt (Conversation is immutable record-like class)
         _conversations[conversationId] = new Conversation
         {
-            Id             = existing.Id,
-            MatchId        = existing.MatchId,
-            CustomerId     = existing.CustomerId,
+            Id = existing.Id,
+            MatchId = existing.MatchId,
+            CustomerId = existing.CustomerId,
             PhotographerId = existing.PhotographerId,
-            Status         = existing.Status,
-            CreatedAt      = existing.CreatedAt,
-            LastMessageAt  = sentAt
+            Status = existing.Status,
+            CreatedAt = existing.CreatedAt,
+            LastMessageAt = sentAt
         };
         return Task.CompletedTask;
     }

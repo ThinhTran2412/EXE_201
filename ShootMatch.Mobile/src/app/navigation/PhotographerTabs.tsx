@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, StyleSheet } from 'react-native';
-import { PhotographerTabParamList } from './types';
+import { PhotographerTabParamList, PhotographerStackParamList } from './types';
 import { colors } from '../theme/colors';
 import { fontSizes } from '../theme/typography';
 
@@ -19,9 +19,11 @@ import PChatScreen from '../../features/photographer/screens/PChatScreen';
 import ServiceManagementScreen from '../../features/photographer/screens/ServiceManagementScreen';
 import BookingCalendarScreen from '../../features/photographer/screens/BookingCalendarScreen';
 import PersonalInfoScreen from '../../features/photographer/screens/PersonalInfoScreen';
+import CallScreen from '../../features/chat/screens/CallScreen';
 
 const Tab   = createBottomTabNavigator<PhotographerTabParamList>();
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<PhotographerStackParamList>();
+
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 const CFG: Record<keyof PhotographerTabParamList, { label: string; icon: IconName; iconActive: IconName }> = {
@@ -68,7 +70,9 @@ export default function PhotographerTabs() {
       <Stack.Screen name="ServiceManagement" component={ServiceManagementScreen} />
       <Stack.Screen name="BookingCalendar" component={BookingCalendarScreen} />
       <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
+      <Stack.Screen name="Call" component={CallScreen} />
     </Stack.Navigator>
+
   );
 }
 

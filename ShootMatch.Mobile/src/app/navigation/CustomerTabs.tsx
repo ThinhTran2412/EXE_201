@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, StyleSheet } from 'react-native';
-import { CustomerTabParamList } from './types';
+import { CustomerTabParamList, CustomerStackParamList } from './types';
 import { colors } from '../theme/colors';
 import { fontSizes } from '../theme/typography';
 
@@ -25,9 +25,11 @@ import EditProfileScreen         from '../../features/customer/screens/EditProfi
 import CustomerFavoritesScreen   from '../../features/customer/screens/CustomerFavoritesScreen';
 import CustomerSharedMediaScreen from '../../features/customer/screens/CustomerSharedMediaScreen';
 import ChatScreen                from '../../features/chat/screens/ChatScreen';
+import CallScreen                from '../../features/chat/screens/CallScreen';
 
 const Tab   = createBottomTabNavigator<CustomerTabParamList>();
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<CustomerStackParamList>();
+
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 const TAB_CONFIG: Record<keyof CustomerTabParamList, { label: string; icon: IconName; iconActive: IconName }> = {
@@ -80,7 +82,9 @@ export default function CustomerTabs() {
       <Stack.Screen name="CustomerFavorites"    component={CustomerFavoritesScreen} />
       <Stack.Screen name="CustomerSharedMedia"  component={CustomerSharedMediaScreen} />
       <Stack.Screen name="Chat"                 component={ChatScreen} />
+      <Stack.Screen name="Call"                 component={CallScreen} />
     </Stack.Navigator>
+
   );
 }
 

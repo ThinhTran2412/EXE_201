@@ -37,6 +37,8 @@ public static class DependencyInjection
         services.AddScoped<IBookingRepository,               EfBookingRepository>();
         services.AddScoped<IReviewRepository,                EfReviewRepository>();
         services.AddScoped<IConversationRepository,          EfConversationRepository>();
+        services.AddScoped<IConversationQueryService,        EfConversationQueryService>();
+        services.AddScoped<ICallSessionRepository,           EfCallSessionRepository>();
         services.AddScoped<IVerificationRequestRepository,   EfVerificationRequestRepository>();
 
         // ── Still InMemory (no EF model yet — replace when ready) ────────────
