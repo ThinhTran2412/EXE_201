@@ -29,10 +29,8 @@ public sealed class ShootMatchDbContext(
     // Conversation & Messaging
     public DbSet<ConversationRecord> Conversations => Set<ConversationRecord>();
     public DbSet<MessageRecord> Messages => Set<MessageRecord>();
+    public DbSet<CallSessionRecord> CallSessions => Set<CallSessionRecord>();
 
-    /// <summary>
-    /// Saves changes and dispatches domain events from all AggregateRoot instances.
-    /// </summary>
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         var result = await base.SaveChangesAsync(cancellationToken);
@@ -76,20 +74,11 @@ public sealed class ShootMatchDbContext(
             entity.Property(x => x.VerificationStatus).HasMaxLength(20);
             entity.Property(x => x.PasswordHash).HasMaxLength(100);
             entity.Property(x => x.GoogleId).HasMaxLength(128);
-            entity.HasIndex(x => x.Email);           // email login lookup
-            entity.HasIndex(x => x.GoogleId);        // google login lookup
-            entity.HasMany(x => x.PortfolioEmbeddings)
-                .WithOne(x => x.Photographer)
-                .HasForeignKey(x => x.PhotographerId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasMany(x => x.PortfolioPhotos)
-                .WithOne(x => x.Photographer)
-                .HasForeignKey(x => x.PhotographerId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasMany(x => x.ServicePackages)
-                .WithOne(x => x.Photographer)
-                .HasForeignKey(x => x.PhotographerId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(x => x.Email);
+            entity.HasIndex(x => x.GoogleId);
+            entity.HasMany(x => x.PortfolioEmbeddings).WithOne(x => x.Photographer).HasForeignKey(x => x.PhotographerId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(x => x.PortfolioPhotos).WithOne(x => x.Photographer).HasForeignKey(x => x.PhotographerId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(x => x.ServicePackages).WithOne(x => x.Photographer).HasForeignKey(x => x.PhotographerId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // ── PortfolioEmbedding ───────────────────────────────────────────────
@@ -140,9 +129,9 @@ public sealed class ShootMatchDbContext(
             entity.Property(x => x.PreferredBudgetMax).HasColumnType("numeric(18,2)");
             entity.Property(x => x.PasswordHash).HasMaxLength(100);
             entity.Property(x => x.GoogleId).HasMaxLength(128);
-            entity.HasIndex(x => x.Email);           // email login lookup
-            entity.HasIndex(x => x.GoogleId);        // google login lookup
-            entity.HasIndex(x => x.Phone);           // phone OTP lookup
+            entity.HasIndex(x => x.Email);
+            entity.HasIndex(x => x.GoogleId);
+            entity.HasIndex(x => x.Phone);
         });
 
         // ── SearchSession ────────────────────────────────────────────────────
@@ -211,7 +200,7 @@ public sealed class ShootMatchDbContext(
             entity.ToTable("reviews");
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Comment).HasMaxLength(2000);
-            entity.HasIndex(x => x.BookingId).IsUnique(); // 1 review per booking
+            entity.HasIndex(x => x.BookingId).IsUnique();
             entity.HasIndex(x => x.TargetPhotographerId);
         });
 
@@ -234,13 +223,9 @@ public sealed class ShootMatchDbContext(
             entity.ToTable("photographer_availabilities");
             entity.HasKey(x => x.Id);
             entity.Property(x => x.SlotType).HasMaxLength(20);
-            // Index for fast calendar lookup: photographer + type
             entity.HasIndex(x => new { x.PhotographerId, x.DayOfWeek });
             entity.HasIndex(x => new { x.PhotographerId, x.SpecificDate });
-            entity.HasOne(x => x.Photographer)
-                .WithMany(x => x.Availabilities)
-                .HasForeignKey(x => x.PhotographerId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Photographer).WithMany(x => x.Availabilities).HasForeignKey(x => x.PhotographerId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // ── OtpRecord ────────────────────────────────────────────────────────
@@ -250,9 +235,7 @@ public sealed class ShootMatchDbContext(
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Phone).HasMaxLength(25);
             entity.Property(x => x.Code).HasMaxLength(10);
-            // Lookup by phone to validate OTP
             entity.HasIndex(x => new { x.Phone, x.IsUsed });
-            // Cleanup index for expired records
             entity.HasIndex(x => x.ExpiresAt);
         });
 
@@ -262,14 +245,11 @@ public sealed class ShootMatchDbContext(
             entity.ToTable("conversations");
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Status).HasMaxLength(20);
-            // Inbox queries: find conversations by participant, sorted by last activity
             entity.HasIndex(x => new { x.CustomerId, x.LastMessageAt });
             entity.HasIndex(x => new { x.PhotographerId, x.LastMessageAt });
-            entity.HasIndex(x => x.MatchId).IsUnique(); // 1 conversation per match
-            entity.HasMany(x => x.Messages)
-                .WithOne(x => x.Conversation)
-                .HasForeignKey(x => x.ConversationId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(x => x.MatchId).IsUnique();
+            entity.HasMany(x => x.Messages).WithOne(x => x.Conversation).HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(x => x.CallSessions).WithOne(x => x.Conversation).HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // ── Message ──────────────────────────────────────────────────────────
@@ -280,10 +260,21 @@ public sealed class ShootMatchDbContext(
             entity.Property(x => x.SenderRole).HasMaxLength(20);
             entity.Property(x => x.ContentType).HasMaxLength(20);
             entity.Property(x => x.Content).HasMaxLength(4000);
-            // Primary query pattern: all messages in a conversation, time-ordered
             entity.HasIndex(x => new { x.ConversationId, x.SentAt });
-            // Unread messages query
             entity.HasIndex(x => new { x.ConversationId, x.ReadAt });
+        });
+
+        modelBuilder.Entity<CallSessionRecord>(entity =>
+        {
+            entity.ToTable("call_sessions");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.CallType).HasMaxLength(20);
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.Property(x => x.InitiatorRole).HasMaxLength(20);
+            entity.Property(x => x.EndReason).HasMaxLength(1000);
+            entity.Property(x => x.SessionToken).HasMaxLength(256);
+            entity.HasIndex(x => new { x.ConversationId, x.Status });
+            entity.HasIndex(x => new { x.ConversationId, x.StartedAt });
         });
     }
 }

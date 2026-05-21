@@ -2,18 +2,21 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ShootMatch.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace ShootMatch.Infrastructure.Migrations
+namespace ShootMatch.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ShootMatchDbContext))]
-    partial class ShootMatchDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260520203216_ContactRealtimeFoundation")]
+    partial class ContactRealtimeFoundation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

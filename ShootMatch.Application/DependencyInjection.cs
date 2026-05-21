@@ -25,6 +25,10 @@ public static class DependencyInjection
         services.AddScoped<CreateBookingCommandHandler>();
         services.AddScoped<SubmitReviewCommandHandler>();
         services.AddScoped<SendMessageCommandHandler>();
+        services.AddScoped<InitiateCallCommandHandler>();
+        services.AddScoped<UpdateCallSessionCommandHandler>();
+        services.AddScoped<MarkConversationReadCommandHandler>();
+        services.AddScoped<CloseStaleCallsCommandHandler>();
 
         // ── Domain Event Handler registrations (for DomainEventDispatcher) ──
         // These allow the dispatcher to resolve IDomainEventHandler<MatchCreated> from DI.

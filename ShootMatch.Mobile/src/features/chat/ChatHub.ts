@@ -54,4 +54,78 @@ export function onReceiveMessage(
   return () => connection?.off('ReceiveMessage', handler);
 }
 
+// ── Calling Methods ───────────────────────────────────────────────────────────
+export async function startCall(conversationId: string, callType: string, sessionToken?: string) {
+  const conn = await connect();
+  await conn.invoke('StartCall', conversationId, callType, sessionToken || null);
+}
+
+export async function acceptCall(callSessionId: string, sessionToken?: string) {
+  const conn = await connect();
+  await conn.invoke('AcceptCall', callSessionId, sessionToken || null);
+}
+
+export async function rejectCall(callSessionId: string, reason?: string) {
+  const conn = await connect();
+  await conn.invoke('RejectCall', callSessionId, reason || 'rejected');
+}
+
+export async function endCall(callSessionId: string, reason?: string) {
+  const conn = await connect();
+  await conn.invoke('EndCall', callSessionId, reason || 'ended');
+}
+
+export async function cancelCall(callSessionId: string, reason?: string) {
+  const conn = await connect();
+  await conn.invoke('CancelCall', callSessionId, reason || 'cancelled');
+}
+
+export async function sendCallSignal(callSessionId: string, signalType: string, payloadJson: string) {
+  const conn = await connect();
+  await conn.invoke('SendCallSignal', callSessionId, signalType, payloadJson);
+}
+
+export async function joinCallRoom(callSessionId: string) {
+  const conn = await connect();
+  await conn.invoke('JoinCallRoom', callSessionId);
+}
+
+// ── Calling Event Listeners ───────────────────────────────────────────────────
+export function onReceiveCallEvent(
+  handler: (evt: {
+    id: string;
+    conversationId: string;
+    callType: string;
+    status: string;
+    initiatorId: string;
+    initiatorRole: string;
+    startedAt: string;
+    answeredAt?: string;
+    endedAt?: string;
+    endReason?: string;
+    sessionToken?: string;
+    event: 'ring' | 'accept' | 'reject' | 'hangup' | 'cancel' | string;
+  }) => void
+) {
+  connection?.on('ReceiveCallEvent', handler);
+  return () => connection?.off('ReceiveCallEvent', handler);
+}
+
+export function onReceiveCallSignal(
+  handler: (sig: {
+    id: string;
+    callSessionId: string;
+    conversationId: string;
+    senderId: string;
+    senderRole: string;
+    signalType: string;
+    payloadJson: string;
+    sentAt: string;
+  }) => void
+) {
+  connection?.on('ReceiveCallSignal', handler);
+  return () => connection?.off('ReceiveCallSignal', handler);
+}
+
 export function getConnection() { return connection; }
+

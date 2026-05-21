@@ -154,6 +154,12 @@ builder.Services
 // ──────────────────────────────────────────
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ShootMatch.Infrastructure.Persistence.ShootMatchDbContext>();
+    await db.Database.EnsureCreatedAsync();
+}
+
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
@@ -167,6 +173,14 @@ app.UseSwaggerUI(options =>
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
+}
+else
+{
+    var urls = app.Urls.ToArray();
+    if (urls.Any(u => u.Contains(":5062")))
+    {
+        app.Logger.LogWarning("Port 5062 is already in use by another process. Use `dotnet run --launch-profile http` or `ASPNETCORE_URLS=http://localhost:5072` to start on a different port.");
+    }
 }
 
 // Serve default wwwroot static files

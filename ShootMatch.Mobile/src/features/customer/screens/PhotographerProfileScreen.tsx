@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { getPhotographer, Photographer } from '../api';
+import { getPhotographer, Photographer, getMyConversations, getMyMatches, recordSwipe } from '../api';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { addFavorite, removeFavorite, isFavorite } from '../utils/favorites';
 import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
@@ -57,6 +57,9 @@ export default function PhotographerProfileScreen() {
   const [p, setP] = useState<Photographer | null>(null);
   const [loading, setLoading] = useState(true);
   const [fav, setFav] = useState(false);
+  const [matchId, setMatchId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [chatLoading, setChatLoading] = useState(false);
 
   // State for Lightbox
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
@@ -64,11 +67,25 @@ export default function PhotographerProfileScreen() {
   useEffect(() => {
     Promise.all([
       getPhotographer(photographerId),
-      isFavorite(photographerId)
+      isFavorite(photographerId),
+      getMyMatches().catch(() => []),
+      getMyConversations().catch(() => []),
     ])
-      .then(([data, favoriteStatus]) => {
+      .then(([data, favoriteStatus, matches, convs]) => {
         setP(data);
         setFav(favoriteStatus);
+
+        // Find existing match
+        const existingMatch = matches.find((m: any) => m.photographerId === photographerId);
+        if (existingMatch) {
+          setMatchId(existingMatch.id);
+        }
+
+        // Find existing conversation
+        const existingConv = convs.find((c: any) => c.photographerId === photographerId);
+        if (existingConv) {
+          setConversationId(existingConv.id);
+        }
       })
       .catch(() => Alert.alert('Lỗi', 'Không tải được hồ sơ'))
       .finally(() => setLoading(false));
@@ -83,6 +100,102 @@ export default function PhotographerProfileScreen() {
     } else {
       await removeFavorite(p.id);
     }
+  };
+
+  const handleChatPress = async () => {
+    if (!p) return;
+    setChatLoading(true);
+    try {
+      let currentConvId = conversationId;
+      
+      // If we don't have conversationId yet, try to fetch/create one
+      if (!currentConvId) {
+        // Fetch fresh matches and conversations first, in case they matched in the background
+        const [matches, convs] = await Promise.all([
+          getMyMatches().catch(() => []),
+          getMyConversations().catch(() => [])
+        ]);
+        
+        const existingMatch = matches.find((m: any) => m.photographerId === photographerId);
+        const existingConv = convs.find((c: any) => c.photographerId === photographerId);
+        
+        if (existingConv) {
+          currentConvId = existingConv.id;
+          setConversationId(existingConv.id);
+          if (existingMatch) setMatchId(existingMatch.id);
+        } else {
+          // No match/conv exists. Let's auto-create it via swipe!
+          // We record swipe Right to simulate mutual match and auto-create the conversation.
+          await recordSwipe('00000000-0000-0000-0000-000000000000', p.id, 'Right');
+          
+          // Re-fetch conversations to get the newly created conversation ID
+          const [updatedMatches, updatedConvs] = await Promise.all([
+            getMyMatches().catch(() => []),
+            getMyConversations().catch(() => [])
+          ]);
+          
+          const newMatch = updatedMatches.find((m: any) => m.photographerId === photographerId);
+          const newConv = updatedConvs.find((c: any) => c.photographerId === photographerId);
+          
+          if (newConv) {
+            currentConvId = newConv.id;
+            setConversationId(newConv.id);
+          }
+          if (newMatch) {
+            setMatchId(newMatch.id);
+          }
+        }
+      }
+      
+      if (currentConvId) {
+        navigation.navigate('Chat', { conversationId: currentConvId, name: p.displayName });
+      } else {
+        Alert.alert('Thông báo', 'Không thể khởi tạo cuộc trò chuyện. Vui lòng thử lại sau.');
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Lỗi', 'Có lỗi xảy ra khi bắt đầu cuộc trò chuyện.');
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleBookPress = async () => {
+    if (!p) return;
+    let currentMatchId = matchId;
+    
+    if (!currentMatchId) {
+      setChatLoading(true);
+      try {
+        // Fetch fresh matches in case they matched in the background
+        const matches = await getMyMatches().catch(() => []);
+        const existingMatch = matches.find((m: any) => m.photographerId === photographerId);
+        
+        if (existingMatch) {
+          currentMatchId = existingMatch.id;
+          setMatchId(existingMatch.id);
+        } else {
+          // Auto-create a match via swipe
+          await recordSwipe('00000000-0000-0000-0000-000000000000', p.id, 'Right');
+          
+          // Re-fetch matches to get the newly created match ID
+          const updatedMatches = await getMyMatches().catch(() => []);
+          const newMatch = updatedMatches.find((m: any) => m.photographerId === photographerId);
+          
+          if (newMatch) {
+            currentMatchId = newMatch.id;
+            setMatchId(newMatch.id);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setChatLoading(false);
+      }
+    }
+    
+    // Navigate so CheckoutScreen can proceed
+    navigation.navigate('Checkout', { photographer: p, matchId: currentMatchId || undefined });
   };
 
   if (loading) {
@@ -347,12 +460,17 @@ export default function PhotographerProfileScreen() {
 
       {/* ── STICKY CTA BAR ── */}
       <View style={[styles.ctaBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <Pressable style={styles.iconBtn}>
-          <Ionicons name="chatbubble-ellipses-outline" size={20} color={THEME.accent} />
+        <Pressable style={styles.iconBtn} onPress={handleChatPress} disabled={chatLoading}>
+          {chatLoading ? (
+            <ActivityIndicator size="small" color={THEME.accent} />
+          ) : (
+            <Ionicons name="chatbubble-ellipses-outline" size={20} color={THEME.accent} />
+          )}
         </Pressable>
         <Pressable
           style={styles.bookBtn}
-          onPress={() => navigation.navigate('Checkout', { photographer: p })}
+          onPress={handleBookPress}
+          disabled={chatLoading}
         >
           <Text style={styles.bookBtnText}>Đặt Lịch Ngay</Text>
         </Pressable>
