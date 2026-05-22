@@ -9,4 +9,5 @@ public interface ICustomerRepository
     Task<Customer?> GetByEmailAsync(string email, CancellationToken cancellationToken);
     Task<Customer?> GetByGoogleIdAsync(string googleId, CancellationToken cancellationToken);
     Task UpsertAsync(Customer customer, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Customer>> GetAllAsync(CancellationToken cancellationToken);
 }

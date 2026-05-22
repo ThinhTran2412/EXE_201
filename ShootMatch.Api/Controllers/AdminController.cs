@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ShootMatch.Api.Contracts;
 using ShootMatch.Application.Abstractions;
 using ShootMatch.Domain.Entities;
 using System.Security.Claims;
@@ -18,9 +19,108 @@ namespace ShootMatch.Api.Controllers;
 [Route("api/admin")]
 [Authorize(Roles = "admin")]
 public sealed class AdminController(
+    ICustomerRepository customerRepository,
+    IBookingRepository bookingRepository,
     IPhotographerRepository photographerRepository,
-    IVerificationRequestRepository verificationRequestRepository) : ControllerBase
+    IVerificationRequestRepository verificationRequestRepository,
+    IStorageService storageService) : ControllerBase
 {
+    [HttpGet("dashboard-stats")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDashboardStats(CancellationToken cancellationToken)
+    {
+        var customers = await customerRepository.GetAllAsync(cancellationToken);
+        var photographers = await photographerRepository.GetAllAsync(cancellationToken);
+        var bookings = await bookingRepository.GetAllAsync(cancellationToken);
+
+        return Ok(new {
+            TotalCustomers = customers.Count,
+            TotalPhotographers = photographers.Count,
+            TotalBookings = bookings.Count,
+            TotalRevenue = bookings.Where(b => b.Status.ToString() == "Completed").Sum(b => b.AgreedPrice) * 0.1m
+        });
+    }
+
+    [HttpGet("customers")]
+    [ProducesResponseType(typeof(IReadOnlyList<Customer>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListCustomers(CancellationToken cancellationToken)
+    {
+        var all = await customerRepository.GetAllAsync(cancellationToken);
+        return Ok(all);
+    }
+
+    [HttpPut("customers/{id:guid}")]
+    [ProducesResponseType(typeof(Customer), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateCustomer(Guid id, [FromBody] UpsertCustomerProfileRequest request, CancellationToken cancellationToken)
+    {
+        var existing = await customerRepository.GetByIdAsync(id, cancellationToken);
+        if (existing is null) return NotFound();
+
+        var updated = new Customer
+        {
+            Id = existing.Id,
+            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? existing.DisplayName : request.DisplayName.Trim(),
+            Phone = string.IsNullOrWhiteSpace(request.Phone) ? existing.Phone : request.Phone.Trim(),
+            Email = string.IsNullOrWhiteSpace(request.Email) ? existing.Email : request.Email.Trim(),
+            Region = string.IsNullOrWhiteSpace(request.Region) ? existing.Region : request.Region.Trim(),
+            AvatarUrl = string.IsNullOrWhiteSpace(request.AvatarUrl) ? existing.AvatarUrl : request.AvatarUrl,
+            CoverPhotoUrl = string.IsNullOrWhiteSpace(request.CoverPhotoUrl) ? existing.CoverPhotoUrl : request.CoverPhotoUrl,
+            HighlightPhoto1Url = string.IsNullOrWhiteSpace(request.HighlightPhoto1Url) ? existing.HighlightPhoto1Url : request.HighlightPhoto1Url,
+            HighlightPhoto2Url = string.IsNullOrWhiteSpace(request.HighlightPhoto2Url) ? existing.HighlightPhoto2Url : request.HighlightPhoto2Url,
+            HighlightPhoto3Url = string.IsNullOrWhiteSpace(request.HighlightPhoto3Url) ? existing.HighlightPhoto3Url : request.HighlightPhoto3Url,
+            RollPreviewPhotos = string.IsNullOrWhiteSpace(request.RollPreviewPhotos) ? existing.RollPreviewPhotos : request.RollPreviewPhotos,
+            PreferredStyles = string.IsNullOrWhiteSpace(request.PreferredStyles) ? existing.PreferredStyles : request.PreferredStyles,
+            IsVerified = existing.IsVerified,
+            PreferredBudgetMin = existing.PreferredBudgetMin,
+            PreferredBudgetMax = existing.PreferredBudgetMax,
+            IsActive = existing.IsActive,
+            PasswordHash = existing.PasswordHash,
+            GoogleId = existing.GoogleId,
+            CreatedAt = existing.CreatedAt,
+            LastSeenAt = existing.LastSeenAt,
+            DeletedAt = existing.DeletedAt
+        };
+
+        await customerRepository.UpsertAsync(updated, cancellationToken);
+        return Ok(updated);
+    }
+
+    [HttpPost("customers/{id:guid}/avatar/upload")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadCustomerAvatar(Guid id, [FromForm] UploadCustomerPhotoRequest request, CancellationToken cancellationToken)
+    {
+        return await UploadPhoto(id, request.File, "customers/avatar", cancellationToken);
+    }
+
+    [HttpPost("customers/{id:guid}/cover/upload")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadCustomerCover(Guid id, [FromForm] UploadCustomerPhotoRequest request, CancellationToken cancellationToken)
+    {
+        return await UploadPhoto(id, request.File, "customers/cover", cancellationToken);
+    }
+
+    [HttpPost("profile/avatar/upload")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadMyAvatar([FromForm] UploadCustomerPhotoRequest request, CancellationToken cancellationToken)
+    {
+        var adminId = GetAdminId();
+        if (adminId is null)
+        {
+            return Unauthorized(new { error = "Missing admin identity." });
+        }
+
+        return await UploadPhoto(adminId.Value, request.File, "admin/avatar", cancellationToken);
+    }
+
+    [HttpGet("bookings")]
+    [ProducesResponseType(typeof(IReadOnlyList<Booking>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListBookings(CancellationToken cancellationToken)
+    {
+        var all = await bookingRepository.GetAllAsync(cancellationToken);
+        return Ok(all);
+    }
+
     /// <summary>Lists all photographers (admin view — includes unverified).</summary>
     [HttpGet("photographers")]
     [ProducesResponseType(typeof(IReadOnlyList<Photographer>), StatusCodes.Status200OK)]
@@ -28,6 +128,65 @@ public sealed class AdminController(
     {
         var all = await photographerRepository.GetAllAsync(cancellationToken);
         return Ok(all);
+    }
+
+    [HttpPut("photographers/{id:guid}")]
+    [ProducesResponseType(typeof(Photographer), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdatePhotographer(Guid id, [FromBody] UpdatePhotographerProfileRequest request, CancellationToken cancellationToken)
+    {
+        var existing = await photographerRepository.GetByIdAsync(id, cancellationToken);
+        if (existing is null) return NotFound();
+
+        var updated = new Photographer
+        {
+            Id = existing.Id,
+            Phone = existing.Phone,
+            Email = existing.Email,
+            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? existing.DisplayName : request.DisplayName.Trim(),
+            Bio = string.IsNullOrWhiteSpace(request.Bio) ? existing.Bio : request.Bio.Trim(),
+            Quote = request.Quote is null ? existing.Quote : request.Quote.Trim(),
+            AvatarUrl = string.IsNullOrWhiteSpace(request.AvatarUrl) ? existing.AvatarUrl : request.AvatarUrl,
+            CoverPhotoUrl = string.IsNullOrWhiteSpace(request.CoverPhotoUrl) ? existing.CoverPhotoUrl : request.CoverPhotoUrl,
+            InstagramUrl = request.InstagramUrl is null ? existing.InstagramUrl : request.InstagramUrl.Trim(),
+            MinBudget = request.MinBudget ?? existing.MinBudget,
+            MaxBudget = request.MaxBudget ?? existing.MaxBudget,
+            Region = existing.Region,
+            Rating = existing.Rating,
+            IsPremium = existing.IsPremium,
+            IsAvailable = existing.IsAvailable,
+            AcceptsInstantBooking = request.AcceptsInstantBooking ?? existing.AcceptsInstantBooking,
+            VerificationStatus = existing.VerificationStatus,
+            PasswordHash = existing.PasswordHash,
+            GoogleId = existing.GoogleId,
+            CreatedAt = existing.CreatedAt,
+            UpdatedAt = DateTime.UtcNow,
+            DeletedAt = existing.DeletedAt,
+            NationalId = existing.NationalId,
+            PersonalAddress = existing.PersonalAddress,
+            VerificationDocumentFrontUrl = existing.VerificationDocumentFrontUrl,
+            VerificationDocumentBackUrl = existing.VerificationDocumentBackUrl,
+            VerificationPortraitUrl = existing.VerificationPortraitUrl,
+            PortfolioEmbeddings = existing.PortfolioEmbeddings,
+            PortfolioPhotos = existing.PortfolioPhotos
+        };
+
+        await photographerRepository.UpsertAsync(updated, cancellationToken);
+        return Ok(updated);
+    }
+
+    [HttpPost("photographers/{id:guid}/avatar/upload")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadPhotographerAvatar(Guid id, [FromForm] UploadPhotographerPhotoRequest request, CancellationToken cancellationToken)
+    {
+        return await UploadPhoto(id, request.File, "photographers/avatar", cancellationToken);
+    }
+
+    [HttpPost("photographers/{id:guid}/cover/upload")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadPhotographerCover(Guid id, [FromForm] UploadPhotographerPhotoRequest request, CancellationToken cancellationToken)
+    {
+        return await UploadPhoto(id, request.File, "photographers/cover", cancellationToken);
     }
 
     /// <summary>Lists all pending verification requests.</summary>
@@ -93,6 +252,32 @@ public sealed class AdminController(
 
         await photographerRepository.UpsertAsync(BuildUpdated(p, isPremium: false), cancellationToken);
         return NoContent();
+    }
+
+    private async Task<IActionResult> UploadPhoto(Guid ownerId, IFormFile file, string kind, CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { error = "No file provided." });
+
+        var contentType = file.ContentType?.ToLowerInvariant() ?? string.Empty;
+        if (contentType is not ("image/jpeg" or "image/png" or "image/webp" or "image/heic"))
+            return BadRequest(new { error = "Only JPEG, PNG, WebP or HEIC files are allowed." });
+
+        var ext = System.IO.Path.GetExtension(file.FileName);
+        if (string.IsNullOrWhiteSpace(ext)) ext = ".jpg";
+
+        var safeName = $"admin/{kind}/{ownerId}/{Guid.NewGuid():N}{ext.ToLowerInvariant()}";
+        var uploadContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "image/jpeg" : file.ContentType;
+
+        await using var stream = file.OpenReadStream();
+        var photoUrl = await storageService.UploadAsync(stream, safeName, uploadContentType, cancellationToken);
+        return Ok(new { photoUrl });
+    }
+
+    private Guid? GetAdminId()
+    {
+        var rawId = User.FindFirst("user_id")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(rawId, out var adminId) ? adminId : null;
     }
 
     private static Photographer BuildUpdated(

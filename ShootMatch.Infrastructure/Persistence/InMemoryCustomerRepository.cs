@@ -45,4 +45,9 @@ public sealed class InMemoryCustomerRepository : ICustomerRepository
         var c = _customersById.Values.FirstOrDefault(x => x.GoogleId == googleId);
         return Task.FromResult(c);
     }
+
+    public Task<IReadOnlyList<Customer>> GetAllAsync(CancellationToken cancellationToken)
+    {
+        return Task.FromResult<IReadOnlyList<Customer>>(_customersById.Values.ToList());
+    }
 }
