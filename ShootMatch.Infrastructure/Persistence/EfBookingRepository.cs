@@ -71,6 +71,12 @@ public sealed class EfBookingRepository(ShootMatchDbContext db) : IBookingReposi
         return records.Select(ToEntity).ToList();
     }
 
+    public async Task<IReadOnlyList<BookingAggregate>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        var records = await db.Bookings.AsNoTracking().ToListAsync(cancellationToken);
+        return records.Select(ToEntity).ToList();
+    }
+
     private static BookingAggregate ToEntity(BookingRecord r)
         => BookingAggregate.Reconstitute(
             r.Id, r.CustomerId, r.PhotographerId, r.MatchId, r.ServicePackageId,

@@ -76,6 +76,12 @@ public sealed class EfCustomerRepository(ShootMatchDbContext db) : ICustomerRepo
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Customer>> GetAllAsync(CancellationToken cancellationToken)
+    {
+        var records = await db.Customers.AsNoTracking().Where(x => x.DeletedAt == null).ToListAsync(cancellationToken);
+        return records.Select(ToEntity).ToList();
+    }
+
     // ── Mappers ──────────────────────────────────────────────────────────────
 
     private static Customer ToEntity(CustomerRecord r) => new()

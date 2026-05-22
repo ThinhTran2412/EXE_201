@@ -15,4 +15,6 @@ public interface IBookingRepository
 
     /// <summary>All bookings assigned to a photographer.</summary>
     Task<IReadOnlyList<BookingAggregate>> GetByPhotographerIdAsync(Guid photographerId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<BookingAggregate>> GetAllAsync(CancellationToken cancellationToken = default);
 }

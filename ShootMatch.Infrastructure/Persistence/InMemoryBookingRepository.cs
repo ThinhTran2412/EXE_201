@@ -44,4 +44,9 @@ public sealed class InMemoryBookingRepository : IBookingRepository
             .ToList();
         return Task.FromResult(result);
     }
+
+    public Task<IReadOnlyList<BookingAggregate>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlyList<BookingAggregate>>(_bookings.Values.ToList());
+    }
 }
