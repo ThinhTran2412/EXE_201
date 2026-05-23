@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { ArrowUpDown, CalendarCheck, Clock3, RefreshCw, Search, TrendingUp, Users } from "lucide-react";
 import { api } from "../../lib/api";
+import { downloadAdminReport } from "./adminExports.ts";
 import {
   compareDate,
   compareNumber,
@@ -68,6 +69,7 @@ export default function AdminBookings() {
   const [payload, setPayload] = useState<AdminBookingsPayload>({ bookings: [], customers: [], photographers: [] });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<"pdf" | "excel" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<(typeof statusFilters)[number]>("All");
@@ -137,6 +139,28 @@ export default function AdminBookings() {
       active = false;
     };
   }, []);
+
+  const exportBookingsReport = async (format: "pdf" | "excel") => {
+    try {
+      setError(null);
+      setExportingFormat(format);
+      const params = new URLSearchParams();
+      params.set("statusFilter", statusFilter);
+      params.set("dateRange", dateRangeFilter);
+      params.set("search", query);
+
+      const response = await api.get(`/admin/reports/bookings/${format}?${params.toString()}`, {
+        responseType: "blob",
+      });
+
+      downloadAdminReport(response, `admin-bookings-report.${format === "excel" ? "xlsx" : "pdf"}`);
+    } catch (exportError) {
+      console.error(exportError);
+      setError("Không xuất được báo cáo booking. Vui lòng thử lại.");
+    } finally {
+      setExportingFormat(null);
+    }
+  };
 
   const customerMap = useMemo(
     () => new Map(payload.customers.map((customer) => [customer.id, customer])),
@@ -270,14 +294,30 @@ export default function AdminBookings() {
             Booking & Giao dịch
           </h1>
         </div>
-        <button
-          onClick={() => void loadBookings({ showRefreshing: true })}
-          disabled={refreshing}
-          className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
-          Làm mới
-        </button>
+        <div className="flex flex-wrap gap-3 self-start">
+          <button
+            onClick={() => void exportBookingsReport("pdf")}
+            disabled={Boolean(exportingFormat) || refreshing}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Xuất PDF
+          </button>
+          <button
+            onClick={() => void exportBookingsReport("excel")}
+            disabled={Boolean(exportingFormat) || refreshing}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Xuất Excel
+          </button>
+          <button
+            onClick={() => void loadBookings({ showRefreshing: true })}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+            Làm mới
+          </button>
+        </div>
       </div>
 
       {error && (
