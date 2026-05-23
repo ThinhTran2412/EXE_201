@@ -7,6 +7,8 @@ using HotChocolate.Configuration;
 using HotChocolate.Execution.Configuration;
 using ShootMatch.Api.GraphQL;
 using ShootMatch.Api.Hubs;
+using ShootMatch.Api.Services;
+using ShootMatch.Application.Abstractions;
 using ShootMatch.Application;
 using ShootMatch.Infrastructure;
 using System.Text;
@@ -20,6 +22,7 @@ builder.Services.AddControllers();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IAdminReportExportService, AdminReportExportService>();
 
 // ──────────────────────────────────────────
 //  CORS — allow mobile (Expo Go) requests over LAN
