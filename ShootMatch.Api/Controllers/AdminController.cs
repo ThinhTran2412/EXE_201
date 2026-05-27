@@ -14,6 +14,7 @@ namespace ShootMatch.Api.Controllers;
 /// GET  /api/admin/verification-requests              — list pending verification requests
 /// POST /api/admin/photographers/{id}/verify          — approve verification (with audit trail)
 /// POST /api/admin/photographers/{id}/revoke-premium  — revoke premium flag
+/// GET  /api/admin/reports/{scope}/{format}           — export PDF / Excel admin reports
 /// </summary>
 [ApiController]
 [Route("api/admin")]
@@ -23,7 +24,8 @@ public sealed class AdminController(
     IBookingRepository bookingRepository,
     IPhotographerRepository photographerRepository,
     IVerificationRequestRepository verificationRequestRepository,
-    IStorageService storageService) : ControllerBase
+    IStorageService storageService,
+    IAdminReportExportService reportExportService) : ControllerBase
 {
     [HttpGet("dashboard-stats")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -119,6 +121,38 @@ public sealed class AdminController(
     {
         var all = await bookingRepository.GetAllAsync(cancellationToken);
         return Ok(all);
+    }
+
+    [HttpGet("reports/{scope}/{format}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ExportReport(
+        string scope,
+        string format,
+        [FromQuery] string? statusFilter,
+        [FromQuery] string? dateRange,
+        [FromQuery] string? search,
+        CancellationToken cancellationToken)
+    {
+        var reportFilter = new AdminBookingReportFilter(statusFilter, dateRange, search);
+
+        AdminReportFile? report = (scope.ToLowerInvariant(), format.ToLowerInvariant()) switch
+        {
+            ("dashboard", "pdf") => await reportExportService.BuildDashboardPdfAsync(cancellationToken),
+            ("dashboard", "excel") => await reportExportService.BuildDashboardExcelAsync(cancellationToken),
+            ("dashboard", "xlsx") => await reportExportService.BuildDashboardExcelAsync(cancellationToken),
+            ("bookings", "pdf") => await reportExportService.BuildBookingsPdfAsync(reportFilter, cancellationToken),
+            ("bookings", "excel") => await reportExportService.BuildBookingsExcelAsync(reportFilter, cancellationToken),
+            ("bookings", "xlsx") => await reportExportService.BuildBookingsExcelAsync(reportFilter, cancellationToken),
+            _ => null
+        };
+
+        if (report is null)
+        {
+            return BadRequest(new { error = "Unsupported report scope or format." });
+        }
+
+        return File(report.Content, report.ContentType, report.FileName);
     }
 
     /// <summary>Lists all photographers (admin view — includes unverified).</summary>

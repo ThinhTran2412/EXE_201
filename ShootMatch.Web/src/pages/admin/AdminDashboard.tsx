@@ -28,6 +28,7 @@ import {
   parseDashboardStats,
   buildWeeklyBookingSeries,
 } from "./adminData";
+import { downloadAdminReport } from "./adminExports.ts";
 import type {
   AdminBooking,
   AdminCustomer,
@@ -65,6 +66,7 @@ export default function AdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<"pdf" | "excel" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadDashboard = async () => {
@@ -135,6 +137,20 @@ export default function AdminDashboard() {
       active = false;
     };
   }, []);
+
+  const exportDashboardReport = async (format: "pdf" | "excel") => {
+    try {
+      setError(null);
+      setExportingFormat(format);
+      const response = await api.get(`/admin/reports/dashboard/${format}`, { responseType: "blob" });
+      downloadAdminReport(response, `admin-dashboard-report.${format === "excel" ? "xlsx" : "pdf"}`);
+    } catch (exportError) {
+      console.error(exportError);
+      setError("Không xuất được báo cáo dashboard. Vui lòng thử lại.");
+    } finally {
+      setExportingFormat(null);
+    }
+  };
 
   const stats = useMemo(() => {
     const revenueFromData = payload.bookings.reduce((sum, booking) => {
@@ -211,14 +227,30 @@ export default function AdminDashboard() {
             Tổng quan hệ thống
           </h1>
         </div>
-        <button
-          onClick={() => void loadDashboard()}
-          disabled={refreshing}
-          className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
-          Làm mới
-        </button>
+        <div className="flex flex-wrap gap-3 self-start">
+          <button
+            onClick={() => void exportDashboardReport("pdf")}
+            disabled={Boolean(exportingFormat) || refreshing}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Xuất PDF
+          </button>
+          <button
+            onClick={() => void exportDashboardReport("excel")}
+            disabled={Boolean(exportingFormat) || refreshing}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Xuất Excel
+          </button>
+          <button
+            onClick={() => void loadDashboard()}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+            Làm mới
+          </button>
+        </div>
       </div>
 
       {error && (
