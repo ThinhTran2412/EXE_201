@@ -37,7 +37,10 @@ public static class DependencyInjection
         services.AddScoped<IBookingRepository,               EfBookingRepository>();
         services.AddScoped<IReviewRepository,                EfReviewRepository>();
         services.AddScoped<IConversationRepository,          EfConversationRepository>();
+        services.AddScoped<INotificationRepository,          EfNotificationRepository>();
+        services.AddScoped<IChatImageService,                ChatImageService>();
         services.AddScoped<IConversationQueryService,        EfConversationQueryService>();
+        services.AddHostedService<HostedServices.ChatMediaDowngradeHostedService>();
         services.AddScoped<ICallSessionRepository,           EfCallSessionRepository>();
         services.AddScoped<IVerificationRequestRepository,   EfVerificationRequestRepository>();
 

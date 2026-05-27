@@ -65,6 +65,14 @@ export interface Conversation {
   status:         string;
   createdAt:      string;
   lastMessageAt?: string;
+  lastMessageContent?:       string;
+  lastMessageSenderName?:    string;
+  lastMessageSenderRole?:    string;
+  unreadCount?:              number;
+  customerDisplayName?:      string;
+  photographerDisplayName?:  string;
+  customerAvatarUrl?:        string;
+  photographerAvatarUrl?:    string;
 }
 
 export interface Review {
@@ -313,7 +321,8 @@ export async function submitReview(payload: {
 export async function getMyConversations(): Promise<Conversation[]> {
   const data = await gql<{ myConversations: Conversation[] }>(`
     query { myConversations {
-      id matchId customerId photographerId status createdAt lastMessageAt
+      id matchId customerId photographerId status createdAt lastMessageAt lastMessageContent lastMessageSenderName lastMessageSenderRole
+      customerDisplayName photographerDisplayName customerAvatarUrl photographerAvatarUrl
     }}
   `);
   return data.myConversations ?? [];

@@ -72,7 +72,7 @@ export default function BookingSuccessScreen() {
         />
         <ClayButton
           label="Nhắn tin ngay"
-          onPress={() => navigation.navigate('Chat')}
+          onPress={() => navigation.navigate('CustomerRoot', { screen: 'Chat' })}
           variant="secondary"
           size="lg"
         />

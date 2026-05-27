@@ -35,7 +35,13 @@ export type CustomerStackParamList = {
   EditProfile: undefined;
   CustomerFavorites: undefined;
   CustomerSharedMedia: undefined;
-  Chat: { conversationId: string; name: string };
+  ChatThread: {
+    conversationId: string;
+    name?: string;
+    participantName?: string;
+    participantAvatarUrl?: string;
+    customerLastSeenAt?: string;
+  };
   Call: {
     conversationId: string;
     callSessionId?: string;
@@ -60,5 +66,6 @@ export type PhotographerStackParamList = {
     name: string;
     avatarUrl?: string;
   };
+  Notifications: undefined;
 };
 

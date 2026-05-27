@@ -9,10 +9,12 @@ export default function HomeTopBar({
   onSearch,
   onNotifications,
   onProfile,
+  notificationUnread = 0,
 }: {
   onSearch: () => void;
   onNotifications: () => void;
   onProfile: () => void;
+  notificationUnread?: number;
 }) {
   return (
     <View style={styles.bar}>
@@ -23,7 +25,7 @@ export default function HomeTopBar({
         </Pressable>
         <Pressable style={styles.iconBtn} onPress={onNotifications}>
           <Ionicons name="notifications-outline" size={20} color={colors.dark} />
-          <View style={styles.dot} />
+          {notificationUnread > 0 && <View style={styles.dot} />}
         </Pressable>
         <Pressable style={styles.profileBtn} onPress={onProfile}>
           <Ionicons name="person" size={18} color={colors.background} />

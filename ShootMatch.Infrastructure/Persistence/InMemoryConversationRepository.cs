@@ -113,4 +113,13 @@ public sealed class InMemoryConversationRepository : IConversationRepository
         };
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyList<Message>> GetExpiredImageMessagesAsync(DateTime utcNow, int limit, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<Message>>([]);
+
+    public Task UpdateMessageMediaAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        _messages[message.Id] = message;
+        return Task.CompletedTask;
+    }
 }

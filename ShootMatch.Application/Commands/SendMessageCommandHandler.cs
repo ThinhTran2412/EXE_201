@@ -31,6 +31,7 @@ public sealed class SendMessageCommandHandler(IConversationRepository conversati
         if (!isParticipant)
             throw new DomainException("Sender is not a participant of this conversation.");
 
+        var isImage = string.Equals(command.ContentType, "Image", StringComparison.OrdinalIgnoreCase);
         var message = new Message
         {
             Id             = Guid.NewGuid(),
@@ -39,6 +40,8 @@ public sealed class SendMessageCommandHandler(IConversationRepository conversati
             SenderRole     = command.SenderRole,
             Content        = command.Content,
             ContentType    = command.ContentType,
+            MediaPreviewUrl = isImage ? command.MediaPreviewUrl : null,
+            MediaExpiresAt  = isImage ? (command.MediaExpiresAt ?? DateTime.UtcNow.AddDays(3)) : null,
             SentAt         = DateTime.UtcNow
         };
 

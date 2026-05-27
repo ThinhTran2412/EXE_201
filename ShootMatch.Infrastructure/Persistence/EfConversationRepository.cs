@@ -44,10 +44,59 @@ public sealed class EfConversationRepository(ShootMatchDbContext db) : IConversa
     }
 
     public async Task<IReadOnlyList<Conversation>> GetConversationsByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default)
-        => (await db.Conversations.AsNoTracking().Where(x => x.CustomerId == customerId).OrderByDescending(x => x.LastMessageAt ?? x.CreatedAt).ToListAsync(cancellationToken)).Select(ToEntity).ToList();
+    {
+        var rows = await (
+            from c in db.Conversations.AsNoTracking()
+            where c.CustomerId == customerId
+            join p in db.Photographers.AsNoTracking() on c.PhotographerId equals p.Id into photographers
+            from p in photographers.DefaultIfEmpty()
+            join lastMessage in db.Messages.AsNoTracking()
+                .OrderByDescending(m => m.SentAt)
+                on c.Id equals lastMessage.ConversationId into messages
+            from lastMessage in messages.Take(1).DefaultIfEmpty()
+            orderby (c.LastMessageAt ?? c.CreatedAt) descending
+            select new { Conversation = c, Photographer = p, LastMessage = lastMessage }
+        ).ToListAsync(cancellationToken);
+
+        return rows.Select(x => ToEntity(
+            x.Conversation,
+            lastMessageContent: GetPreviewText(x.LastMessage, x.LastMessage?.SenderRole == "customer" ? "Bạn" : x.Photographer?.DisplayName),
+            lastMessageSenderName: x.LastMessage?.SenderRole == "customer" ? "Bạn" : x.Photographer?.DisplayName,
+            lastMessageSenderRole: x.LastMessage?.SenderRole,
+            unreadCount: 0,
+            customerDisplayName: null,
+            photographerDisplayName: x.Photographer?.DisplayName,
+            customerAvatarUrl: null,
+            photographerAvatarUrl: x.Photographer?.AvatarUrl)).ToList();
+    }
 
     public async Task<IReadOnlyList<Conversation>> GetConversationsByPhotographerIdAsync(Guid photographerId, CancellationToken cancellationToken = default)
-        => (await db.Conversations.AsNoTracking().Where(x => x.PhotographerId == photographerId).OrderByDescending(x => x.LastMessageAt ?? x.CreatedAt).ToListAsync(cancellationToken)).Select(ToEntity).ToList();
+    {
+        var rows = await (
+            from c in db.Conversations.AsNoTracking()
+            where c.PhotographerId == photographerId
+            join cust in db.Customers.AsNoTracking() on c.CustomerId equals cust.Id into customers
+            from cust in customers.DefaultIfEmpty()
+            join lastMessage in db.Messages.AsNoTracking()
+                .OrderByDescending(m => m.SentAt)
+                on c.Id equals lastMessage.ConversationId into messages
+            from lastMessage in messages.Take(1).DefaultIfEmpty()
+            orderby (c.LastMessageAt ?? c.CreatedAt) descending
+            select new { Conversation = c, Customer = cust, LastMessage = lastMessage }
+        ).ToListAsync(cancellationToken);
+
+        return rows.Select(x => ToEntity(
+            x.Conversation,
+            lastMessageContent: GetPreviewText(x.LastMessage, x.LastMessage?.SenderRole == "photographer" ? "Bạn" : x.Customer?.DisplayName),
+            lastMessageSenderName: x.LastMessage?.SenderRole == "photographer" ? "Bạn" : x.Customer?.DisplayName,
+            lastMessageSenderRole: x.LastMessage?.SenderRole,
+            unreadCount: 0,
+            customerDisplayName: x.Customer?.DisplayName,
+            photographerDisplayName: null,
+            customerAvatarUrl: x.Customer?.AvatarUrl,
+            photographerAvatarUrl: null,
+            customerLastSeenAt: x.Customer?.LastSeenAt)).ToList();
+    }
 
     public async Task SaveMessageAsync(Message message, CancellationToken cancellationToken = default)
     {
@@ -59,6 +108,9 @@ public sealed class EfConversationRepository(ShootMatchDbContext db) : IConversa
             SenderRole = message.SenderRole,
             Content = message.Content,
             ContentType = message.ContentType,
+            MediaPreviewUrl = message.MediaPreviewUrl,
+            MediaExpiresAt = message.MediaExpiresAt,
+            MediaDowngraded = message.MediaDowngraded,
             SentAt = message.SentAt,
             ReadAt = message.ReadAt
         }, cancellationToken);
@@ -90,7 +142,24 @@ public sealed class EfConversationRepository(ShootMatchDbContext db) : IConversa
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    private static Conversation ToEntity(ConversationRecord r) => new()
+    private static string? GetPreviewText(MessageRecord? message, string? senderName)
+        => message is null
+            ? null
+            : message.ContentType == "Image"
+                ? $"{senderName ?? "Người đối diện"} đã gửi một ảnh"
+                : message.Content;
+
+    private static Conversation ToEntity(
+        ConversationRecord r,
+        string? lastMessageContent = null,
+        string? lastMessageSenderRole = null,
+        string? lastMessageSenderName = null,
+        int unreadCount = 0,
+        string? customerDisplayName = null,
+        string? photographerDisplayName = null,
+        string? customerAvatarUrl = null,
+        string? photographerAvatarUrl = null,
+        DateTime? customerLastSeenAt = null) => new()
     {
         Id = r.Id,
         MatchId = r.MatchId,
@@ -98,8 +167,41 @@ public sealed class EfConversationRepository(ShootMatchDbContext db) : IConversa
         PhotographerId = r.PhotographerId,
         Status = r.Status,
         CreatedAt = r.CreatedAt,
-        LastMessageAt = r.LastMessageAt
+        LastMessageAt = r.LastMessageAt,
+        LastMessageContent = lastMessageContent,
+        LastMessageSenderRole = lastMessageSenderRole,
+        LastMessageSenderName = lastMessageSenderName,
+        UnreadCount = unreadCount,
+        CustomerDisplayName = customerDisplayName,
+        PhotographerDisplayName = photographerDisplayName,
+        CustomerAvatarUrl = customerAvatarUrl,
+        PhotographerAvatarUrl = photographerAvatarUrl,
+        CustomerLastSeenAt = customerLastSeenAt,
     };
+
+    public async Task<IReadOnlyList<Message>> GetExpiredImageMessagesAsync(DateTime utcNow, int limit, CancellationToken cancellationToken = default)
+        => (await db.Messages
+            .Where(x => x.ContentType == "Image"
+                && !x.MediaDowngraded
+                && x.MediaExpiresAt != null
+                && x.MediaExpiresAt <= utcNow
+                && x.MediaPreviewUrl != null)
+            .OrderBy(x => x.MediaExpiresAt)
+            .Take(limit)
+            .ToListAsync(cancellationToken))
+            .Select(ToEntity)
+            .ToList();
+
+    public async Task UpdateMessageMediaAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        var row = await db.Messages.FirstOrDefaultAsync(x => x.Id == message.Id, cancellationToken);
+        if (row is null) return;
+        row.Content = message.Content;
+        row.MediaPreviewUrl = message.MediaPreviewUrl;
+        row.MediaExpiresAt = message.MediaExpiresAt;
+        row.MediaDowngraded = message.MediaDowngraded;
+        await db.SaveChangesAsync(cancellationToken);
+    }
 
     private static Message ToEntity(MessageRecord m) => new()
     {
@@ -109,6 +211,9 @@ public sealed class EfConversationRepository(ShootMatchDbContext db) : IConversa
         SenderRole = m.SenderRole,
         Content = m.Content,
         ContentType = m.ContentType,
+        MediaPreviewUrl = m.MediaPreviewUrl,
+        MediaExpiresAt = m.MediaExpiresAt,
+        MediaDowngraded = m.MediaDowngraded,
         SentAt = m.SentAt,
         ReadAt = m.ReadAt
     };

@@ -8,6 +8,9 @@ export interface Message {
   contentType: string;
   sentAt:      string;
   readAt?:     string;
+  displayContent?: string;
+  mediaPreviewUrl?: string;
+  mediaExpiresAt?: string;
 }
 
 export interface ConversationWithPhotographer {
@@ -17,6 +20,11 @@ export interface ConversationWithPhotographer {
   photographerId: string;
   status:         string;
   lastMessageAt?: string;
+  customerDisplayName?:     string;
+  photographerDisplayName?: string;
+  customerAvatarUrl?:       string;
+  photographerAvatarUrl?:   string;
+  customerLastSeenAt?:      string;
 }
 
 export async function getConversationMessages(conversationId: string): Promise<Message[]> {
@@ -24,6 +32,7 @@ export async function getConversationMessages(conversationId: string): Promise<M
     query GetMessages($id: UUID!) {
       conversationMessages(conversationId: $id) {
         id senderId senderRole content contentType sentAt readAt
+        displayContent mediaPreviewUrl mediaExpiresAt
       }
     }
   `, { id: conversationId });
@@ -34,6 +43,7 @@ export async function getConversationsByPhotographer(): Promise<ConversationWith
   const data = await gql<{ myConversationsAsPhotographer: ConversationWithPhotographer[] }>(`
     query { myConversationsAsPhotographer {
       id matchId customerId photographerId status lastMessageAt
+      customerDisplayName photographerDisplayName customerAvatarUrl photographerAvatarUrl customerLastSeenAt
     }}
   `);
   return data.myConversationsAsPhotographer ?? [];

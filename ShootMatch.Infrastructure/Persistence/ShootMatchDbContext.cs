@@ -29,6 +29,7 @@ public sealed class ShootMatchDbContext(
     // Conversation & Messaging
     public DbSet<ConversationRecord> Conversations => Set<ConversationRecord>();
     public DbSet<MessageRecord> Messages => Set<MessageRecord>();
+    public DbSet<AppNotificationRecord> AppNotifications => Set<AppNotificationRecord>();
     public DbSet<CallSessionRecord> CallSessions => Set<CallSessionRecord>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -260,8 +261,24 @@ public sealed class ShootMatchDbContext(
             entity.Property(x => x.SenderRole).HasMaxLength(20);
             entity.Property(x => x.ContentType).HasMaxLength(20);
             entity.Property(x => x.Content).HasMaxLength(4000);
+            entity.Property(x => x.MediaPreviewUrl).HasMaxLength(4000);
             entity.HasIndex(x => new { x.ConversationId, x.SentAt });
             entity.HasIndex(x => new { x.ConversationId, x.ReadAt });
+            entity.HasIndex(x => new { x.ContentType, x.MediaExpiresAt, x.MediaDowngraded });
+        });
+
+        modelBuilder.Entity<AppNotificationRecord>(entity =>
+        {
+            entity.ToTable("app_notifications");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.RecipientRole).HasMaxLength(20);
+            entity.Property(x => x.Category).HasMaxLength(30);
+            entity.Property(x => x.Title).HasMaxLength(200);
+            entity.Property(x => x.Body).HasMaxLength(2000);
+            entity.Property(x => x.PayloadJson).HasColumnType("jsonb");
+            entity.Property(x => x.ActionType).HasMaxLength(50);
+            entity.HasIndex(x => new { x.RecipientId, x.RecipientRole, x.CreatedAt });
+            entity.HasIndex(x => new { x.RecipientId, x.RecipientRole, x.ReadAt });
         });
 
         modelBuilder.Entity<CallSessionRecord>(entity =>

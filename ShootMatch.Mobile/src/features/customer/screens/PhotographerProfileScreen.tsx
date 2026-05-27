@@ -148,7 +148,12 @@ export default function PhotographerProfileScreen() {
       }
       
       if (currentConvId) {
-        navigation.navigate('Chat', { conversationId: currentConvId, name: p.displayName });
+        navigation.navigate('ChatThread', {
+          conversationId: currentConvId,
+          name: p.displayName,
+          participantName: p.displayName,
+          participantAvatarUrl: p.avatarUrl ? formatImageUrl(p.avatarUrl) : undefined,
+        });
       } else {
         Alert.alert('Thông báo', 'Không thể khởi tạo cuộc trò chuyện. Vui lòng thử lại sau.');
       }

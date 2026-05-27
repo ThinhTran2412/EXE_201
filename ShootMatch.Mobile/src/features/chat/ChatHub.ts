@@ -1,32 +1,110 @@
 import * as signalR from '@microsoft/signalr';
-import { tokenStorage } from '../../shared/storage/tokenStorage';
+import { AppState, type AppStateStatus } from 'react-native';
+import { ensureAccessToken, refreshAccessToken } from '../../shared/auth/tokenRefresh';
+import { SIGNALR_URL } from '../../shared/api/config';
 
-const HUB_URL = process.env.EXPO_PUBLIC_SIGNALR_URL ?? 'http://192.168.1.7:5000/hubs/chat';
+const HUB_URL = SIGNALR_URL;
+
+/** Client chờ server ping — mặc định 30s dễ timeout trên iOS khi idle */
+const SERVER_TIMEOUT_MS = 90_000;
+const KEEP_ALIVE_MS = 20_000;
 
 let connection: signalR.HubConnection | null = null;
+let appStateSub: { remove: () => void } | null = null;
 
-export async function connect(): Promise<signalR.HubConnection> {
-  if (connection?.state === signalR.HubConnectionState.Connected) return connection;
+function isUnauthorizedError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.includes('401') || msg.toLowerCase().includes('unauthorized');
+}
 
-  const token = await tokenStorage.getAccess();
+function isTimeoutDisconnect(err?: Error): boolean {
+  if (!err?.message) return false;
+  return err.message.includes('timeout') || err.message.includes('Server timeout');
+}
 
-  connection = new signalR.HubConnectionBuilder()
+function buildConnection(): signalR.HubConnection {
+  const conn = new signalR.HubConnectionBuilder()
     .withUrl(HUB_URL, {
-      // WebSocket doesn't support Authorization header — send via query string
-      accessTokenFactory: () => token ?? '',
-      transport: signalR.HttpTransportType.WebSockets,
+      accessTokenFactory: async () => (await ensureAccessToken()) ?? '',
+      transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling,
     })
-    .withAutomaticReconnect()
-    .configureLogging(signalR.LogLevel.Warning)
+    .withAutomaticReconnect([0, 2_000, 5_000, 10_000, 30_000])
+    .configureLogging(signalR.LogLevel.Error)
     .build();
 
-  await connection.start();
+  conn.serverTimeoutInMilliseconds = SERVER_TIMEOUT_MS;
+  conn.keepAliveIntervalInMilliseconds = KEEP_ALIVE_MS;
+
+  conn.onreconnecting(() => {
+    // Đang thử kết nối lại — không log ERROR
+  });
+
+  conn.onreconnected(() => {
+    // Kết nối lại thành công
+  });
+
+  conn.onclose((err) => {
+    if (err && !isTimeoutDisconnect(err)) {
+      console.warn('[ChatHub] disconnected:', err.message);
+    }
+  });
+
+  return conn;
+}
+
+function ensureAppStateListener() {
+  if (appStateSub) return;
+  appStateSub = AppState.addEventListener('change', (state: AppStateStatus) => {
+    if (state === 'active' && connection?.state === signalR.HubConnectionState.Disconnected) {
+      connect().catch(() => {});
+    }
+  });
+}
+
+export async function connect(): Promise<signalR.HubConnection> {
+  if (connection?.state === signalR.HubConnectionState.Connected) {
+    ensureAppStateListener();
+    return connection;
+  }
+
+  const token = await ensureAccessToken();
+  if (!token) {
+    throw new Error('Chưa đăng nhập — không thể kết nối chat realtime.');
+  }
+
+  if (!connection || connection.state === signalR.HubConnectionState.Disconnected) {
+    connection = buildConnection();
+  }
+
+  if (connection.state === signalR.HubConnectionState.Connecting
+    || connection.state === signalR.HubConnectionState.Reconnecting) {
+    return connection;
+  }
+
+  try {
+    await connection.start();
+    ensureAppStateListener();
+  } catch (err) {
+    if (!isUnauthorizedError(err)) throw err;
+
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) throw err;
+
+    connection = buildConnection();
+    await connection.start();
+    ensureAppStateListener();
+  }
+
   return connection;
 }
 
 export async function disconnect() {
   if (connection) {
-    await connection.stop();
+    try {
+      await connection.stop();
+    } catch {
+      // noop
+    }
     connection = null;
   }
 }
@@ -38,7 +116,11 @@ export async function joinConversation(conversationId: string) {
 
 export async function leaveConversation(conversationId: string) {
   if (connection?.state === signalR.HubConnectionState.Connected) {
-    await connection.invoke('LeaveConversation', conversationId);
+    try {
+      await connection.invoke('LeaveConversation', conversationId);
+    } catch {
+      // noop
+    }
   }
 }
 
@@ -47,11 +129,42 @@ export async function sendMessage(conversationId: string, content: string) {
   await conn.invoke('SendMessage', conversationId, content);
 }
 
-export function onReceiveMessage(
-  handler: (msg: { senderId: string; senderRole: string; content: string; sentAt: string }) => void
-) {
+export async function sendImageMessage(conversationId: string, imageUrl: string, previewUrl: string) {
+  const conn = await connect();
+  await conn.invoke('SendImageMessage', conversationId, imageUrl, previewUrl);
+}
+
+export interface ReceivedMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderRole: string;
+  content: string;
+  contentType: string;
+  sentAt: string;
+  mediaPreviewUrl?: string;
+  mediaExpiresAt?: string;
+}
+
+export function onReceiveMessage(handler: (msg: ReceivedMessage) => void) {
   connection?.on('ReceiveMessage', handler);
   return () => connection?.off('ReceiveMessage', handler);
+}
+
+export interface ReceivedNotification {
+  id: string;
+  category: string;
+  title: string;
+  body: string;
+  payloadJson?: string | null;
+  actionType?: string | null;
+  createdAt: string;
+  read?: boolean;
+}
+
+export function onReceiveNotification(handler: (n: ReceivedNotification) => void) {
+  connection?.on('ReceiveNotification', handler);
+  return () => connection?.off('ReceiveNotification', handler);
 }
 
 // ── Calling Methods ───────────────────────────────────────────────────────────
@@ -105,7 +218,7 @@ export function onReceiveCallEvent(
     endReason?: string;
     sessionToken?: string;
     event: 'ring' | 'accept' | 'reject' | 'hangup' | 'cancel' | string;
-  }) => void
+  }) => void,
 ) {
   connection?.on('ReceiveCallEvent', handler);
   return () => connection?.off('ReceiveCallEvent', handler);
@@ -121,11 +234,10 @@ export function onReceiveCallSignal(
     signalType: string;
     payloadJson: string;
     sentAt: string;
-  }) => void
+  }) => void,
 ) {
   connection?.on('ReceiveCallSignal', handler);
   return () => connection?.off('ReceiveCallSignal', handler);
 }
 
 export function getConnection() { return connection; }
-

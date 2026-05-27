@@ -1,7 +1,7 @@
 import axios from 'axios';
+import { refreshAccessToken } from '../auth/tokenRefresh';
 import { tokenStorage } from '../storage/tokenStorage';
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.31:5062';
+import { API_URL } from './config';
 
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -24,19 +24,9 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {
-        const refresh = await tokenStorage.getRefresh();
-        const role = await tokenStorage.getRole();
-        const endpoint = role === 'photographer'
-          ? '/api/photographer-auth/refresh'
-          : '/api/auth/refresh';
-        const { data } = await axios.post(`${API_URL}${endpoint}`, { refreshToken: refresh });
-        await tokenStorage.save(
-          data.accessToken,
-          data.refreshToken,
-          role ?? 'customer',
-          data.userId ?? ''
-        );
-        original.headers.Authorization = `Bearer ${data.accessToken}`;
+        const accessToken = await refreshAccessToken();
+        if (!accessToken) throw new Error('refresh failed');
+        original.headers.Authorization = `Bearer ${accessToken}`;
         return apiClient(original);
       } catch {
         await tokenStorage.clear();
@@ -46,4 +36,4 @@ apiClient.interceptors.response.use(
   }
 );
 
-export { API_URL };
+export { API_URL } from './config';

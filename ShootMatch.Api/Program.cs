@@ -36,9 +36,14 @@ builder.Services.AddCors(options =>
 // ──────────────────────────────────────────
 //  SignalR (real-time messaging)
 // ──────────────────────────────────────────
+builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, ShootMatch.Api.Hubs.ShootMatchUserIdProvider>();
 builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    // Mobile / WebSocket idle — tránh timeout khi không có tin nhắn
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(90);
+    options.HandshakeTimeout = TimeSpan.FromSeconds(30);
 });
 
 // ──────────────────────────────────────────
@@ -157,7 +162,8 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ShootMatch.Infrastructure.Persistence.ShootMatchDbContext>();
-    await db.Database.EnsureCreatedAsync();
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseBootstrap");
+    await ShootMatch.Infrastructure.Persistence.DatabaseBootstrap.ApplyAsync(db, logger);
 }
 
 app.UseSwagger();

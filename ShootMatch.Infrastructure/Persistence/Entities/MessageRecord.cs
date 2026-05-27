@@ -14,6 +14,10 @@ public sealed class MessageRecord
     /// <summary>Text | Image</summary>
     public string ContentType { get; set; } = "Text";
 
+    public string? MediaPreviewUrl { get; set; }
+    public DateTime? MediaExpiresAt { get; set; }
+    public bool MediaDowngraded { get; set; }
+
     public DateTime SentAt { get; set; }
     public DateTime? ReadAt { get; set; }
 

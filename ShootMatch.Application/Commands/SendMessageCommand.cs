@@ -11,4 +11,6 @@ public sealed record SendMessageCommand(
     string SenderRole,
     string Content,
     /// <summary>Text | Image</summary>
-    string ContentType = "Text");
+    string ContentType = "Text",
+    string? MediaPreviewUrl = null,
+    DateTime? MediaExpiresAt = null);

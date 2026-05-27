@@ -15,4 +15,6 @@ public interface IConversationRepository
     Task<int> MarkMessagesAsReadAsync(Guid conversationId, Guid readerId, DateTime readAt, CancellationToken cancellationToken = default);
     Task<int> GetUnreadCountAsync(Guid conversationId, Guid recipientId, CancellationToken cancellationToken = default);
     Task TouchLastMessageAtAsync(Guid conversationId, DateTime sentAt, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Message>> GetExpiredImageMessagesAsync(DateTime utcNow, int limit, CancellationToken cancellationToken = default);
+    Task UpdateMessageMediaAsync(Message message, CancellationToken cancellationToken = default);
 }

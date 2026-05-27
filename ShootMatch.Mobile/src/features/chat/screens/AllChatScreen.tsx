@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  FlatList, StyleSheet, Text, View, Pressable, ActivityIndicator, RefreshControl,
+  FlatList, StyleSheet, Text, View, Pressable, ActivityIndicator, RefreshControl, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -8,9 +8,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { getMyConversations } from '../../customer/api';
 import type { Conversation } from '../../customer/api';
+import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { colors } from '../../../app/theme/colors';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { radius, spacing } from '../../../app/theme/spacing';
+import { useAuth } from '../../auth/AuthContext';
 
 function formatTime(iso?: string) {
   if (!iso) return '';
@@ -23,8 +25,32 @@ function formatTime(iso?: string) {
   return d.toLocaleDateString('vi-VN');
 }
 
+function photographerLabel(c: Conversation) {
+  const name = c.photographerDisplayName?.trim();
+  if (name) return name;
+  return `Nhiếp ảnh gia #${(c.photographerId ?? '').slice(0, 6)}`;
+}
+
+function previewText(c: Conversation, sessionUserId?: string) {
+  if (!c.lastMessageContent?.trim()) {
+    return c.lastMessageAt ? 'Nhấn để xem tin nhắn gần nhất' : 'Bắt đầu trò chuyện';
+  }
+
+  const body = c.lastMessageContent.trim();
+  const senderIsMe = c.lastMessageSenderName?.trim() === 'Bạn'
+    || (!!sessionUserId && ((c.customerId === sessionUserId && c.lastMessageSenderRole === 'customer') || (c.photographerId === sessionUserId && c.lastMessageSenderRole === 'photographer')));
+
+  if (senderIsMe) {
+    return `Bạn: ${body}`;
+  }
+
+  const senderName = c.lastMessageSenderName?.trim() || 'Người đối diện';
+  return `${senderName}: ${body}`;
+}
+
 export default function AllChatScreen() {
   const navigation  = useNavigation<any>();
+  const { session } = useAuth();
   const [convs,      setConvs]      = useState<Conversation[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,22 +93,38 @@ export default function AllChatScreen() {
           <Animated.View entering={FadeInDown.duration(400).delay(index * 60)}>
             <Pressable
               style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-              onPress={() => navigation.getParent()?.navigate('Chat', { conversationId: c.id, name: 'Nhiếp ảnh gia', participantName: 'Nhiếp ảnh gia' })}
+              onPress={() => navigation.navigate('ChatThread', {
+                conversationId: c.id,
+                name: photographerLabel(c),
+                participantName: photographerLabel(c),
+                participantAvatarUrl: formatImageUrl(c.photographerAvatarUrl) || undefined,
+              })}
             >
               <View style={styles.avatar}>
-                <Ionicons name="person" size={24} color={colors.textMuted} />
+                {formatImageUrl(c.photographerAvatarUrl) ? (
+                  <Image source={{ uri: formatImageUrl(c.photographerAvatarUrl)! }} style={styles.avatarImage} />
+                ) : (
+                  <Ionicons name="person" size={24} color={colors.textMuted} />
+                )}
                 {c.status === 'Active' && <View style={styles.onlineDot} />}
               </View>
               <View style={styles.rowContent}>
                 <View style={styles.rowTop}>
-                  <Text style={styles.rowName} numberOfLines={1}>Nhiếp ảnh gia</Text>
+                  <Text style={styles.rowName} numberOfLines={1}>{photographerLabel(c)}</Text>
                   <Text style={styles.rowTime}>{formatTime(c.lastMessageAt)}</Text>
                 </View>
-                <Text style={styles.rowPreview} numberOfLines={1}>
-                  {c.lastMessageAt ? 'Nhấn để xem tin nhắn' : 'Bắt đầu trò chuyện'}
+                <Text style={styles.rowPreview} numberOfLines={2}>
+                  {previewText(c, session?.userId)}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+              <View style={styles.rightSlot}>
+                {(c.unreadCount ?? 0) > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadBadgeText}>{c.unreadCount}</Text>
+                  </View>
+                )}
+                {c.lastMessageAt ? null : <Ionicons name="chevron-forward" size={16} color={colors.textLight} />}
+              </View>
             </Pressable>
           </Animated.View>
         )}
@@ -100,7 +142,7 @@ export default function AllChatScreen() {
 
 const styles = StyleSheet.create({
   safe:   { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[6], paddingVertical: spacing[4], borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: spacing[4] },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing[3], paddingHorizontal: spacing[6], paddingVertical: spacing[4], borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: spacing[4] },
   title:  { fontSize: fontSizes.xl, fontWeight: fontWeights.bold, color: colors.dark, flex: 1 },
   badge:  { backgroundColor: colors.accent, fontSize: fontSizes.xs, fontWeight: fontWeights.bold, paddingHorizontal: spacing[2.5], paddingVertical: spacing[0.5], borderRadius: radius.full, overflow: 'hidden' },
   list:           { paddingTop: spacing[2] },
@@ -108,13 +150,17 @@ const styles = StyleSheet.create({
   sep:            { height: 1, marginHorizontal: spacing[6], backgroundColor: colors.border },
   row:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[6], paddingVertical: spacing[4], gap: spacing[3] },
   rowPressed: { backgroundColor: 'rgba(26,26,15,0.04)' },
-  avatar:    { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.clay, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  avatar:    { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.clay, alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' },
+  avatarImage: { width: '100%', height: '100%' },
   onlineDot: { position: 'absolute', bottom: 2, right: 2, width: 12, height: 12, borderRadius: 6, backgroundColor: colors.success, borderWidth: 2, borderColor: colors.background },
   rowContent:{ flex: 1, gap: spacing[1] },
-  rowTop:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  rowTop:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing[2] },
   rowName:   { fontSize: fontSizes.md, fontWeight: fontWeights.semibold, color: colors.dark, flex: 1 },
   rowTime:   { fontSize: fontSizes.xs, color: colors.textLight },
-  rowPreview: { fontSize: fontSizes.sm, color: colors.textMuted },
+  rowPreview: { fontSize: fontSizes.sm, color: colors.textMuted, lineHeight: 18 },
+  rightSlot: { alignItems: 'center', justifyContent: 'center', gap: spacing[2], minWidth: 28 },
+  unreadBadge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
+  unreadBadgeText: { color: colors.background, fontSize: 11, fontWeight: fontWeights.bold },
   empty:      { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing[3], padding: spacing[10] },
   emptyEmoji: { fontSize: 56 },
   emptyTitle: { fontSize: fontSizes.xl, fontWeight: fontWeights.bold, color: colors.dark },
