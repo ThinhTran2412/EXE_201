@@ -106,9 +106,22 @@ public sealed class ShootMatchDbContext(
             entity.ToTable("service_packages");
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Title).HasMaxLength(200);
-            entity.Property(x => x.Description).HasMaxLength(2000);
+            entity.Property(x => x.Subtitle).HasMaxLength(300);
+            entity.Property(x => x.Description).HasMaxLength(3000);
+            entity.Property(x => x.HeroTitle).HasMaxLength(200);
+            entity.Property(x => x.HeroSubtitle).HasMaxLength(300);
+            entity.Property(x => x.CallToAction).HasMaxLength(120);
             entity.Property(x => x.Price).HasColumnType("numeric(18,2)");
             entity.HasIndex(x => x.PhotographerId);
+            entity.HasMany(x => x.Media).WithOne(x => x.ServicePackage).HasForeignKey(x => x.ServicePackageId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ServicePackageMediaRecord>(entity =>
+        {
+            entity.ToTable("service_package_media");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ImageUrl).HasMaxLength(1024);
+            entity.HasIndex(x => new { x.ServicePackageId, x.SortOrder });
         });
 
         // ── Customer ────────────────────────────────────────────────────────

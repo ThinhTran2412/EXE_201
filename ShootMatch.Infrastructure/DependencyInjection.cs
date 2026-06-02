@@ -32,6 +32,8 @@ public static class DependencyInjection
         // ── Repositories (EF Core / PostgreSQL) ──────────────────────────────
         services.AddScoped<ICustomerRepository,              EfCustomerRepository>();
         services.AddScoped<IPhotographerRepository,          EfPhotographerRepository>();
+        services.AddScoped<IServicePackageRepository,        EfServicePackageRepository>();
+        services.AddScoped<IPhotographerAvailabilityRepository, EfPhotographerAvailabilityRepository>();
         services.AddScoped<IAuthSessionRepository,           EfAuthSessionRepository>();
         services.AddScoped<IMatchRepository,                 EfMatchRepository>();
         services.AddScoped<IBookingRepository,               EfBookingRepository>();

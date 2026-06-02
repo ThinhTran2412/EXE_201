@@ -2,6 +2,13 @@ import { apiClient } from '../../shared/api/client';
 import { gql } from '../../shared/api/graphql';
 import { tokenStorage } from '../../shared/storage/tokenStorage';
 
+export interface AvailabilitySlot {
+  specificDate: string;
+  startTime: string;
+  endTime: string;
+  slotType: 'Available' | 'Busy' | 'Blocked';
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface PhotographerCard {
   photographerId: string;
@@ -83,6 +90,30 @@ export interface Review {
   rating:              number;
   comment:             string;
   createdAt:           string;
+}
+
+export interface PhotographerAvailabilitySlot {
+  specificDate: string;
+  startTime: string;
+  endTime: string;
+  slotType: 'Available' | 'Busy' | 'Blocked';
+}
+
+function normalizeDateKey(value?: string | null) {
+  return value ? String(value).slice(0, 10) : '';
+}
+
+function normalizeTimeKey(value?: string | null) {
+  return value ? String(value).slice(0, 5) : '';
+}
+
+export function normalizeAvailabilitySlot(slot: PhotographerAvailabilitySlot): PhotographerAvailabilitySlot {
+  return {
+    ...slot,
+    specificDate: normalizeDateKey(slot.specificDate),
+    startTime: normalizeTimeKey(slot.startTime),
+    endTime: normalizeTimeKey(slot.endTime),
+  };
 }
 
 // ── Matching ──────────────────────────────────────────────────────────────────
@@ -267,6 +298,22 @@ export async function getPhotographer(id: string): Promise<Photographer | null> 
     }
   `, { id });
   return data.photographer;
+}
+
+export async function getPhotographerAvailability(
+  photographerId: string,
+  from?: string,
+  to?: string,
+): Promise<PhotographerAvailabilitySlot[]> {
+  try {
+    const { data } = await apiClient.get<PhotographerAvailabilitySlot[]>(
+      `/api/photographers/${photographerId}/availability`,
+      { params: { from, to } },
+    );
+    return (data ?? []).map(normalizeAvailabilitySlot);
+  } catch {
+    return [];
+  }
 }
 
 // ── Matches ───────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { refreshAccessToken } from '../auth/tokenRefresh';
+import { ensureAccessToken, refreshAccessToken } from '../auth/tokenRefresh';
 import { tokenStorage } from '../storage/tokenStorage';
 import { API_URL } from './config';
 
@@ -9,9 +9,9 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach JWT to every request
+// Attach a fresh JWT to every request
 apiClient.interceptors.request.use(async (config) => {
-  const token = await tokenStorage.getAccess();
+  const token = await ensureAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ScrollView, StyleSheet, Text, View, Image, Pressable,
   ActivityIndicator, Alert, Dimensions, Modal,
@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { getPhotographer, Photographer, getMyConversations, getMyMatches, recordSwipe } from '../api';
+import { getPhotographer, Photographer, getMyConversations, getMyMatches, recordSwipe, getPhotographerAvailability, type PhotographerAvailabilitySlot } from '../api';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { addFavorite, removeFavorite, isFavorite } from '../utils/favorites';
 import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
@@ -29,6 +29,44 @@ const THEME = {
 const REGIONS: Record<string, string> = {
   HN: 'Hà Nội', HCM: 'TP.HCM', DN: 'Đà Nẵng', HP: 'Hải Phòng', CT: 'Cần Thơ',
 };
+
+type TimeSlot = {
+  start: string;
+  end: string;
+};
+
+const TIME_SLOTS: TimeSlot[] = [
+  { start: '07:00', end: '07:30' },
+  { start: '07:30', end: '08:00' },
+  { start: '08:00', end: '08:30' },
+  { start: '08:30', end: '09:00' },
+  { start: '09:00', end: '09:30' },
+  { start: '09:30', end: '10:00' },
+  { start: '10:00', end: '10:30' },
+  { start: '10:30', end: '11:00' },
+  { start: '11:00', end: '11:30' },
+  { start: '11:30', end: '12:00' },
+  { start: '12:00', end: '12:30' },
+  { start: '12:30', end: '13:00' },
+  { start: '13:00', end: '13:30' },
+  { start: '13:30', end: '14:00' },
+  { start: '14:00', end: '14:30' },
+  { start: '14:30', end: '15:00' },
+  { start: '15:00', end: '15:30' },
+  { start: '15:30', end: '16:00' },
+  { start: '16:00', end: '16:30' },
+  { start: '16:30', end: '17:00' },
+  { start: '17:00', end: '17:30' },
+  { start: '17:30', end: '18:00' },
+  { start: '18:00', end: '18:30' },
+  { start: '18:30', end: '19:00' },
+  { start: '19:00', end: '19:30' },
+  { start: '19:30', end: '20:00' },
+  { start: '20:00', end: '20:30' },
+  { start: '20:30', end: '21:00' },
+  { start: '21:00', end: '21:30' },
+  { start: '21:30', end: '22:00' },
+];
 
 // ── Dummy Data ──
 const DUMMY_EQUIPMENT = [
@@ -60,35 +98,49 @@ export default function PhotographerProfileScreen() {
   const [matchId, setMatchId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
+  const [availabilitySlots, setAvailabilitySlots] = useState<PhotographerAvailabilitySlot[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [scheduleExpanded, setScheduleExpanded] = useState(false);
+  const [selectedScheduleDate, setSelectedScheduleDate] = useState(new Date());
+  const [selectedShift, setSelectedShift] = useState<'Sáng' | 'Trưa' | 'Chiều'>('Sáng');
 
   // State for Lightbox
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
     Promise.all([
       getPhotographer(photographerId),
       isFavorite(photographerId),
       getMyMatches().catch(() => []),
       getMyConversations().catch(() => []),
+      getPhotographerAvailability(photographerId).catch(() => []),
     ])
-      .then(([data, favoriteStatus, matches, convs]) => {
+      .then(([data, favoriteStatus, matches, convs, availability]) => {
+        if (!mounted) return;
         setP(data);
         setFav(favoriteStatus);
+        setAvailabilitySlots(availability);
 
-        // Find existing match
         const existingMatch = matches.find((m: any) => m.photographerId === photographerId);
-        if (existingMatch) {
-          setMatchId(existingMatch.id);
-        }
+        if (existingMatch) setMatchId(existingMatch.id);
 
-        // Find existing conversation
         const existingConv = convs.find((c: any) => c.photographerId === photographerId);
-        if (existingConv) {
-          setConversationId(existingConv.id);
-        }
+        if (existingConv) setConversationId(existingConv.id);
       })
-      .catch(() => Alert.alert('Lỗi', 'Không tải được hồ sơ'))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (!mounted) return;
+        Alert.alert('Lỗi', 'Không tải được hồ sơ');
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setLoading(false);
+        setScheduleLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, [photographerId]);
 
   const toggleFav = async () => {
@@ -203,30 +255,56 @@ export default function PhotographerProfileScreen() {
     navigation.navigate('Checkout', { photographer: p, matchId: currentMatchId || undefined });
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={THEME.accent} />
-      </View>
-    );
-  }
+  const normalizeAvailabilityDate = (value?: string | null) => {
+    if (!value) return '';
+    return value.slice(0, 10);
+  };
+
+  const normalizeAvailabilityTime = (value?: string | null) => {
+    if (!value) return '';
+    return value.length >= 5 ? value.slice(0, 5) : value;
+  };
+
+  const scheduleDays = (() => {
+    const base = new Date();
+    const dates = Array.from({ length: 7 }, (_, idx) => {
+      const date = new Date(base);
+      date.setDate(base.getDate() + idx);
+      return date;
+    });
+
+    return dates.map((date) => {
+      const key = date.toISOString().slice(0, 10);
+      const slots = availabilitySlots.filter((slot) => normalizeAvailabilityDate(slot.specificDate) === key);
+      const blockedStarts = new Set(slots.filter((slot) => slot.slotType === 'Blocked').map((slot) => normalizeAvailabilityTime(slot.startTime)));
+      const availableStarts = TIME_SLOTS.filter((slot) => !blockedStarts.has(slot.start)).map((slot) => slot.start);
+      const preview = availableStarts.slice(0, 3);
+      return {
+        key,
+        date,
+        preview,
+        totalAvailable: availableStarts.length,
+        blockedCount: blockedStarts.size,
+        isToday: key === new Date().toISOString().slice(0, 10),
+      };
+    });
+  })();
+
+  const selectedScheduleKey = selectedScheduleDate.toISOString().slice(0, 10);
+  const selectedDaySlots = availabilitySlots.filter((slot) => normalizeAvailabilityDate(slot.specificDate) === selectedScheduleKey);
+  const selectedDayBlockedStarts = new Set(selectedDaySlots.filter((slot) => slot.slotType === 'Blocked').map((slot) => normalizeAvailabilityTime(slot.startTime)));
+  const selectedDayAvailability = {
+    blockedStarts: selectedDayBlockedStarts,
+    availableSlots: TIME_SLOTS.filter((slot) => !selectedDayBlockedStarts.has(slot.start)),
+    slots: selectedDaySlots,
+  };
+
+  const photos = p?.portfolioPhotos?.length ? p.portfolioPhotos : (p?.avatarUrl ? [p.avatarUrl] : []);
+  const displayPhotos = photos.slice(0, 9);
+  const heroUri = p?.coverPhotoUrl || photos[0] || p?.avatarUrl || '';
+  const specialties = ['Portrait', 'Fashion', 'Editorial']; // Dummy
 
   if (!p) return null;
-
-  const photos = p.portfolioPhotos?.length ? p.portfolioPhotos : (p.avatarUrl ? [p.avatarUrl] : []);
-  const displayPhotos = photos.slice(0, 9);
-  const heroUri = p.coverPhotoUrl || photos[0] || p.avatarUrl || '';
-  const specialties = ['Portrait', 'Fashion', 'Editorial']; // Dummy
-  const scheduleSlots = [
-    { day: 'T3', time: '09:00', state: 'normal' },
-    { day: 'T3', time: '14:00', state: 'selected' },
-    { day: 'T4', time: '10:00', state: 'unavailable' },
-    { day: 'T4', time: '15:00', state: 'normal' },
-    { day: 'T5', time: '09:00', state: 'normal' },
-    { day: 'T5', time: '13:00', state: 'unavailable' },
-    { day: 'T6', time: '10:00', state: 'normal' },
-    { day: 'T7', time: '08:00', state: 'normal' },
-  ];
 
   return (
     <View style={styles.safe}>
@@ -413,22 +491,106 @@ export default function PhotographerProfileScreen() {
 
         {/* ── SCHEDULE ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Lịch Trống Tuần Này</Text>
-          <View style={styles.scheduleGrid}>
-            {scheduleSlots.map((s, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.timeSlot,
-                  s.state === 'selected' && styles.timeSlotSelected,
-                  s.state === 'unavailable' && styles.timeSlotUnavailable
-                ]}
-              >
-                <Text style={[styles.slotDay, s.state === 'selected' && { color: THEME.primary }]}>{s.day}</Text>
-                <Text style={[styles.slotTime, s.state === 'selected' && { color: THEME.primary }]}>{s.time}</Text>
-              </View>
-            ))}
+          <View style={styles.scheduleHeader}>
+            <Text style={styles.sectionTitle}>Lịch Trống Tuần Này</Text>
+            <Pressable style={styles.scheduleToggle} onPress={() => setScheduleExpanded((prev) => !prev)}>
+              <Text style={styles.scheduleToggleText}>{scheduleExpanded ? 'Thu gọn' : 'Xem chi tiết'}</Text>
+            </Pressable>
           </View>
+
+          <View style={styles.dayPager}>
+            <Pressable
+              style={[styles.dayPagerBtn, scheduleDays[0]?.key === selectedScheduleKey && styles.dayPagerBtnDisabled]}
+              onPress={() => {
+                const next = new Date(selectedScheduleDate);
+                next.setDate(next.getDate() - 1);
+                setSelectedScheduleDate(next);
+              }}
+              disabled={scheduleDays[0]?.key === selectedScheduleKey}
+            >
+              <Ionicons name="chevron-back" size={16} color={THEME.accent} />
+            </Pressable>
+            <Text style={styles.dayPagerLabel}>
+              {selectedScheduleDate.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+            </Text>
+            <Pressable
+              style={styles.dayPagerBtn}
+              onPress={() => {
+                const next = new Date(selectedScheduleDate);
+                next.setDate(next.getDate() + 1);
+                setSelectedScheduleDate(next);
+              }}
+            >
+              <Ionicons name="chevron-forward" size={16} color={THEME.accent} />
+            </Pressable>
+          </View>
+
+          <View style={styles.shiftTabsRow}>
+            {['Sáng', 'Trưa', 'Chiều'].map((label) => {
+              const active = selectedShift === label;
+              return (
+                <Pressable key={label} style={styles.shiftTab} onPress={() => setSelectedShift(label as 'Sáng' | 'Trưa' | 'Chiều')}>
+                  <Text style={[styles.shiftTabText, active && styles.shiftTabTextActive]} numberOfLines={1}>{label}</Text>
+                  <View style={[styles.shiftTabLine, active && styles.shiftTabLineActive]} />
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {scheduleLoading ? (
+            <View style={styles.scheduleLoading}>
+              <ActivityIndicator size="small" color={THEME.accent} />
+              <Text style={styles.scheduleLoadingText}>Đang tải lịch thực tế...</Text>
+            </View>
+          ) : (
+            <>
+              {(() => {
+                const shiftRanges = {
+                  Sáng: ['07:00', '12:00'],
+                  Trưa: ['12:00', '17:00'],
+                  Chiều: ['17:00', '22:00'],
+                } as const;
+                const [startRange, endRange] = shiftRanges[selectedShift];
+                const shiftSlots = TIME_SLOTS.filter((slot) => slot.start >= startRange && slot.start < endRange);
+                const shiftSlotStates = shiftSlots.map((slot) => ({
+                  ...slot,
+                  isBusy: selectedDayAvailability.slots.some((blocked) => blocked.startTime.slice(0, 5) === slot.start && blocked.slotType === 'Blocked'),
+                }));
+                const slotsToShow = (scheduleExpanded ? shiftSlotStates : shiftSlotStates.slice(0, 10)).slice(0, 10);
+                const firstRow = slotsToShow.slice(0, 5);
+                const secondRow = slotsToShow.slice(5, 10);
+
+                return (
+                  <View style={styles.timeSlotRows}>
+                    {[firstRow, secondRow].map((row, rowIndex) => (
+                      <View key={`slot-row-${rowIndex}`} style={styles.timeSlotRow}>
+                        {row.map((slot) => (
+                          <View key={`${selectedScheduleKey}-${slot.start}`} style={[styles.timeSlotItem, slot.isBusy && styles.timeSlotItemBusy]}>
+                            <Text style={[styles.timeSlotItemTime, slot.isBusy && styles.timeSlotItemTimeBusy]}>{slot.start}</Text>
+                            <Text style={[styles.timeSlotItemRange, slot.isBusy && styles.timeSlotItemRangeBusy]}>{slot.end}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ))}
+                  </View>
+                );
+              })()}
+
+              <View style={styles.scheduleSummaryCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.scheduleSummaryTitle}>
+                    {selectedScheduleDate.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  </Text>
+                  <Text style={styles.scheduleSummaryText}>
+                    {selectedDayAvailability.availableSlots.length} khung giờ trống · {selectedDayAvailability.blockedStarts.size} khung giờ bận
+                  </Text>
+                </View>
+                <Pressable style={styles.scheduleDetailsBtn} onPress={() => setScheduleExpanded((prev) => !prev)}>
+                  <Text style={styles.scheduleDetailsBtnText}>{scheduleExpanded ? 'Thu gọn' : 'Xem chi tiết'}</Text>
+                </Pressable>
+              </View>
+            </>
+          )}
         </View>
 
         {/* ── REVIEWS ── */}
@@ -530,12 +692,34 @@ const styles = StyleSheet.create({
   equipItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, backgroundColor: 'rgba(26,26,15,0.03)', borderWidth: 1, borderColor: 'rgba(26,26,15,0.06)' },
   serviceItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(26,26,15,0.08)' },
 
-  scheduleGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  timeSlot: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: 'rgba(26,26,15,0.04)', borderWidth: 1, borderColor: 'rgba(26,26,15,0.08)', alignItems: 'center', width: '23%' },
-  timeSlotSelected: { backgroundColor: THEME.accent, borderColor: THEME.accent },
-  timeSlotUnavailable: { opacity: 0.35 },
-  slotDay: { fontSize: 11, color: THEME.accent, marginBottom: 2 },
-  slotTime: { fontSize: 11, fontWeight: '700', color: THEME.accent },
+  scheduleHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 },
+  scheduleToggle: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(26,26,15,0.12)', backgroundColor: 'rgba(26,26,15,0.03)', flexShrink: 0, maxWidth: 120 },
+  scheduleToggleText: { fontSize: 12, fontWeight: '700', color: THEME.accent },
+  dayPager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, padding: 10, borderRadius: 14, backgroundColor: 'rgba(26,26,15,0.03)' },
+  shiftTabsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, gap: 8 },
+  shiftTab: { flex: 1, alignItems: 'center', paddingVertical: 4, minWidth: 0 },
+  shiftTabText: { fontSize: 12, fontWeight: '700', color: THEME.accent, opacity: 0.45, textAlign: 'center' },
+  shiftTabTextActive: { opacity: 1 },
+  shiftTabLine: { marginTop: 5, height: 2, width: 22, borderRadius: 99, backgroundColor: 'transparent' },
+  shiftTabLineActive: { backgroundColor: THEME.accent },
+  dayPagerBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(26,26,15,0.08)' },
+  dayPagerBtnDisabled: { opacity: 0.35 },
+  dayPagerLabel: { fontSize: 13, fontWeight: '700', color: THEME.accent, textTransform: 'capitalize' },
+  scheduleLoading: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
+  scheduleLoadingText: { fontSize: 12, color: THEME.accent, opacity: 0.6 },
+  timeSlotRows: { gap: 8 },
+  timeSlotRow: { flexDirection: 'row', gap: 8 },
+  timeSlotItem: { flex: 1, paddingVertical: 10, paddingHorizontal: 10, borderRadius: 12, backgroundColor: 'rgba(26,26,15,0.04)', borderWidth: 1, borderColor: 'rgba(26,26,15,0.08)' },
+  timeSlotItemBusy: { backgroundColor: 'rgba(148,163,184,0.16)', borderColor: 'rgba(148,163,184,0.45)' },
+  timeSlotItemTime: { fontSize: 13, fontWeight: '800', color: THEME.accent },
+  timeSlotItemTimeBusy: { color: '#64748b', textDecorationLine: 'line-through' },
+  timeSlotItemRange: { fontSize: 10, color: THEME.accent, opacity: 0.5, marginTop: 2 },
+  timeSlotItemRangeBusy: { opacity: 0.35 },
+  scheduleSummaryCard: { marginTop: 12, padding: 14, borderRadius: 16, backgroundColor: 'rgba(26,26,15,0.03)', borderWidth: 1, borderColor: 'rgba(26,26,15,0.06)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  scheduleSummaryTitle: { fontSize: 13, fontWeight: '800', color: THEME.accent, textTransform: 'capitalize' },
+  scheduleSummaryText: { fontSize: 11, color: THEME.accent, opacity: 0.55, marginTop: 4 },
+  scheduleDetailsBtn: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, backgroundColor: THEME.accent, flexShrink: 0 },
+  scheduleDetailsBtnText: { fontSize: 11, fontWeight: '800', color: THEME.primary },
 
   reviewCard: { backgroundColor: 'rgba(26,26,15,0.03)', borderWidth: 1, borderColor: 'rgba(26,26,15,0.06)', borderRadius: 16, padding: 16 },
   reviewAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(26,26,15,0.1)', alignItems: 'center', justifyContent: 'center' },

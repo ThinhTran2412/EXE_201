@@ -14,6 +14,8 @@ namespace ShootMatch.Api.Controllers;
 [Authorize(Roles = "photographer")]
 public sealed class PhotographersController(
     IPhotographerRepository photographerRepository,
+    IServicePackageRepository servicePackageRepository,
+    IPhotographerAvailabilityRepository availabilityRepository,
     IStorageService storageService) : ControllerBase
 {
     [HttpGet("me")]
@@ -24,6 +26,54 @@ public sealed class PhotographersController(
         var id = GetPhotographerIdOrThrow(User);
         var photographer = await photographerRepository.GetByIdAsync(id, cancellationToken);
         return photographer is null ? NotFound() : Ok(photographer);
+    }
+
+    [HttpGet("availability")]
+    [ProducesResponseType(typeof(IReadOnlyList<PhotographerAvailability>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMyAvailability([FromQuery] DateOnly? from, [FromQuery] DateOnly? to, CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var items = await availabilityRepository.GetByPhotographerIdAsync(id, from, to, cancellationToken);
+        return Ok(items);
+    }
+
+    [HttpGet("{id:guid}/availability")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(IReadOnlyList<PhotographerAvailability>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPhotographerAvailability(Guid id, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, CancellationToken cancellationToken)
+    {
+        var items = await availabilityRepository.GetByPhotographerIdAsync(id, from, to, cancellationToken);
+        return Ok(items);
+    }
+
+    [HttpPost("availability/block")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> BlockAvailability([FromBody] BlockPhotographerAvailabilityBatchRequest request, CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var blocks = request.Slots.Select(slot => new PhotographerAvailability
+        {
+            Id = Guid.NewGuid(),
+            PhotographerId = id,
+            SpecificDate = request.SpecificDate,
+            StartTime = slot.StartTime,
+            EndTime = slot.EndTime,
+            SlotType = "Blocked",
+            CreatedAt = DateTime.UtcNow,
+        }).ToList();
+
+        await availabilityRepository.UpsertBlocksAsync(id, blocks, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpDelete("availability/block")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> UnblockAvailability([FromBody] BlockPhotographerAvailabilityBatchRequest request, CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var startTimes = request.Slots.Select(x => x.StartTime).ToList();
+        await availabilityRepository.DeleteBlocksAsync(id, request.SpecificDate, startTimes, cancellationToken);
+        return NoContent();
     }
 
     [HttpPut("profile")]
@@ -130,52 +180,6 @@ public sealed class PhotographersController(
             GoogleId                      = existing.GoogleId,
             CreatedAt                     = existing.CreatedAt,
             UpdatedAt                     = DateTime.UtcNow,
-            PortfolioEmbeddings           = existing.PortfolioEmbeddings
-        };
-
-        await photographerRepository.UpsertAsync(updated, cancellationToken);
-        return Ok(updated);
-    }
-
-    [HttpPatch("availability")]
-    [ProducesResponseType(typeof(Photographer), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateAvailability(
-        [FromBody] SetAvailabilityRequest request,
-        CancellationToken cancellationToken)
-    {
-        var id = GetPhotographerIdOrThrow(User);
-        var existing = await photographerRepository.GetByIdAsync(id, cancellationToken);
-        if (existing is null) return NotFound();
-
-        var updated = new Photographer
-        {
-            Id                            = existing.Id,
-            Phone                         = existing.Phone,
-            Email                         = existing.Email,
-            DisplayName                   = existing.DisplayName,
-            Bio                           = existing.Bio,
-            Quote                         = existing.Quote,
-            NationalId                    = existing.NationalId,
-            Region                        = existing.Region,
-            PersonalAddress               = existing.PersonalAddress,
-            VerificationDocumentFrontUrl  = existing.VerificationDocumentFrontUrl,
-            VerificationDocumentBackUrl   = existing.VerificationDocumentBackUrl,
-            VerificationPortraitUrl       = existing.VerificationPortraitUrl,
-            AvatarUrl                     = existing.AvatarUrl,
-            CoverPhotoUrl                 = existing.CoverPhotoUrl,
-            InstagramUrl                  = existing.InstagramUrl,
-            MinBudget                     = existing.MinBudget,
-            MaxBudget                     = existing.MaxBudget,
-            AcceptsInstantBooking         = existing.AcceptsInstantBooking,
-            Rating                        = existing.Rating,
-            IsPremium                     = existing.IsPremium,
-            IsAvailable                   = request.IsAvailable,
-            VerificationStatus            = existing.VerificationStatus,
-            PasswordHash                  = existing.PasswordHash,
-            GoogleId                      = existing.GoogleId,
-            CreatedAt                     = existing.CreatedAt,
-            UpdatedAt                     = DateTime.UtcNow,
             DeletedAt                     = existing.DeletedAt,
             PortfolioEmbeddings           = existing.PortfolioEmbeddings,
             PortfolioPhotos               = existing.PortfolioPhotos
@@ -237,32 +241,128 @@ public sealed class PhotographersController(
         return Accepted();
     }
 
+    [HttpGet("service-packages")]
+    public async Task<IActionResult> GetServicePackages(CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var packages = await servicePackageRepository.GetByPhotographerIdAsync(id, cancellationToken);
+        return Ok(packages);
+    }
+
+    [HttpGet("service-packages/{packageId:guid}")]
+    public async Task<IActionResult> GetServicePackage(Guid packageId, CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var package = await servicePackageRepository.GetByIdAsync(id, packageId, cancellationToken);
+        return package is null ? NotFound() : Ok(package);
+    }
+
+    [HttpPost("service-packages")]
+    public async Task<IActionResult> CreateServicePackage([FromBody] ServicePackageRequest request, CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var package = await BuildServicePackageAsync(id, Guid.Empty, request, cancellationToken);
+        return Ok(package);
+    }
+
+    [HttpPut("service-packages/{packageId:guid}")]
+    public async Task<IActionResult> UpdateServicePackage(Guid packageId, [FromBody] UpdateServicePackageRequest request, CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var existing = await servicePackageRepository.GetByIdAsync(id, packageId, cancellationToken);
+        if (existing is null) return NotFound();
+
+        var package = await BuildServicePackageAsync(id, packageId, new ServicePackageRequest(
+            request.Title,
+            request.Subtitle,
+            request.Description,
+            request.HeroTitle,
+            request.HeroSubtitle,
+            request.CallToAction,
+            request.Price,
+            request.DurationHours,
+            request.IsActive,
+            request.Media), cancellationToken);
+        return Ok(package);
+    }
+
+    [HttpDelete("service-packages/{packageId:guid}")]
+    public async Task<IActionResult> DeleteServicePackage(Guid packageId, CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        await servicePackageRepository.DeleteAsync(id, packageId, cancellationToken);
+        return NoContent();
+    }
+
+    private async Task<ServicePackage> BuildServicePackageAsync(
+        Guid photographerId,
+        Guid packageId,
+        ServicePackageRequest request,
+        CancellationToken cancellationToken)
+    {
+        var title = request.Title.Trim();
+        var subtitle = request.Subtitle.Trim();
+        var description = request.Description.Trim();
+        var heroTitle = request.HeroTitle.Trim();
+        var heroSubtitle = request.HeroSubtitle.Trim();
+        var callToAction = request.CallToAction.Trim();
+
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(heroTitle) || string.IsNullOrWhiteSpace(callToAction))
+            throw new DomainException("Thiếu thông tin tiêu đề hoặc CTA cho gói dịch vụ.");
+
+        var media = request.Media
+            .OrderBy(x => x.SortOrder)
+            .Take(10)
+            .Select(x => new ServicePackageMedia
+            {
+                Id = Guid.NewGuid(),
+                ImageUrl = x.ImageUrl.Trim(),
+                SortOrder = x.SortOrder,
+            })
+            .ToList();
+
+        if (media.Count < 5)
+            throw new DomainException("Mỗi gói dịch vụ cần tối thiểu 5 ảnh.");
+
+        var package = new ServicePackage
+        {
+            Id = packageId == Guid.Empty ? Guid.NewGuid() : packageId,
+            PhotographerId = photographerId,
+            Title = title,
+            Subtitle = subtitle,
+            Description = description,
+            HeroTitle = heroTitle,
+            HeroSubtitle = heroSubtitle,
+            CallToAction = callToAction,
+            Price = request.Price,
+            DurationHours = request.DurationHours,
+            IsActive = request.IsActive,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            Media = media,
+        };
+
+        await servicePackageRepository.UpsertAsync(package, cancellationToken);
+        return package;
+    }
+
     private async Task<IActionResult> UploadProfilePhoto(IFormFile file, string kind, CancellationToken ct)
     {
-        if (file is null || file.Length == 0)
-            return BadRequest(new { error = "No file provided." });
-
-        var contentType = file.ContentType?.ToLowerInvariant() ?? string.Empty;
-        if (contentType is not ("image/jpeg" or "image/png" or "image/webp" or "image/heic"))
-            return BadRequest(new { error = "Only JPEG, PNG, WebP or HEIC files are allowed." });
-
-        var ext = System.IO.Path.GetExtension(file.FileName);
-        if (string.IsNullOrWhiteSpace(ext)) ext = ".jpg";
-
-        var photographerId = GetPhotographerIdOrThrow(User);
-        var safeName = $"{kind}/{photographerId}/{Guid.NewGuid():N}{ext.ToLowerInvariant()}";
-        var uploadContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "image/jpeg" : file.ContentType;
+        if (file.Length <= 0) return BadRequest("Empty file.");
+        var id = GetPhotographerIdOrThrow(User);
+        var existing = await photographerRepository.GetByIdAsync(id, ct);
+        if (existing is null) return NotFound();
 
         await using var stream = file.OpenReadStream();
-        var photoUrl = await storageService.UploadAsync(stream, safeName, uploadContentType, ct);
+        var objectName = $"photographers/{id}/{kind}-{Guid.NewGuid():N}{System.IO.Path.GetExtension(file.FileName)}";
+        var photoUrl = await storageService.UploadAsync(stream, objectName, file.ContentType ?? "application/octet-stream", ct);
         return Ok(new { photoUrl });
     }
 
     private static Guid GetPhotographerIdOrThrow(ClaimsPrincipal user)
     {
         var claim = user.FindFirst("photographer_id")?.Value;
-        if (!Guid.TryParse(claim, out var id))
-            throw new UnauthorizedAccessException("Missing photographer_id claim.");
+        if (!Guid.TryParse(claim, out var id)) throw new UnauthorizedAccessException("Missing photographer_id claim.");
         return id;
     }
 }

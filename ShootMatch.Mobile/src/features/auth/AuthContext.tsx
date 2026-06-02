@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/api/client';
 import { getUserIdFromAccessToken } from '../../shared/auth/currentUser';
+import { ensureAccessToken } from '../../shared/auth/tokenRefresh';
 import { tokenStorage } from '../../shared/storage/tokenStorage';
 import * as ChatHub from '../chat/ChatHub';
 
@@ -31,12 +32,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const access = await tokenStorage.getAccess();
-      const role   = await tokenStorage.getRole() as UserRole;
-      const stored = await tokenStorage.getUserId();
+      const role = (await tokenStorage.getRole()) as UserRole;
+      const storedUserId = await tokenStorage.getUserId();
+      const access = await ensureAccessToken();
+
       if (access && role) {
-        const userId = stored || getUserIdFromAccessToken(access, role);
-        if (!stored && userId) await tokenStorage.setUserId(userId);
+        const userId = storedUserId || getUserIdFromAccessToken(access, role) || '';
+        if (!storedUserId && userId) await tokenStorage.setUserId(userId);
         setSession({ accessToken: access, role, userId });
       }
     })().finally(() => setInitializing(false));
