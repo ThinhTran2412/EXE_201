@@ -142,6 +142,24 @@ export async function uploadPortfolioPhoto(uri: string, mimeType: string): Promi
   return data.photoUrl;
 }
 
+export async function uploadServicePackageMedia(uri: string, mimeType: string): Promise<string> {
+  const filename = uri.split('/').pop() ?? `package_${Date.now()}.jpg`;
+
+  const form = new FormData();
+  form.append('file', {
+    uri,
+    name: filename,
+    type: mimeType ?? 'image/jpeg',
+  } as any);
+
+  const { data } = await apiClient.post<{ photoUrl: string }>(
+    '/api/photographers/service-packages/media/upload',
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  return data.photoUrl;
+}
+
 /** Delete a portfolio photo by its Supabase public URL. */
 export async function deletePortfolioPhoto(photoUrl: string): Promise<void> {
   await apiClient.delete('/api/photographers/portfolio', { data: { photoUrl } });

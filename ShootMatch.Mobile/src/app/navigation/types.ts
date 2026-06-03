@@ -28,7 +28,8 @@ export type CustomerStackParamList = {
   CustomerRoot: undefined;
   PhotographerProfile: { id: string };
   PhotographerPortfolio: { photographerId: string; initialIndex?: number };
-  Checkout: { matchId: string; agreedPrice: number };
+  PhotographerServicePackages: { photographer: any; packages: any[] };
+  Checkout: { photographer: any; matchId?: string; packageId?: string; packages?: any[] };
   BookingSuccess: undefined;
   BookingDetail: { bookingId: string };
   Notifications: undefined;

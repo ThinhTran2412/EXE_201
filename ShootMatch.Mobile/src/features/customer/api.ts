@@ -2,6 +2,13 @@ import { apiClient } from '../../shared/api/client';
 import { gql } from '../../shared/api/graphql';
 import { tokenStorage } from '../../shared/storage/tokenStorage';
 
+export interface AvailabilitySlot {
+  specificDate: string;
+  startTime: string;
+  endTime: string;
+  slotType: 'Available' | 'Busy' | 'Blocked';
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface PhotographerCard {
   photographerId: string;
@@ -65,6 +72,14 @@ export interface Conversation {
   status:         string;
   createdAt:      string;
   lastMessageAt?: string;
+  lastMessageContent?:       string;
+  lastMessageSenderName?:    string;
+  lastMessageSenderRole?:    string;
+  unreadCount?:              number;
+  customerDisplayName?:      string;
+  photographerDisplayName?:  string;
+  customerAvatarUrl?:        string;
+  photographerAvatarUrl?:    string;
 }
 
 export interface Review {
@@ -75,6 +90,30 @@ export interface Review {
   rating:              number;
   comment:             string;
   createdAt:           string;
+}
+
+export interface PhotographerAvailabilitySlot {
+  specificDate: string;
+  startTime: string;
+  endTime: string;
+  slotType: 'Available' | 'Busy' | 'Blocked';
+}
+
+function normalizeDateKey(value?: string | null) {
+  return value ? String(value).slice(0, 10) : '';
+}
+
+function normalizeTimeKey(value?: string | null) {
+  return value ? String(value).slice(0, 5) : '';
+}
+
+export function normalizeAvailabilitySlot(slot: PhotographerAvailabilitySlot): PhotographerAvailabilitySlot {
+  return {
+    ...slot,
+    specificDate: normalizeDateKey(slot.specificDate),
+    startTime: normalizeTimeKey(slot.startTime),
+    endTime: normalizeTimeKey(slot.endTime),
+  };
 }
 
 // ── Matching ──────────────────────────────────────────────────────────────────
@@ -261,6 +300,31 @@ export async function getPhotographer(id: string): Promise<Photographer | null> 
   return data.photographer;
 }
 
+export async function getPhotographerAvailability(
+  photographerId: string,
+  from?: string,
+  to?: string,
+): Promise<PhotographerAvailabilitySlot[]> {
+  try {
+    const { data } = await apiClient.get<PhotographerAvailabilitySlot[]>(
+      `/api/photographers/${photographerId}/availability`,
+      { params: { from, to } },
+    );
+    return (data ?? []).map(normalizeAvailabilitySlot);
+  } catch {
+    return [];
+  }
+}
+
+export async function getPhotographerServicePackages(photographerId: string): Promise<any[]> {
+  try {
+    const { data } = await apiClient.get<any[]>(`/api/photographers/${photographerId}/service-packages`);
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
 // ── Matches ───────────────────────────────────────────────────────────────────
 export async function getMyMatches(): Promise<Match[]> {
   const data = await gql<{ myMatches: Match[] }>(`
@@ -313,7 +377,8 @@ export async function submitReview(payload: {
 export async function getMyConversations(): Promise<Conversation[]> {
   const data = await gql<{ myConversations: Conversation[] }>(`
     query { myConversations {
-      id matchId customerId photographerId status createdAt lastMessageAt
+      id matchId customerId photographerId status createdAt lastMessageAt lastMessageContent lastMessageSenderName lastMessageSenderRole
+      customerDisplayName photographerDisplayName customerAvatarUrl photographerAvatarUrl
     }}
   `);
   return data.myConversations ?? [];

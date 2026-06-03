@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  ScrollView, StyleSheet, Text, View, TextInput, Alert, Platform,
+  ScrollView, StyleSheet, Text, View, TextInput, Alert, Platform, Pressable, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -18,12 +18,16 @@ const COMMISSION_RATE = 0.1;
 export default function CheckoutScreen() {
   const navigation = useNavigation<any>();
   const route      = useRoute<any>();
-  const { photographer, matchId } = route.params as { photographer: Photographer; matchId?: string };
+  const { photographer, matchId, packageId, packages } = route.params as { photographer: Photographer; matchId?: string, packageId?: string, packages?: any[] };
 
-  const [price,     setPrice]     = useState(photographer.minBudget.toString());
+  const initialPackage = packages?.find(p => p.id === packageId);
+  const [selectedPackage, setSelectedPackage] = useState<any | null>(initialPackage || null);
+
+  const [price,     setPrice]     = useState(initialPackage ? initialPackage.price.toString() : photographer.minBudget.toString());
   const [date,      setDate]      = useState('');
-  const [note,      setNote]      = useState('');
+  const [note,      setNote]      = useState(initialPackage ? `Gói dịch vụ: ${initialPackage.title}` : '');
   const [loading,   setLoading]   = useState(false);
+  const [showPackages, setShowPackages] = useState(false);
 
   const numPrice   = parseFloat(price.replace(/[^0-9.]/g, '')) || 0;
   const commission = Math.round(numPrice * COMMISSION_RATE);
@@ -76,6 +80,18 @@ export default function CheckoutScreen() {
         {/* Form */}
         <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.form}>
           <Text style={styles.sectionTitle}>Chi tiết đặt lịch</Text>
+
+          {packages && packages.length > 0 && (
+            <View style={styles.field}>
+              <Text style={styles.label}>Gói dịch vụ (Tùy chọn)</Text>
+              <Pressable style={styles.packageSelect} onPress={() => setShowPackages(true)}>
+                <Text style={[styles.packageSelectText, !selectedPackage && { color: colors.textLight }]}>
+                  {selectedPackage ? selectedPackage.title : 'Chọn gói dịch vụ...'}
+                </Text>
+                <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+              </Pressable>
+            </View>
+          )}
 
           <View style={styles.field}>
             <Text style={styles.label}>Ngày & Giờ chụp</Text>
@@ -145,6 +161,53 @@ export default function CheckoutScreen() {
           size="lg"
         />
       </View>
+
+      {/* Package Selection Modal */}
+      {packages && packages.length > 0 && (
+        <Modal visible={showPackages} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Chọn gói dịch vụ</Text>
+                <Pressable onPress={() => setShowPackages(false)} style={styles.modalClose}>
+                  <Ionicons name="close" size={24} color={colors.dark} />
+                </Pressable>
+              </View>
+              <ScrollView>
+                {packages.map((pkg: any) => (
+                  <Pressable
+                    key={pkg.id}
+                    style={[styles.packageOption, selectedPackage?.id === pkg.id && styles.packageOptionSelected]}
+                    onPress={() => {
+                      setSelectedPackage(pkg);
+                      setPrice(pkg.price.toString());
+                      setNote(prev => prev.includes('Gói dịch vụ:') ? prev.replace(/Gói dịch vụ:.*(\n|$)/, `Gói dịch vụ: ${pkg.title}\n`) : `Gói dịch vụ: ${pkg.title}\n${prev}`);
+                      setShowPackages(false);
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.packageOptionTitle}>{pkg.title}</Text>
+                      <Text style={styles.packageOptionSub}>{pkg.durationHours} giờ · {pkg.subtitle}</Text>
+                    </View>
+                    <Text style={styles.packageOptionPrice}>{pkg.price.toLocaleString('vi-VN')}đ</Text>
+                  </Pressable>
+                ))}
+                <Pressable
+                  style={styles.packageOption}
+                  onPress={() => {
+                    setSelectedPackage(null);
+                    setPrice(photographer.minBudget.toString());
+                    setNote(prev => prev.replace(/Gói dịch vụ:.*(\n|$)/, ''));
+                    setShowPackages(false);
+                  }}
+                >
+                  <Text style={styles.packageOptionTitle}>Không chọn gói (Thỏa thuận riêng)</Text>
+                </Pressable>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -181,4 +244,17 @@ const styles = StyleSheet.create({
   totalValue:   { fontSize: fontSizes.md, fontWeight: fontWeights.extrabold, color: colors.accent },
 
   cta: { paddingHorizontal: spacing[6], paddingVertical: spacing[4], borderTopWidth: 1, borderTopColor: colors.border },
+
+  packageSelect: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: spacing[4], paddingVertical: spacing[3], borderWidth: 1, borderColor: colors.border },
+  packageSelectText: { fontSize: fontSizes.md, color: colors.dark, flex: 1 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: colors.background, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, maxHeight: '80%', paddingBottom: spacing[6] },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing[5], borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalTitle: { fontSize: fontSizes.lg, fontWeight: fontWeights.bold, color: colors.dark },
+  modalClose: { padding: spacing[1] },
+  packageOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing[5], borderBottomWidth: 1, borderBottomColor: colors.border },
+  packageOptionSelected: { backgroundColor: 'rgba(255, 66, 0, 0.05)' },
+  packageOptionTitle: { fontSize: fontSizes.md, fontWeight: fontWeights.semibold, color: colors.dark, marginBottom: 2 },
+  packageOptionSub: { fontSize: fontSizes.sm, color: colors.textMuted },
+  packageOptionPrice: { fontSize: fontSizes.md, fontWeight: fontWeights.bold, color: colors.accent },
 });
