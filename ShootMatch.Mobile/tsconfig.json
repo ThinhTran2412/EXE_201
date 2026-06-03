@@ -14,19 +14,8 @@
     }
   },
   "include": [
-    "App.tsx",
-    "index.ts",
-    "src/**/*.ts",
-    "src/**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules",
-    "ShootMatch.Web",
-    "dist",
-    "web-build",
-    "android",
-    "ios",
-    "picture",
-    "scripts"
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.d.ts"
   ]
 }

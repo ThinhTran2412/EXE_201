@@ -15,8 +15,7 @@ public sealed class ChatHub(
     InitiateCallCommandHandler initiateCallHandler,
     UpdateCallSessionCommandHandler updateCallSessionHandler,
     MarkConversationReadCommandHandler markReadHandler,
-    ICallSessionRepository callSessionRepository,
-    ShootMatch.Application.Services.NotificationService notificationService) : Hub
+    ICallSessionRepository callSessionRepository) : Hub
 {
     public async Task JoinConversation(Guid conversationId)
     {
@@ -37,8 +36,7 @@ public sealed class ChatHub(
 
     public async Task LeaveConversation(Guid conversationId) => await Groups.RemoveFromGroupAsync(Context.ConnectionId, ConversationGroupName(conversationId));
     public async Task SendMessage(Guid conversationId, string content) => await SendInternal(conversationId, content, "Text");
-    public async Task SendImageMessage(Guid conversationId, string imageUrl, string previewUrl)
-        => await SendInternal(conversationId, imageUrl, "Image", previewUrl);
+    public async Task SendImageMessage(Guid conversationId, string imageUrl) => await SendInternal(conversationId, imageUrl, "Image");
 
     public async Task MarkRead(Guid conversationId)
     {
@@ -98,52 +96,13 @@ public sealed class ChatHub(
         await Groups.AddToGroupAsync(Context.ConnectionId, CallGroupName(callSessionId));
     }
 
-    private async Task SendInternal(Guid conversationId, string content, string contentType, string? mediaPreviewUrl = null)
+    private async Task SendInternal(Guid conversationId, string content, string contentType)
     {
         var (senderId, senderRole) = GetCallerIdentity(Context.User);
         try
         {
-            var conversation = await conversationRepository.GetConversationByIdAsync(conversationId)
-                ?? throw new DomainException($"Conversation {conversationId} not found.");
-
-            var message = await messageHandler.HandleAsync(new SendMessageCommand(
-                conversationId, senderId, senderRole, content, contentType, mediaPreviewUrl));
-
-            await Clients.Group(ConversationGroupName(conversationId)).SendAsync("ReceiveMessage", new
-            {
-                message.Id,
-                message.ConversationId,
-                message.SenderId,
-                message.SenderRole,
-                content = message.DisplayContent,
-                message.ContentType,
-                message.SentAt,
-                message.MediaPreviewUrl,
-                message.MediaExpiresAt,
-            });
-
-            var senderName = senderRole == "customer"
-                ? (conversation.CustomerDisplayName ?? "Khách hàng")
-                : (conversation.PhotographerDisplayName ?? "Nhiếp ảnh gia");
-
-            var notification = await notificationService.NotifyNewMessageAsync(
-                conversation, message, senderName);
-
-            var recipientId = senderRole == "customer"
-                ? conversation.PhotographerId
-                : conversation.CustomerId;
-
-            await Clients.User(recipientId.ToString()).SendAsync("ReceiveNotification", new
-            {
-                notification.Id,
-                notification.Category,
-                notification.Title,
-                notification.Body,
-                notification.PayloadJson,
-                notification.ActionType,
-                notification.CreatedAt,
-                read = false,
-            });
+            var message = await messageHandler.HandleAsync(new SendMessageCommand(conversationId, senderId, senderRole, content, contentType));
+            await Clients.Group(ConversationGroupName(conversationId)).SendAsync("ReceiveMessage", new { message.Id, message.ConversationId, message.SenderId, message.SenderRole, message.Content, message.ContentType, message.SentAt });
         }
         catch (DomainException ex) { await Clients.Caller.SendAsync("Error", ex.Message); }
     }

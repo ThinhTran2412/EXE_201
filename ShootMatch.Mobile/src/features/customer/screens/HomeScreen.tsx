@@ -32,11 +32,9 @@ import PortfolioMasonry from '../components/PortfolioMasonry';
 import { colors } from '../../../app/theme/colors';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { spacing } from '../../../app/theme/spacing';
-import { useNotificationUnreadCount } from '../../../shared/notifications/NotificationContext';
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
-  const notificationUnread = useNotificationUnreadCount();
 
   const [featured, setFeatured] = useState<FeaturedDisplay[]>([]);
   const [moments, setMoments] = useState<MomentDisplay[]>([]);
@@ -93,7 +91,6 @@ export default function HomeScreen() {
         onSearch={() => goTab('Discover')}
         onNotifications={() => navigation.navigate('Notifications')}
         onProfile={() => goTab('Profile')}
-        notificationUnread={notificationUnread}
       />
 
       <ScrollView

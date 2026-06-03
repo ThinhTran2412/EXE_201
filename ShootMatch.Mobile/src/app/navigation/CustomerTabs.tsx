@@ -6,7 +6,6 @@ import { Platform, StyleSheet } from 'react-native';
 import { CustomerTabParamList, CustomerStackParamList } from './types';
 import { colors } from '../theme/colors';
 import { fontSizes } from '../theme/typography';
-import { useNotificationUnreadCount } from '../../shared/notifications/NotificationContext';
 
 // Tab screens
 import HomeScreen       from '../../features/customer/screens/HomeScreen';
@@ -42,8 +41,6 @@ const TAB_CONFIG: Record<keyof CustomerTabParamList, { label: string; icon: Icon
 };
 
 function CustomerTabNavigator() {
-  const unreadCount = useNotificationUnreadCount();
-
   return (
     <Tab.Navigator
       screenOptions={({ route }) => {
@@ -58,8 +55,6 @@ function CustomerTabNavigator() {
             <Ionicons name={focused ? cfg.iconActive : cfg.icon} size={size} color={color} />
           ),
           tabBarLabel: cfg.label,
-          tabBarBadge: route.name === 'Chat' && unreadCount > 0 ? unreadCount : undefined,
-          tabBarBadgeStyle: route.name === 'Chat' ? styles.tabBadge : undefined,
         };
       }}
     >
@@ -87,7 +82,7 @@ export default function CustomerTabs() {
       <Stack.Screen name="EditProfile"          component={EditProfileScreen} />
       <Stack.Screen name="CustomerFavorites"    component={CustomerFavoritesScreen} />
       <Stack.Screen name="CustomerSharedMedia"  component={CustomerSharedMediaScreen} />
-      <Stack.Screen name="ChatThread"           component={ChatScreen} />
+      <Stack.Screen name="Chat"                 component={ChatScreen} />
       <Stack.Screen name="Call"                 component={CallScreen} />
     </Stack.Navigator>
 
@@ -108,5 +103,4 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   label: { fontSize: fontSizes.xs, fontWeight: '600' },
-  tabBadge: { backgroundColor: colors.accent, color: colors.background, fontSize: 10, fontWeight: '700', minWidth: 18, height: 18 },
 });

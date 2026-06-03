@@ -1,5 +1,6 @@
-import { apiClient } from './client';
-import { refreshAccessToken } from '../auth/tokenRefresh';
+import axios from 'axios';
+import { apiClient, API_URL } from './client';
+import { tokenStorage } from '../storage/tokenStorage';
 
 function isGraphQlAuthError(errors: { message?: string; extensions?: { code?: string } }[]) {
   return errors.some(e =>
@@ -8,6 +9,25 @@ function isGraphQlAuthError(errors: { message?: string; extensions?: { code?: st
     || (e.message?.toLowerCase().includes('not authorized') ?? false)
     || (e.message?.toLowerCase().includes('not authenticated') ?? false),
   );
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refresh = await tokenStorage.getRefresh();
+  if (!refresh) return null;
+
+  const role = await tokenStorage.getRole();
+  const endpoint = role === 'photographer'
+    ? '/api/photographer-auth/refresh'
+    : '/api/auth/refresh';
+
+  const { data } = await axios.post(`${API_URL}${endpoint}`, { refreshToken: refresh });
+  await tokenStorage.save(
+    data.accessToken,
+    data.refreshToken,
+    role ?? 'customer',
+    (await tokenStorage.getUserId()) ?? '',
+  );
+  return data.accessToken as string;
 }
 
 export async function gql<T>(

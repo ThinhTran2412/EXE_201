@@ -12,6 +12,7 @@ public sealed class ShootMatchDbContext(
     public DbSet<PhotographerRecord> Photographers => Set<PhotographerRecord>();
     public DbSet<PortfolioEmbeddingRecord> PortfolioEmbeddings => Set<PortfolioEmbeddingRecord>();
     public DbSet<CustomerRecord> Customers => Set<CustomerRecord>();
+    public DbSet<StaffRecord> Staffs => Set<StaffRecord>();
     public DbSet<SearchSessionRecord> SearchSessions => Set<SearchSessionRecord>();
     public DbSet<AuthSessionRecord> AuthSessions => Set<AuthSessionRecord>();
     public DbSet<SwipeActionRecord> SwipeActions => Set<SwipeActionRecord>();
@@ -29,7 +30,6 @@ public sealed class ShootMatchDbContext(
     // Conversation & Messaging
     public DbSet<ConversationRecord> Conversations => Set<ConversationRecord>();
     public DbSet<MessageRecord> Messages => Set<MessageRecord>();
-    public DbSet<AppNotificationRecord> AppNotifications => Set<AppNotificationRecord>();
     public DbSet<CallSessionRecord> CallSessions => Set<CallSessionRecord>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -106,22 +106,9 @@ public sealed class ShootMatchDbContext(
             entity.ToTable("service_packages");
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Title).HasMaxLength(200);
-            entity.Property(x => x.Subtitle).HasMaxLength(300);
-            entity.Property(x => x.Description).HasMaxLength(3000);
-            entity.Property(x => x.HeroTitle).HasMaxLength(200);
-            entity.Property(x => x.HeroSubtitle).HasMaxLength(300);
-            entity.Property(x => x.CallToAction).HasMaxLength(120);
+            entity.Property(x => x.Description).HasMaxLength(2000);
             entity.Property(x => x.Price).HasColumnType("numeric(18,2)");
             entity.HasIndex(x => x.PhotographerId);
-            entity.HasMany(x => x.Media).WithOne(x => x.ServicePackage).HasForeignKey(x => x.ServicePackageId).OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<ServicePackageMediaRecord>(entity =>
-        {
-            entity.ToTable("service_package_media");
-            entity.HasKey(x => x.Id);
-            entity.Property(x => x.ImageUrl).HasMaxLength(1024);
-            entity.HasIndex(x => new { x.ServicePackageId, x.SortOrder });
         });
 
         // ── Customer ────────────────────────────────────────────────────────
@@ -143,6 +130,24 @@ public sealed class ShootMatchDbContext(
             entity.Property(x => x.PreferredBudgetMax).HasColumnType("numeric(18,2)");
             entity.Property(x => x.PasswordHash).HasMaxLength(100);
             entity.Property(x => x.GoogleId).HasMaxLength(128);
+            entity.HasIndex(x => x.Email);
+            entity.HasIndex(x => x.GoogleId);
+            entity.HasIndex(x => x.Phone);
+        });
+
+        // ── Staff ──────────────────────────────────────────────────────────
+        modelBuilder.Entity<StaffRecord>(entity =>
+        {
+            entity.ToTable("staffs");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.DisplayName).HasMaxLength(200);
+            entity.Property(x => x.Phone).HasMaxLength(25);
+            entity.Property(x => x.Email).HasMaxLength(200);
+            entity.Property(x => x.Role).HasMaxLength(20);
+            entity.Property(x => x.ApprovalStatus).HasMaxLength(20);
+            entity.Property(x => x.PasswordHash).HasMaxLength(100);
+            entity.Property(x => x.GoogleId).HasMaxLength(128);
+            entity.Property(x => x.ApprovedBy).HasMaxLength(200);
             entity.HasIndex(x => x.Email);
             entity.HasIndex(x => x.GoogleId);
             entity.HasIndex(x => x.Phone);
@@ -274,24 +279,8 @@ public sealed class ShootMatchDbContext(
             entity.Property(x => x.SenderRole).HasMaxLength(20);
             entity.Property(x => x.ContentType).HasMaxLength(20);
             entity.Property(x => x.Content).HasMaxLength(4000);
-            entity.Property(x => x.MediaPreviewUrl).HasMaxLength(4000);
             entity.HasIndex(x => new { x.ConversationId, x.SentAt });
             entity.HasIndex(x => new { x.ConversationId, x.ReadAt });
-            entity.HasIndex(x => new { x.ContentType, x.MediaExpiresAt, x.MediaDowngraded });
-        });
-
-        modelBuilder.Entity<AppNotificationRecord>(entity =>
-        {
-            entity.ToTable("app_notifications");
-            entity.HasKey(x => x.Id);
-            entity.Property(x => x.RecipientRole).HasMaxLength(20);
-            entity.Property(x => x.Category).HasMaxLength(30);
-            entity.Property(x => x.Title).HasMaxLength(200);
-            entity.Property(x => x.Body).HasMaxLength(2000);
-            entity.Property(x => x.PayloadJson).HasColumnType("jsonb");
-            entity.Property(x => x.ActionType).HasMaxLength(50);
-            entity.HasIndex(x => new { x.RecipientId, x.RecipientRole, x.CreatedAt });
-            entity.HasIndex(x => new { x.RecipientId, x.RecipientRole, x.ReadAt });
         });
 
         modelBuilder.Entity<CallSessionRecord>(entity =>

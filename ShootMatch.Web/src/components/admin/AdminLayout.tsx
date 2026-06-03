@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Outlet, useNavigate, Link, useLocation } from "react-router-dom";
-import { Camera, LayoutDashboard, Users, Calendar, LogOut, Upload } from "lucide-react";
+import { Camera, LayoutDashboard, Users, Calendar, LogOut, Upload, ShieldCheck } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../store/useAuthStore";
 
@@ -65,6 +65,7 @@ export default function AdminLayout() {
   const navItems = [
     { name: "Tổng quan", path: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Người dùng", path: "/admin/users", icon: Users },
+    { name: "Duyệt staff", path: "/admin/staff", icon: ShieldCheck },
     { name: "Booking & Giao dịch", path: "/admin/bookings", icon: Calendar },
   ];
 

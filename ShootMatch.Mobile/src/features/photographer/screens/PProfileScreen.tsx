@@ -63,8 +63,8 @@ export default function PProfileScreen() {
     nationalId: '',
   });
 
-  const loadProfile = React.useCallback(async (showSpinner = false) => {
-    if (showSpinner) setLoading(true);
+  const loadProfile = React.useCallback(async () => {
+    setLoading(true);
     try {
       const p = await getPhotographerProfile();
       if (p) {
@@ -85,9 +85,13 @@ export default function PProfileScreen() {
     }
   }, []);
 
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
   useFocusEffect(
     React.useCallback(() => {
-      loadProfile(false);
+      loadProfile();
     }, [loadProfile])
   );
 

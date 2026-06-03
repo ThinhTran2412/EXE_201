@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { ensureAccessToken, refreshAccessToken } from '../auth/tokenRefresh';
 import { tokenStorage } from '../storage/tokenStorage';
-import { API_URL } from './config';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.31:5062';
 
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -9,9 +9,9 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach a fresh JWT to every request
+// Attach JWT to every request
 apiClient.interceptors.request.use(async (config) => {
-  const token = await ensureAccessToken();
+  const token = await tokenStorage.getAccess();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -24,9 +24,19 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {
-        const accessToken = await refreshAccessToken();
-        if (!accessToken) throw new Error('refresh failed');
-        original.headers.Authorization = `Bearer ${accessToken}`;
+        const refresh = await tokenStorage.getRefresh();
+        const role = await tokenStorage.getRole();
+        const endpoint = role === 'photographer'
+          ? '/api/photographer-auth/refresh'
+          : '/api/auth/refresh';
+        const { data } = await axios.post(`${API_URL}${endpoint}`, { refreshToken: refresh });
+        await tokenStorage.save(
+          data.accessToken,
+          data.refreshToken,
+          role ?? 'customer',
+          data.userId ?? ''
+        );
+        original.headers.Authorization = `Bearer ${data.accessToken}`;
         return apiClient(original);
       } catch {
         await tokenStorage.clear();
@@ -36,4 +46,4 @@ apiClient.interceptors.response.use(
   }
 );
 
-export { API_URL } from './config';
+export { API_URL };

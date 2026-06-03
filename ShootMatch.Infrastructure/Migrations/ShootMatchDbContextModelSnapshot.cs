@@ -22,57 +22,6 @@ namespace ShootMatch.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.AppNotificationRecord", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ActionType")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PayloadJson")
-                        .HasColumnType("jsonb");
-
-                    b.Property<DateTime?>("ReadAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("RecipientId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("RecipientRole")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RecipientId", "RecipientRole", "CreatedAt");
-
-                    b.HasIndex("RecipientId", "RecipientRole", "ReadAt");
-
-                    b.ToTable("app_notifications", (string)null);
-                });
-
             modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.AuthSessionRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -430,16 +379,6 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.Property<Guid>("ConversationId")
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("MediaDowngraded")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("MediaExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("MediaPreviewUrl")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
-
                     b.Property<DateTime?>("ReadAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -459,8 +398,6 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.HasIndex("ConversationId", "ReadAt");
 
                     b.HasIndex("ConversationId", "SentAt");
-
-                    b.HasIndex("ContentType", "MediaExpiresAt", "MediaDowngraded");
 
                     b.ToTable("messages", (string)null);
                 });
@@ -797,61 +734,22 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.ToTable("search_sessions", (string)null);
                 });
 
-            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ServicePackageMediaRecord", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ImageUrl")
-                        .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
-
-                    b.Property<Guid>("ServicePackageId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ServicePackageId", "SortOrder");
-
-                    b.ToTable("service_package_media", (string)null);
-                });
-
             modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ServicePackageRecord", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("CallToAction")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(3000)
-                        .HasColumnType("character varying(3000)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<int>("DurationHours")
                         .HasColumnType("integer");
-
-                    b.Property<string>("HeroSubtitle")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("HeroTitle")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -862,18 +760,10 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<string>("Subtitle")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -1015,17 +905,6 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.Navigation("Photographer");
                 });
 
-            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ServicePackageMediaRecord", b =>
-                {
-                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.ServicePackageRecord", "ServicePackage")
-                        .WithMany("Media")
-                        .HasForeignKey("ServicePackageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ServicePackage");
-                });
-
             modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ServicePackageRecord", b =>
                 {
                     b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.PhotographerRecord", "Photographer")
@@ -1053,11 +932,6 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.Navigation("PortfolioPhotos");
 
                     b.Navigation("ServicePackages");
-                });
-
-            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ServicePackageRecord", b =>
-                {
-                    b.Navigation("Media");
                 });
 #pragma warning restore 612, 618
         }

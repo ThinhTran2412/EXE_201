@@ -39,35 +39,6 @@ export interface PBooking {
   cancellationReason?: string;
 }
 
-export interface PhotographerAvailabilitySlot {
-  specificDate: string;
-  startTime: string;
-  endTime: string;
-  slotType: 'Available' | 'Blocked';
-}
-
-export interface ServicePackageMedia {
-  imageUrl: string;
-  sortOrder: number;
-}
-
-export interface ServicePackage {
-  id: string;
-  photographerId: string;
-  title: string;
-  subtitle: string;
-  description: string;
-  heroTitle: string;
-  heroSubtitle: string;
-  callToAction: string;
-  price: number;
-  durationHours: number;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  media: ServicePackageMedia[];
-}
-
 export async function getPhotographerProfile(): Promise<PhotographerProfile | null> {
   const data = await gql<{ photographerProfile: PhotographerProfile | null }>(`
     query { photographerProfile {
@@ -120,37 +91,6 @@ export async function uploadProfileImage(uri: string, mimeType: string, kind: 'a
 
 export async function setAvailability(isAvailable: boolean) {
   await apiClient.patch('/api/photographers/availability', { isAvailable });
-}
-
-export async function getAvailability(from?: string, to?: string): Promise<PhotographerAvailabilitySlot[]> {
-  const { data } = await apiClient.get<PhotographerAvailabilitySlot[]>('/api/photographers/availability', {
-    params: { from, to },
-  });
-  return data ?? [];
-}
-
-export async function blockAvailability(specificDate: string, slots: { startTime: string; endTime: string }[]) {
-  await apiClient.post('/api/photographers/availability/block', {
-    specificDate,
-    slots: slots.map((slot) => ({
-      specificDate,
-      startTime: slot.startTime,
-      endTime: slot.endTime,
-    })),
-  });
-}
-
-export async function unblockAvailability(specificDate: string, slots: { startTime: string; endTime: string }[]) {
-  await apiClient.delete('/api/photographers/availability/block', {
-    data: {
-      specificDate,
-      slots: slots.map((slot) => ({
-        specificDate,
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-      })),
-    },
-  });
 }
 
 export async function getMyBookingsAsPhotographer(): Promise<PBooking[]> {
@@ -223,39 +163,4 @@ export async function uploadServicePackageMedia(uri: string, mimeType: string): 
 /** Delete a portfolio photo by its Supabase public URL. */
 export async function deletePortfolioPhoto(photoUrl: string): Promise<void> {
   await apiClient.delete('/api/photographers/portfolio', { data: { photoUrl } });
-}
-
-export async function getMyServicePackages(): Promise<ServicePackage[]> {
-  const { data } = await apiClient.get<ServicePackage[]>('/api/photographers/service-packages');
-  return data ?? [];
-}
-
-export async function saveServicePackage(payload: Partial<ServicePackage> & {
-  title: string;
-  subtitle: string;
-  description: string;
-  heroTitle: string;
-  heroSubtitle: string;
-  callToAction: string;
-  price: number;
-  durationHours: number;
-  isActive: boolean;
-  media: ServicePackageMedia[];
-}) {
-  const { id, ...body } = payload;
-  const cleanBody = {
-    ...body,
-    media: body.media?.map((m: any) => ({ imageUrl: m.imageUrl, sortOrder: m.sortOrder }))
-  };
-
-  if (id) {
-    const { data } = await apiClient.put<ServicePackage>(`/api/photographers/service-packages/${id}`, cleanBody);
-    return data;
-  }
-  const { data } = await apiClient.post<ServicePackage>('/api/photographers/service-packages', cleanBody);
-  return data;
-}
-
-export async function deleteServicePackage(packageId: string): Promise<void> {
-  await apiClient.delete(`/api/photographers/service-packages/${packageId}`);
 }

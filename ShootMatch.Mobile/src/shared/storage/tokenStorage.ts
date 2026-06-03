@@ -33,10 +33,6 @@ export const tokenStorage = {
     return AsyncStorage.getItem(KEYS.USER_ID);
   },
 
-  async setUserId(userId: string) {
-    await AsyncStorage.setItem(KEYS.USER_ID, userId);
-  },
-
   async clear() {
     await AsyncStorage.multiRemove(Object.values(KEYS));
   },

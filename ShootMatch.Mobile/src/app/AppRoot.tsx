@@ -4,7 +4,6 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../features/auth/AuthContext';
-import { NotificationProvider } from '../shared/notifications/NotificationContext';
 import AuthNavigator from './navigation/AuthNavigator';
 import RoleNavigator from './navigation/RoleNavigator';
 import { colors } from './theme/colors';
@@ -48,16 +47,16 @@ function CallListener() {
   const { session } = useAuth();
 
   useEffect(() => {
-    if (!session?.accessToken) return;
+    if (!session) return;
 
     let cleanup: (() => void) | undefined;
-    let cancelled = false;
 
+    // Bắt đầu lắng nghe cuộc gọi toàn cục khi user online
     (async () => {
       try {
         await ChatHub.connect();
-        if (cancelled) return;
         cleanup = ChatHub.onReceiveCallEvent((evt) => {
+          // Nếu có sự kiện 'ring' và người khởi tạo không phải là mình
           if (evt.event === 'ring' && evt.initiatorId !== session.userId) {
             navigationRef.current?.navigate('Call', {
               conversationId: evt.conversationId,
@@ -74,11 +73,9 @@ function CallListener() {
     })();
 
     return () => {
-      cancelled = true;
       cleanup?.();
-      // Giữ hub nền — tránh disconnect/reconnect gây timeout log liên tục
     };
-  }, [session?.accessToken, session?.userId]);
+  }, [session]);
 
   return null;
 }
@@ -88,12 +85,10 @@ export default function AppRoot() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <AuthProvider>
-          <NotificationProvider>
-            <NavigationContainer ref={navigationRef} theme={navTheme}>
-              <Router />
-              <CallListener />
-            </NavigationContainer>
-          </NotificationProvider>
+          <NavigationContainer ref={navigationRef} theme={navTheme}>
+            <Router />
+            <CallListener />
+          </NavigationContainer>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

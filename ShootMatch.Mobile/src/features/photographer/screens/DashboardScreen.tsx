@@ -15,7 +15,6 @@ import {
   cancelBooking 
 } from '../api';
 import { useAuth } from '../../auth/AuthContext';
-import { useNotificationUnreadCount } from '../../../shared/notifications/NotificationContext';
 
 const { width } = Dimensions.get('window');
 
@@ -41,7 +40,6 @@ const formatPhotoUrl = (url?: string) => {
 };
 
 export default function DashboardScreen() {
-  const notificationUnread = useNotificationUnreadCount();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
@@ -139,9 +137,9 @@ export default function DashboardScreen() {
               </Pressable>
               
               <View style={styles.topActions}>
-                <Pressable style={styles.iconBtn} onPress={() => navigation.navigate('Notifications')}>
+                <Pressable style={styles.iconBtn} onPress={() => {}}>
                   <Ionicons name="notifications-outline" size={18} color={THEME.cream} />
-                  {notificationUnread > 0 && <View style={styles.notifDot} />}
+                  <View style={styles.notifDot} />
                 </Pressable>
                 <Pressable style={[styles.iconBtn, { borderColor: 'rgba(239,68,68,0.25)' }]} onPress={logout}>
                   <Ionicons name="power-outline" size={18} color="#f87171" />

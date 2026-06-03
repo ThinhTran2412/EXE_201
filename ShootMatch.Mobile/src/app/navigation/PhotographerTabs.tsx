@@ -17,10 +17,9 @@ import PProfileScreen        from '../../features/photographer/screens/PProfileS
 // Stack screens
 import PChatScreen from '../../features/photographer/screens/PChatScreen';
 import ServiceManagementScreen from '../../features/photographer/screens/ServiceManagementScreen';
-import PBookingCalendarScreen from '../../features/photographer/screens/PBookingCalendarScreen';
+import BookingCalendarScreen from '../../features/photographer/screens/BookingCalendarScreen';
 import PersonalInfoScreen from '../../features/photographer/screens/PersonalInfoScreen';
 import CallScreen from '../../features/chat/screens/CallScreen';
-import PNotificationsScreen from '../../features/photographer/screens/PNotificationsScreen';
 
 const Tab   = createBottomTabNavigator<PhotographerTabParamList>();
 const Stack = createNativeStackNavigator<PhotographerStackParamList>();
@@ -69,10 +68,9 @@ export default function PhotographerTabs() {
       <Stack.Screen name="PhotographerRoot" component={PhotographerTabNavigator} />
       <Stack.Screen name="Chat" component={PChatScreen} />
       <Stack.Screen name="ServiceManagement" component={ServiceManagementScreen} />
-      <Stack.Screen name="BookingCalendar" component={PBookingCalendarScreen} />
+      <Stack.Screen name="BookingCalendar" component={BookingCalendarScreen} />
       <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
       <Stack.Screen name="Call" component={CallScreen} />
-      <Stack.Screen name="Notifications" component={PNotificationsScreen} />
     </Stack.Navigator>
 
   );

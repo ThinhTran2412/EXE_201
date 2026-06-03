@@ -27,11 +27,13 @@ public sealed class JwtTokenService(IConfiguration configuration) : IAuthTokenSe
             new Claim(ClaimTypes.MobilePhone,    phone),
             new Claim(ClaimTypes.Role,           role),
 
-            // Backward-compat: controllers currently read "customer_id"
-            // Keep for Customer tokens; Photographer tokens set "photographer_id" separately
-            role == "customer"
-                ? new Claim("customer_id",      userId.ToString())
-                : new Claim("photographer_id",  userId.ToString())
+            role switch
+            {
+                "customer" => new Claim("customer_id", userId.ToString()),
+                "staff" => new Claim("staff_id", userId.ToString()),
+                "admin" => new Claim("admin_id", userId.ToString()),
+                _ => new Claim("photographer_id", userId.ToString())
+            }
         };
 
         var token = new JwtSecurityToken(

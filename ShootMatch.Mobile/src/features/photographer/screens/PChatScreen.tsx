@@ -1,16 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  ActivityIndicator,
-  Image,
-  Alert,
+  FlatList, KeyboardAvoidingView, Platform, Pressable,
+  StyleSheet, Text, TextInput, View, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,68 +9,37 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { getConversationMessages, Message } from '../../chat/api';
 import * as ChatHub from '../../chat/ChatHub';
 import { useAuth } from '../../auth/AuthContext';
-import { getUserIdFromAccessToken } from '../../../shared/auth/currentUser';
-import { getPhotographerProfile } from '../api';
-import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
-import {
-  buildMessageClusters,
-  clustersToListRows,
-  isPeerOnline,
-  ONLINE_THRESHOLD_MS,
-} from '../../chat/utils/messageClusters';
-import ChatMessageClusterView from '../../chat/components/ChatMessageClusterView';
-import ImageLightbox from '../../../shared/components/ImageLightbox';
-import { useSendChatImage } from '../../chat/hooks/useSendChatImage';
 import { colors } from '../../../app/theme/colors';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { radius, spacing } from '../../../app/theme/spacing';
 
-const FALLBACK_AVATAR = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&q=80';
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function Bubble({ msg, isMe }: { msg: Message; isMe: boolean }) {
+  return (
+    <View style={[styles.bubbleRow, isMe ? styles.bubbleRowMe : styles.bubbleRowThem]}>
+      <View style={[styles.bubble, isMe ? styles.bubbleMeBg : styles.bubbleThemBg]}>
+        <Text style={[styles.bubbleText, isMe ? styles.bubbleTextMe : styles.bubbleTextThem]}>{msg.content}</Text>
+      </View>
+      <Text style={[styles.bubbleTime, isMe && styles.bubbleTimeMe]}>{formatTime(msg.sentAt)}</Text>
+    </View>
+  );
+}
 
 export default function PChatScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { session } = useAuth();
-  const {
-    conversationId,
-    name,
-    participantName,
-    participantAvatarUrl,
-    customerLastSeenAt,
-  } = route.params as {
-    conversationId: string;
-    name?: string;
-    participantName?: string;
-    participantAvatarUrl?: string;
-    customerLastSeenAt?: string;
-  };
-
+  const { conversationId, name, participantName } = route.params as { conversationId: string; name?: string; participantName?: string };
   const headerTitle = participantName ?? name ?? 'Đang trò chuyện';
-  const theirAvatar = participantAvatarUrl ?? FALLBACK_AVATAR;
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [myAvatar, setMyAvatar] = useState('');
-  const [myName, setMyName] = useState('Tôi');
-  const [expandedClusterId, setExpandedClusterId] = useState<string | null>(null);
-  const [peerLastSeenAt, setPeerLastSeenAt] = useState<string | undefined>(customerLastSeenAt);
-  const [peerLiveUntil, setPeerLiveUntil] = useState(0);
-  const [lightboxUri, setLightboxUri] = useState<string | null>(null);
   const listRef = useRef<FlatList>(null);
-  const { uploading: uploadingImage, pickAndSend } = useSendChatImage(conversationId);
-
-  const peerOnline = isPeerOnline(peerLastSeenAt, peerLiveUntil);
-
-  useEffect(() => {
-    getPhotographerProfile()
-      .then((p) => {
-        if (p?.avatarUrl) setMyAvatar(formatImageUrl(p.avatarUrl));
-        if (p?.displayName?.trim()) setMyName(p.displayName.trim());
-      })
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     getConversationMessages(conversationId)
@@ -92,23 +52,14 @@ export default function PChatScreen() {
     (async () => {
       await ChatHub.joinConversation(conversationId);
       cleanup = ChatHub.onReceiveMessage((incoming) => {
-        if (incoming.senderRole === 'customer') {
-          setPeerLiveUntil(Date.now() + ONLINE_THRESHOLD_MS);
-          setPeerLastSeenAt(incoming.sentAt);
-        }
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === incoming.id)) return prev;
-          return [...prev, {
-            id: incoming.id,
-            senderId: incoming.senderId,
-            senderRole: incoming.senderRole,
-            content: incoming.content,
-            contentType: incoming.contentType ?? 'Text',
-            sentAt: incoming.sentAt,
-            mediaPreviewUrl: incoming.mediaPreviewUrl,
-            mediaExpiresAt: incoming.mediaExpiresAt,
-          }];
-        });
+        setMessages((prev) => [...prev, {
+          id: Date.now().toString(),
+          senderId: incoming.senderId,
+          senderRole: incoming.senderRole,
+          content: incoming.content,
+          contentType: 'Text',
+          sentAt: incoming.sentAt,
+        }]);
       });
     })();
     return () => {
@@ -117,19 +68,7 @@ export default function PChatScreen() {
     };
   }, [conversationId]);
 
-  const currentUserId = useMemo(
-    () => (session?.accessToken ? getUserIdFromAccessToken(session.accessToken, session.role) : session?.userId) ?? '',
-    [session?.accessToken, session?.role, session?.userId],
-  );
-
-  const listRows = useMemo(() => {
-    const clusters = buildMessageClusters(messages, currentUserId);
-    return clustersToListRows(clusters);
-  }, [messages, currentUserId]);
-
-  const toggleClusterTime = (clusterId: string) => {
-    setExpandedClusterId((prev) => (prev === clusterId ? null : clusterId));
-  };
+  const listData = useMemo(() => messages.map((msg) => ({ msg, isMe: msg.senderId === session?.userId })), [messages, session?.userId]);
 
   const handleSend = async () => {
     if (!text.trim()) return;
@@ -137,89 +76,45 @@ export default function PChatScreen() {
     try {
       await ChatHub.sendMessage(conversationId, text.trim());
       setText('');
-    } catch {
-      // noop
-    }
+    } catch {}
     setSending(false);
   };
+
+  function initiateCall(type: 'audio' | 'video') {
+    navigation.navigate('Call', { conversationId, callType: type, role: 'caller', name: headerTitle, participantName: headerTitle });
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={22} color={colors.dark} />
+          <Ionicons name="arrow-back" size={22} color={colors.dark} />
         </Pressable>
-        <View style={styles.headerCenter}>
-          <View style={styles.headerAvatarWrap}>
-            <Image source={{ uri: theirAvatar }} style={styles.headerAvatar} />
-            <View style={[styles.statusDot, peerOnline ? styles.statusOnline : styles.statusOffline]} />
-          </View>
-          <View style={styles.headerText}>
-            <Text style={styles.headerName} numberOfLines={1}>{headerTitle}</Text>
-            <Text style={[styles.headerSub, peerOnline && styles.headerSubOnline]}>
-              {peerOnline ? 'Đang trực tuyến' : 'Không trực tuyến'}
-            </Text>
-          </View>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerName} numberOfLines={1}>{headerTitle}</Text>
+          <Text style={styles.headerSub}>Đang trực tuyến</Text>
         </View>
-        <Pressable onPress={() => navigation.navigate('Call', {
-          conversationId,
-          callType: 'audio',
-          role: 'caller',
-          name: headerTitle,
-          participantName: headerTitle,
-        })}
-        style={styles.headerAction}
-        >
-          <Ionicons name="call-outline" size={20} color={colors.accent} />
+        <Pressable onPress={() => initiateCall('audio')} style={styles.headerAction}>
+          <Ionicons name="call-outline" size={22} color={colors.dark} />
         </Pressable>
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
-      >
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
         {loading ? (
           <ActivityIndicator size="large" color={colors.accent} style={styles.loader} />
         ) : (
           <FlatList
             ref={listRef}
-            data={listRows}
-            keyExtractor={(row) => row.key}
+            data={listData}
+            keyExtractor={(item) => item.msg.id}
             contentContainerStyle={styles.messageList}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => {
-              if (item.type === 'spacer') {
-                return <View style={styles.blockSpacer} />;
-              }
-              return (
-                <ChatMessageClusterView
-                  cluster={item.cluster}
-                  expanded={expandedClusterId === item.cluster.id}
-                  onPress={() => toggleClusterTime(item.cluster.id)}
-                  myAvatar={myAvatar}
-                  theirAvatar={theirAvatar}
-                  theirName={headerTitle}
-                  myName={myName}
-                  onImagePress={setLightboxUri}
-                />
-              );
-            }}
+            renderItem={({ item }) => <Bubble msg={item.msg} isMe={item.isMe} />}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
-            ListEmptyComponent={(
-              <View style={styles.empty}>
-                <Text style={styles.emptyText}>Chưa có tin nhắn. Gửi lời đầu tiên nhé.</Text>
-              </View>
-            )}
+            ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyText}>Chưa có tin nhắn nào.{'\n'}Bắt đầu trò chuyện! 👋</Text></View>}
           />
         )}
 
-        <View style={styles.inputRow}>
-          <Pressable style={styles.attachBtn} onPress={pickAndSend} disabled={uploadingImage}>
-            {uploadingImage
-              ? <ActivityIndicator size="small" color={colors.dark} />
-              : <Ionicons name="image-outline" size={22} color={colors.dark} />}
-          </Pressable>
+        <View style={styles.inputBar}>
           <TextInput
             style={styles.input}
             value={text}
@@ -229,23 +124,11 @@ export default function PChatScreen() {
             multiline
             maxLength={2000}
           />
-          <Pressable
-            style={[styles.sendBtn, (!text.trim() || sending) && styles.sendBtnOff]}
-            onPress={handleSend}
-            disabled={!text.trim() || sending}
-          >
-            {sending
-              ? <ActivityIndicator size="small" color={colors.background} />
-              : <Ionicons name="send" size={18} color={colors.background} />}
+          <Pressable style={[styles.sendBtn, (!text.trim() || sending) && styles.sendBtnDisabled]} onPress={handleSend} disabled={!text.trim() || sending}>
+            {sending ? <ActivityIndicator size="small" color={colors.background} /> : <Ionicons name="send" size={18} color={colors.background} />}
           </Pressable>
         </View>
       </KeyboardAvoidingView>
-
-      <ImageLightbox
-        visible={!!lightboxUri}
-        uri={lightboxUri ?? ''}
-        onClose={() => setLightboxUri(null)}
-      />
     </SafeAreaView>
   );
 }
@@ -254,89 +137,28 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   loader: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
-    gap: spacing[2],
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backBtn: { padding: spacing[2] },
-  headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
-  headerAvatarWrap: { position: 'relative' },
-  headerAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.clayLight,
-  },
-  statusDot: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: colors.background,
-  },
-  statusOnline: { backgroundColor: colors.success },
-  statusOffline: { backgroundColor: colors.textLight },
-  headerText: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[4], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing[3] },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  headerInfo: { flex: 1 },
   headerName: { fontSize: fontSizes.md, fontWeight: fontWeights.bold, color: colors.dark },
-  headerSub: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
-  headerSubOnline: { color: colors.success },
-  headerAction: { padding: spacing[2] },
-  messageList: {
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[4],
-    gap: spacing[2],
-    flexGrow: 1,
-  },
-  blockSpacer: { height: spacing[5] },
+  headerSub: { fontSize: fontSizes.xs, color: colors.success },
+  headerAction: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  messageList: { paddingHorizontal: spacing[4], paddingVertical: spacing[4], gap: spacing[3], flexGrow: 1 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: spacing[12] },
-  emptyText: { color: colors.textMuted, fontSize: fontSizes.sm },
-  attachBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing[2],
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background,
-  },
-  input: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 100,
-    backgroundColor: colors.white,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[2.5],
-    fontSize: fontSizes.md,
-    color: colors.dark,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.dark,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendBtnOff: { opacity: 0.35 },
+  emptyText: { color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
+  bubbleRow: { width: '100%', gap: spacing[1.5] },
+  bubbleRowMe: { alignItems: 'flex-end' },
+  bubbleRowThem: { alignItems: 'flex-start' },
+  bubble: { maxWidth: '82%', borderRadius: radius.lg, paddingVertical: spacing[3], paddingHorizontal: spacing[4] },
+  bubbleMeBg: { backgroundColor: colors.dark, borderBottomRightRadius: 4 },
+  bubbleThemBg: { backgroundColor: colors.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: colors.border },
+  bubbleText: { fontSize: fontSizes.md, lineHeight: 22 },
+  bubbleTextMe: { color: colors.background },
+  bubbleTextThem: { color: colors.dark },
+  bubbleTime: { fontSize: fontSizes.xs, color: colors.textLight },
+  bubbleTimeMe: { color: colors.textLight, textAlign: 'right' },
+  inputBar: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing[3], paddingHorizontal: spacing[4], paddingVertical: spacing[3], borderTopWidth: 1, borderTopColor: colors.border },
+  input: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: spacing[4], paddingVertical: spacing[2.5], fontSize: fontSizes.md, color: colors.dark, borderWidth: 1, borderColor: colors.border, maxHeight: 120 },
+  sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.dark, alignItems: 'center', justifyContent: 'center' },
+  sendBtnDisabled: { opacity: 0.4 },
 });

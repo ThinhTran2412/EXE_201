@@ -1,9 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/api/client';
-import { getUserIdFromAccessToken } from '../../shared/auth/currentUser';
-import { ensureAccessToken } from '../../shared/auth/tokenRefresh';
 import { tokenStorage } from '../../shared/storage/tokenStorage';
-import * as ChatHub from '../chat/ChatHub';
 
 export type UserRole = 'customer' | 'photographer' | null;
 
@@ -32,15 +29,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const role = (await tokenStorage.getRole()) as UserRole;
-      const storedUserId = await tokenStorage.getUserId();
-      const access = await ensureAccessToken();
-
-      if (access && role) {
-        const userId = storedUserId || getUserIdFromAccessToken(access, role) || '';
-        if (!storedUserId && userId) await tokenStorage.setUserId(userId);
-        setSession({ accessToken: access, role, userId });
-      }
+      const access = await tokenStorage.getAccess();
+      const role   = await tokenStorage.getRole() as UserRole;
+      const userId = await tokenStorage.getUserId();
+      if (access && role) setSession({ accessToken: access, role, userId: userId ?? '' });
     })().finally(() => setInitializing(false));
   }, []);
 
@@ -94,17 +86,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   async function logout() {
-    await ChatHub.disconnect().catch(() => {});
     await tokenStorage.clear();
     setSession(null);
   }
 
-  async function _saveSession(data: { accessToken: string; refreshToken: string; customerId?: string; photographerId?: string }, role: UserRole) {
-    const userId =
-      getUserIdFromAccessToken(data.accessToken, role)
-      || data.customerId
-      || data.photographerId
-      || '';
+  async function _saveSession(data: any, role: UserRole) {
+    const userId = data.customerId ?? data.photographerId ?? '';
     await tokenStorage.save(data.accessToken, data.refreshToken, role ?? 'customer', userId);
     setSession({ accessToken: data.accessToken, role, userId });
   }
