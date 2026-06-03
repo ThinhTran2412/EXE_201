@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Camera, ChevronRight, Shield, UserRound, WandSparkles } from "lucide-react";
+import { BadgeCheck, Camera, ChevronRight, Shield, UserRound, WandSparkles } from "lucide-react";
 
 const cards = [
   {
@@ -15,6 +15,13 @@ const cards = [
     to: "/auth/photographer",
     icon: Camera,
     tone: "from-slate-900 to-slate-700",
+  },
+  {
+    title: "Staff",
+    description: "Đăng nhập riêng hoặc đăng ký qua Google email / email mật khẩu để duyệt photographer.",
+    to: "/auth/staff/login",
+    icon: BadgeCheck,
+    tone: "from-emerald-700 to-teal-700",
   },
   {
     title: "Quản trị viên",

@@ -11,7 +11,9 @@ namespace ShootMatch.Api.Controllers;
 /// Admin management endpoints. Require role = "admin".
 ///
 /// GET  /api/admin/photographers                      — list all photographers
+/// GET  /api/admin/staff                               — list staff accounts
 /// GET  /api/admin/verification-requests              — list pending verification requests
+/// POST /api/admin/staff/{id}/approve                 — approve staff account
 /// POST /api/admin/photographers/{id}/verify          — approve verification (with audit trail)
 /// POST /api/admin/photographers/{id}/revoke-premium  — revoke premium flag
 /// GET  /api/admin/reports/{scope}/{format}           — export PDF / Excel admin reports
@@ -23,6 +25,7 @@ public sealed class AdminController(
     ICustomerRepository customerRepository,
     IBookingRepository bookingRepository,
     IPhotographerRepository photographerRepository,
+    IStaffRepository staffRepository,
     IVerificationRequestRepository verificationRequestRepository,
     IStorageService storageService,
     IAdminReportExportService reportExportService) : ControllerBase
@@ -164,6 +167,42 @@ public sealed class AdminController(
         return Ok(all);
     }
 
+    [HttpGet("staff")]
+    [ProducesResponseType(typeof(IReadOnlyList<Staff>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListStaff(CancellationToken cancellationToken)
+    {
+        var all = await staffRepository.GetAllAsync(cancellationToken);
+        return Ok(all);
+    }
+
+    [HttpPost("staff/{id:guid}/approve")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ApproveStaff(Guid id, CancellationToken cancellationToken)
+    {
+        var staff = await staffRepository.GetByIdAsync(id, cancellationToken);
+        if (staff is null) return NotFound();
+
+        await staffRepository.UpsertAsync(new Staff
+        {
+            Id = staff.Id,
+            DisplayName = staff.DisplayName,
+            Phone = staff.Phone,
+            Email = staff.Email,
+            Role = staff.Role,
+            ApprovalStatus = "Approved",
+            PasswordHash = staff.PasswordHash,
+            GoogleId = staff.GoogleId,
+            CreatedAt = staff.CreatedAt,
+            UpdatedAt = DateTime.UtcNow,
+            ApprovedAt = DateTime.UtcNow,
+            ApprovedBy = User.FindFirst("user_id")?.Value,
+            DeletedAt = staff.DeletedAt
+        }, cancellationToken);
+
+        return NoContent();
+    }
+
     [HttpPut("photographers/{id:guid}")]
     [ProducesResponseType(typeof(Photographer), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -175,8 +214,8 @@ public sealed class AdminController(
         var updated = new Photographer
         {
             Id = existing.Id,
-            Phone = existing.Phone,
-            Email = existing.Email,
+            Phone = string.IsNullOrWhiteSpace(request.Phone) ? existing.Phone : request.Phone.Trim(),
+            Email = string.IsNullOrWhiteSpace(request.Email) ? existing.Email : request.Email.Trim(),
             DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? existing.DisplayName : request.DisplayName.Trim(),
             Bio = string.IsNullOrWhiteSpace(request.Bio) ? existing.Bio : request.Bio.Trim(),
             Quote = request.Quote is null ? existing.Quote : request.Quote.Trim(),
@@ -185,7 +224,7 @@ public sealed class AdminController(
             InstagramUrl = request.InstagramUrl is null ? existing.InstagramUrl : request.InstagramUrl.Trim(),
             MinBudget = request.MinBudget ?? existing.MinBudget,
             MaxBudget = request.MaxBudget ?? existing.MaxBudget,
-            Region = existing.Region,
+            Region = string.IsNullOrWhiteSpace(request.Region) ? existing.Region : request.Region.Trim(),
             Rating = existing.Rating,
             IsPremium = existing.IsPremium,
             IsAvailable = existing.IsAvailable,

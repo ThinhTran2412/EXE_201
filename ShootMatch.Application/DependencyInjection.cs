@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.AddScoped<AuthService>();
         services.AddScoped<CustomerService>();
         services.AddScoped<PhotographerAuthService>();
+        services.AddScoped<StaffAuthService>();
 
         // ── Command handlers ──
         services.AddScoped<CreateMatchSearchCommandHandler>();

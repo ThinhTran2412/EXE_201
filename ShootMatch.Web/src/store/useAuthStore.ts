@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { resolveTokenUserId } from "../lib/jwt";
 
-export type UserRole = "customer" | "photographer" | "admin" | null;
+export type UserRole = "customer" | "photographer" | "staff" | "admin" | null;
 
 export interface AuthSession {
   accessToken: string;

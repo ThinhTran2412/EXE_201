@@ -12,6 +12,7 @@ public sealed class ShootMatchDbContext(
     public DbSet<PhotographerRecord> Photographers => Set<PhotographerRecord>();
     public DbSet<PortfolioEmbeddingRecord> PortfolioEmbeddings => Set<PortfolioEmbeddingRecord>();
     public DbSet<CustomerRecord> Customers => Set<CustomerRecord>();
+    public DbSet<StaffRecord> Staffs => Set<StaffRecord>();
     public DbSet<SearchSessionRecord> SearchSessions => Set<SearchSessionRecord>();
     public DbSet<AuthSessionRecord> AuthSessions => Set<AuthSessionRecord>();
     public DbSet<SwipeActionRecord> SwipeActions => Set<SwipeActionRecord>();
@@ -129,6 +130,24 @@ public sealed class ShootMatchDbContext(
             entity.Property(x => x.PreferredBudgetMax).HasColumnType("numeric(18,2)");
             entity.Property(x => x.PasswordHash).HasMaxLength(100);
             entity.Property(x => x.GoogleId).HasMaxLength(128);
+            entity.HasIndex(x => x.Email);
+            entity.HasIndex(x => x.GoogleId);
+            entity.HasIndex(x => x.Phone);
+        });
+
+        // ── Staff ──────────────────────────────────────────────────────────
+        modelBuilder.Entity<StaffRecord>(entity =>
+        {
+            entity.ToTable("staffs");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.DisplayName).HasMaxLength(200);
+            entity.Property(x => x.Phone).HasMaxLength(25);
+            entity.Property(x => x.Email).HasMaxLength(200);
+            entity.Property(x => x.Role).HasMaxLength(20);
+            entity.Property(x => x.ApprovalStatus).HasMaxLength(20);
+            entity.Property(x => x.PasswordHash).HasMaxLength(100);
+            entity.Property(x => x.GoogleId).HasMaxLength(128);
+            entity.Property(x => x.ApprovedBy).HasMaxLength(200);
             entity.HasIndex(x => x.Email);
             entity.HasIndex(x => x.GoogleId);
             entity.HasIndex(x => x.Phone);

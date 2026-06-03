@@ -2,6 +2,8 @@ export interface JwtPayloadClaims {
   user_id?: string;
   customer_id?: string;
   photographer_id?: string;
+  staff_id?: string;
+  admin_id?: string;
   sub?: string;
   role?: string;
   [key: string]: unknown;
@@ -23,11 +25,11 @@ export function decodeJwtPayload(token: string): JwtPayloadClaims | null {
   }
 }
 
-export function resolveTokenRole(token: string): "customer" | "photographer" | "admin" | null {
+export function resolveTokenRole(token: string): "customer" | "photographer" | "staff" | "admin" | null {
   const payload = decodeJwtPayload(token);
   const role = payload?.role;
 
-  if (role === "customer" || role === "photographer" || role === "admin") {
+  if (role === "customer" || role === "photographer" || role === "staff" || role === "admin") {
     return role;
   }
 
@@ -40,6 +42,8 @@ export function resolveTokenUserId(token: string): string {
     (typeof payload?.user_id === "string" && payload.user_id) ||
     (typeof payload?.customer_id === "string" && payload.customer_id) ||
     (typeof payload?.photographer_id === "string" && payload.photographer_id) ||
+    (typeof payload?.staff_id === "string" && payload.staff_id) ||
+    (typeof payload?.admin_id === "string" && payload.admin_id) ||
     (typeof payload?.sub === "string" && payload.sub) ||
     ""
   );

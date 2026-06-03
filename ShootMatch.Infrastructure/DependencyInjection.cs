@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ShootMatch.Application.Abstractions;
@@ -22,7 +23,8 @@ public static class DependencyInjection
                 "Connection string 'DefaultConnection' is required. Set it in appsettings.json or environment variables.");
 
         services.AddDbContext<ShootMatchDbContext>(options =>
-            options.UseNpgsql(connectionString));
+            options.UseNpgsql(connectionString)
+                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
         services.AddScoped<DomainEventDispatcher>();
 
@@ -32,6 +34,7 @@ public static class DependencyInjection
         // ── Repositories (EF Core / PostgreSQL) ──────────────────────────────
         services.AddScoped<ICustomerRepository,              EfCustomerRepository>();
         services.AddScoped<IPhotographerRepository,          EfPhotographerRepository>();
+        services.AddScoped<IStaffRepository,                 EfStaffRepository>();
         services.AddScoped<IAuthSessionRepository,           EfAuthSessionRepository>();
         services.AddScoped<IMatchRepository,                 EfMatchRepository>();
         services.AddScoped<IBookingRepository,               EfBookingRepository>();

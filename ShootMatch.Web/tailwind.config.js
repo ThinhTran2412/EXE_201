@@ -22,7 +22,7 @@ export default {
           "Liberation Sans",
           "sans-serif",
         ],
-        display: ["Georgia", "serif"],
+        display: ["Anton", "sans-serif"],
         mono: ["Courier New", "Courier", "monospace"],
       },
       fontSize: {
