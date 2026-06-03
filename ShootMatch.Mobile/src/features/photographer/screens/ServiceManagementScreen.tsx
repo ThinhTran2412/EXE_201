@@ -8,15 +8,17 @@ import {
   TextInput,
   Modal,
   Alert,
+  ImageBackground,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../../app/theme/colors';
 import { spacing } from '../../../app/theme/spacing';
 import { radius } from '../../../app/theme/spacing';
-import { deleteServicePackage, getMyServicePackages, saveServicePackage, uploadPortfolioPhoto, type ServicePackage, type ServicePackageMedia } from '../api';
+import { deleteServicePackage, getMyServicePackages, saveServicePackage, uploadServicePackageMedia, type ServicePackage, type ServicePackageMedia } from '../api';
 import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
 
 type ServiceForm = {
@@ -105,6 +107,7 @@ export default function ServiceManagementScreen() {
   const [services, setServices] = useState<ServicePackage[]>([]);
   const [editorVisible, setEditorVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<ServiceForm>(DEFAULT_FORM);
@@ -238,7 +241,7 @@ export default function ServiceManagementScreen() {
     try {
       const uploaded = await Promise.all(
         selected.map(async (asset, index) => {
-          const url = await uploadPortfolioPhoto(asset.uri, asset.mimeType ?? 'image/jpeg');
+          const url = await uploadServicePackageMedia(asset.uri, asset.mimeType ?? 'image/jpeg');
           return { imageUrl: url, sortOrder: form.media.length + index + 1 };
         }),
       );
@@ -315,70 +318,236 @@ export default function ServiceManagementScreen() {
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>Đang tải danh sách gói...</Text>
             </View>
-          ) : services.map((item, index) => (
-            <Animated.View key={item.id} entering={FadeInDown.delay(index * 60).duration(550)} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardHeaderLeft}>
-                  <View style={styles.cardBadge}>
-                    <Ionicons name="camera-outline" size={14} color={colors.accent} />
-                    <Text style={styles.cardBadgeText}>Gói {index + 1}</Text>
-                  </View>
-                  <Text style={styles.cardName} numberOfLines={2}>{item.title}</Text>
-                </View>
-                <View style={styles.priceBlock}>
-                  <Text style={styles.price}>{formatCurrency(item.price)}</Text>
-                  <Text style={styles.duration}>{item.durationHours} giờ</Text>
-                </View>
-              </View>
+          ) : services.map((item, index) => {
+            const parsed = splitDescriptionSections(item.description);
+            const tags = splitTags(parsed.tags).slice(0, 4);
+            const coverImage = item.media[0]?.imageUrl;
+            const isExpanded = expandedId === item.id;
+            const featureLines = parsed.features
+              ? parsed.features.split('\n').map(l => l.trim()).filter(Boolean)
+              : [];
+            const requirementLines = parsed.requirements
+              ? parsed.requirements.split('\n').map(l => l.trim()).filter(Boolean)
+              : [];
+            return (
+              <Animated.View key={item.id} entering={FadeInDown.delay(index * 60).duration(550)} style={styles.card}>
 
-              <Text style={styles.cardDesc}>{previewText(splitDescriptionSections(item.description).description, 140)}</Text>
-
-              <View style={styles.divider} />
-
-              <View style={styles.metaRow}>
-                <View style={styles.metaChip}>
-                  <Ionicons name="time-outline" size={14} color={colors.accent} />
-                  <Text style={styles.metaChipText}>{item.durationHours} giờ</Text>
-                </View>
-                <View style={styles.metaChip}>
-                  <Ionicons name="images-outline" size={14} color={colors.accent} />
-                  <Text style={styles.metaChipText}>{item.media.length} ảnh</Text>
-                </View>
-              </View>
-
-              {renderSection('Mô tả chi tiết', splitDescriptionSections(item.description).description)}
-              {renderSection('Tag ảnh', splitDescriptionSections(item.description).tags)}
-              {renderSection('Features', splitDescriptionSections(item.description).features)}
-              {renderSection('Yêu cầu buổi chụp', splitDescriptionSections(item.description).requirements)}
-
-              <View style={styles.mediaStrip}>
-                {item.media.slice(0, 5).map((media) => (
-                  <PortfolioImageCell
-                    key={media.id}
-                    uri={media.imageUrl}
-                    borderRadius={14}
-                    style={styles.mediaThumb}
-                    resizeMode="cover"
+                {/* ── Cover image with gradient overlay ── */}
+                <View style={styles.cardCoverWrap}>
+                  {coverImage ? (
+                    <PortfolioImageCell
+                      uri={coverImage}
+                      style={styles.cardCoverImg}
+                      borderRadius={0}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={[styles.cardCoverImg, styles.cardCoverPlaceholder]}>
+                      <Ionicons name="camera" size={36} color="rgba(255,247,225,0.25)" />
+                    </View>
+                  )}
+                  <LinearGradient
+                    colors={['transparent', 'rgba(26,26,15,0.72)', 'rgba(26,26,15,0.95)']}
+                    locations={[0.2, 0.65, 1]}
+                    style={styles.cardCoverGradient}
                   />
-                ))}
-              </View>
 
-              <View style={styles.cardActions}>
-                <Pressable style={styles.actionBtnEdit} onPress={() => openEdit(item)}>
-                  <View style={styles.actionIconWrapEdit}>
-                    <Ionicons name="create-outline" size={16} color="#F3C08B" />
+                  {/* Package number label top-left */}
+                  <View style={styles.cardCoverBadge}>
+                    <Ionicons name="aperture-outline" size={12} color="rgba(255,247,225,0.9)" />
+                    <Text style={styles.cardCoverBadgeText}>Gói {index + 1}</Text>
                   </View>
-                  <Text style={styles.actionTextEdit}>Chỉnh sửa gói</Text>
-                </Pressable>
-                <Pressable style={styles.actionBtnDanger} onPress={() => remove(item.id)}>
-                  <View style={styles.actionIconWrapDanger}>
-                    <Ionicons name="trash-outline" size={16} color="#ff8a8a" />
+
+                  {/* Active / Inactive status top-right */}
+                  <View style={[styles.cardStatusBadge, item.isActive ? styles.cardStatusActive : styles.cardStatusInactive]}>
+                    <View style={[styles.cardStatusDot, item.isActive ? styles.cardStatusDotActive : styles.cardStatusDotInactive]} />
+                    <Text style={[styles.cardStatusText, item.isActive ? styles.cardStatusTextActive : styles.cardStatusTextInactive]}>
+                      {item.isActive ? 'Đang bật' : 'Tắt'}
+                    </Text>
                   </View>
-                  <Text style={styles.actionTextDanger}>Xóa</Text>
-                </Pressable>
-              </View>
-            </Animated.View>
-          ))}
+
+                  {/* Title & price overlay at bottom of image */}
+                  <View style={styles.cardCoverContent}>
+                    <Text style={styles.cardCoverTitle} numberOfLines={2}>{item.title}</Text>
+                    <View style={styles.cardPricePill}>
+                      <Text style={styles.cardPriceText}>{formatCurrency(item.price)}</Text>
+                      <Text style={styles.cardPriceSep}>·</Text>
+                      <Ionicons name="time-outline" size={12} color="rgba(255,247,225,0.75)" />
+                      <Text style={styles.cardPriceDuration}>{item.durationHours}h</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* ── Body ── */}
+                <View style={styles.cardBody}>
+
+                  {/* Tags always visible */}
+                  {tags.length > 0 && (
+                    <View style={styles.cardTagRow}>
+                      {tags.map((tag, i) => (
+                        <View key={i} style={styles.cardTag}>
+                          <Text style={styles.cardTagText}>#{tag}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Meta chips always visible */}
+                  <View style={styles.metaRow}>
+                    <View style={styles.metaChip}>
+                      <Ionicons name="time-outline" size={13} color={colors.accent} />
+                      <Text style={styles.metaChipText}>{item.durationHours} giờ</Text>
+                    </View>
+                    <View style={styles.metaChip}>
+                      <Ionicons name="images-outline" size={13} color={colors.accent} />
+                      <Text style={styles.metaChipText}>{item.media.length} ảnh</Text>
+                    </View>
+                    {!!parsed.features && (
+                      <View style={styles.metaChip}>
+                        <Ionicons name="checkmark-circle-outline" size={13} color={colors.success} />
+                        <Text style={[styles.metaChipText, { color: colors.success }]}>Features</Text>
+                      </View>
+                    )}
+                    {!!parsed.requirements && (
+                      <View style={styles.metaChip}>
+                        <Ionicons name="clipboard-outline" size={13} color={colors.info} />
+                        <Text style={[styles.metaChipText, { color: colors.info }]}>Yêu cầu</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* ── COLLAPSED: short description preview + first 4 thumbs ── */}
+                  {!isExpanded && (
+                    <>
+                      {!!parsed.description && (
+                        <Text style={styles.cardDesc} numberOfLines={2}>
+                          {previewText(parsed.description, 110)}
+                        </Text>
+                      )}
+                      {item.media.length > 1 && (
+                        <View style={styles.thumbStrip}>
+                          {item.media.slice(1, 5).map((media, mi) => (
+                            <PortfolioImageCell
+                              key={media.id ?? mi}
+                              uri={media.imageUrl}
+                              borderRadius={10}
+                              style={styles.thumbStripItem}
+                              resizeMode="cover"
+                            />
+                          ))}
+                          {item.media.length > 5 && (
+                            <View style={styles.thumbStripMore}>
+                              <Text style={styles.thumbStripMoreText}>+{item.media.length - 5}</Text>
+                            </View>
+                          )}
+                        </View>
+                      )}
+                    </>
+                  )}
+
+                  {/* ── EXPANDED: full details ── */}
+                  {isExpanded && (
+                    <>
+                      {/* Full description */}
+                      {!!parsed.description && (
+                        <View style={styles.detailSection}>
+                          <View style={styles.detailSectionHeader}>
+                            <Ionicons name="document-text-outline" size={14} color={colors.accent} />
+                            <Text style={styles.detailSectionTitle}>Mô tả chi tiết</Text>
+                          </View>
+                          <Text style={styles.detailSectionBody}>{parsed.description.trim()}</Text>
+                        </View>
+                      )}
+
+                      {/* Features */}
+                      {featureLines.length > 0 && (
+                        <View style={styles.detailSection}>
+                          <View style={styles.detailSectionHeader}>
+                            <Ionicons name="sparkles-outline" size={14} color={colors.success} />
+                            <Text style={[styles.detailSectionTitle, { color: colors.success }]}>Features</Text>
+                          </View>
+                          <View style={styles.featureList}>
+                            {featureLines.map((line, li) => (
+                              <View key={li} style={styles.featureItem}>
+                                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                                <Text style={styles.featureItemText}>{line}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+
+                      {/* Requirements */}
+                      {requirementLines.length > 0 && (
+                        <View style={styles.detailSection}>
+                          <View style={styles.detailSectionHeader}>
+                            <Ionicons name="clipboard-outline" size={14} color={colors.info} />
+                            <Text style={[styles.detailSectionTitle, { color: colors.info }]}>Yêu cầu buổi chụp</Text>
+                          </View>
+                          <View style={styles.featureList}>
+                            {requirementLines.map((line, li) => (
+                              <View key={li} style={styles.featureItem}>
+                                <Ionicons name="ellipse" size={6} color={colors.info} style={{ marginTop: 5 }} />
+                                <Text style={[styles.featureItemText, { color: colors.textMuted }]}>{line}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+
+                      {/* All photos */}
+                      {item.media.length > 0 && (
+                        <View style={styles.detailSection}>
+                          <View style={styles.detailSectionHeader}>
+                            <Ionicons name="images-outline" size={14} color={colors.accent} />
+                            <Text style={styles.detailSectionTitle}>Ảnh gói ({item.media.length})</Text>
+                          </View>
+                          <View style={styles.expandedPhotoGrid}>
+                            {item.media.map((media, mi) => (
+                              <PortfolioImageCell
+                                key={media.id ?? mi}
+                                uri={media.imageUrl}
+                                borderRadius={10}
+                                style={styles.expandedPhotoItem}
+                                resizeMode="cover"
+                              />
+                            ))}
+                          </View>
+                        </View>
+                      )}
+                    </>
+                  )}
+
+                  {/* ── Toggle button ── */}
+                  <Pressable
+                    style={styles.toggleBtn}
+                    onPress={() => setExpandedId(isExpanded ? null : item.id)}
+                  >
+                    <Text style={styles.toggleBtnText}>
+                      {isExpanded ? 'Thu gọn' : 'Xem chi tiết'}
+                    </Text>
+                    <Ionicons
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={15}
+                      color={colors.accent}
+                    />
+                  </Pressable>
+
+                  {/* ── Action buttons ── */}
+                  <View style={styles.cardActions}>
+                    <Pressable style={styles.actionBtnEdit} onPress={() => openEdit(item)}>
+                      <Ionicons name="create-outline" size={15} color={colors.accent} />
+                      <Text style={styles.actionTextEdit}>Chỉnh sửa</Text>
+                    </Pressable>
+                    <Pressable style={styles.actionBtnDanger} onPress={() => remove(item.id)}>
+                      <Ionicons name="trash-outline" size={15} color="#e05252" />
+                      <Text style={styles.actionTextDanger}>Xóa</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </Animated.View>
+            );
+          })}
 
           {!loading && services.length === 0 && (
             <View style={styles.emptyState}>
@@ -587,31 +756,189 @@ const styles = StyleSheet.create({
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 16 },
   addBtnText: { color: '#fff', fontWeight: '800' },
 
-  content: { paddingHorizontal: 16, gap: 14 },
-  card: { backgroundColor: '#fff', borderRadius: 26, padding: 18, borderWidth: 1, borderColor: colors.border, gap: 12, shadowColor: '#d6c2b0', shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 2 },
+  content: { paddingHorizontal: 16, gap: 16 },
+
+  // ── Card ──
+  card: {
+    backgroundColor: '#fffaf4',
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(26,26,15,0.09)',
+    shadowColor: '#b8a98a',
+    shadowOpacity: 0.22,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 5,
+  },
+
+  // Cover image
+  cardCoverWrap: { position: 'relative', height: 200 },
+  cardCoverImg: { width: '100%', height: '100%' },
+  cardCoverPlaceholder: { backgroundColor: '#2a2a1a', justifyContent: 'center', alignItems: 'center' },
+  cardCoverGradient: { ...StyleSheet.absoluteFillObject },
+
+  // Floating badges on cover
+  cardCoverBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(26,26,15,0.55)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,247,225,0.15)',
+  },
+  cardCoverBadgeText: { color: 'rgba(255,247,225,0.9)', fontSize: 11, fontWeight: '700' },
+
+  cardStatusBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  cardStatusActive: { backgroundColor: 'rgba(45,106,79,0.85)', borderWidth: 1, borderColor: 'rgba(45,180,100,0.4)' },
+  cardStatusInactive: { backgroundColor: 'rgba(26,26,15,0.6)', borderWidth: 1, borderColor: 'rgba(255,247,225,0.1)' },
+  cardStatusDot: { width: 6, height: 6, borderRadius: 3 },
+  cardStatusDotActive: { backgroundColor: '#5ddb8a' },
+  cardStatusDotInactive: { backgroundColor: 'rgba(255,247,225,0.4)' },
+  cardStatusText: { fontSize: 11, fontWeight: '700' },
+  cardStatusTextActive: { color: '#a8f0c0' },
+  cardStatusTextInactive: { color: 'rgba(255,247,225,0.55)' },
+
+  // Title + price at bottom of cover
+  cardCoverContent: {
+    position: 'absolute',
+    bottom: 14,
+    left: 14,
+    right: 14,
+    gap: 6,
+  },
+  cardCoverTitle: {
+    color: '#fffaf4',
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+    lineHeight: 26,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  cardPricePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(207,64,40,0.85)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,180,140,0.3)',
+  },
+  cardPriceText: { color: '#fffaf4', fontSize: 13, fontWeight: '900', letterSpacing: 0.2 },
+  cardPriceSep: { color: 'rgba(255,247,225,0.5)', fontSize: 11, marginHorizontal: 1 },
+  cardPriceDuration: { color: 'rgba(255,247,225,0.8)', fontSize: 12, fontWeight: '600' },
+
+  // Card body
+  cardBody: { padding: 16, gap: 12 },
+  cardDesc: { color: colors.textMuted, lineHeight: 21, fontSize: 13.5 },
+
+  // Tag chips
+  cardTagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  cardTag: {
+    backgroundColor: 'rgba(207,64,40,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(207,64,40,0.14)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  cardTagText: { color: colors.accent, fontSize: 11.5, fontWeight: '700' },
+
+  // Meta chips
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  metaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#fff7e1',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(26,26,15,0.08)',
+  },
+  metaChipText: { color: colors.text, fontSize: 11.5, fontWeight: '600' },
+
+  // Thumbnail strip
+  thumbStrip: { flexDirection: 'row', gap: 6 },
+  thumbStripItem: { width: 60, height: 60, borderRadius: 10 },
+  thumbStripMore: {
+    width: 60,
+    height: 60,
+    borderRadius: 10,
+    backgroundColor: 'rgba(26,26,15,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(26,26,15,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  thumbStripMoreText: { color: colors.textMuted, fontSize: 13, fontWeight: '800' },
+
+  // Action buttons
+  cardActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  actionBtnEdit: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 14,
+    backgroundColor: 'rgba(207,64,40,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(207,64,40,0.15)',
+  },
+  actionBtnDanger: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 14,
+    backgroundColor: 'rgba(224,82,82,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(224,82,82,0.15)',
+  },
+  actionTextEdit: { color: colors.accent, fontWeight: '800', fontSize: 13.5 },
+  actionTextDanger: { color: '#e05252', fontWeight: '800', fontSize: 13.5 },
+
+  // Kept for renderSection (used elsewhere if needed)
+  sectionBlock: { marginTop: 12, paddingHorizontal: 4 },
+  sectionBlockLabel: { color: colors.text, fontSize: 13, fontWeight: '800', marginBottom: 4 },
+  sectionBlockValue: { color: colors.textMuted, fontSize: 13, lineHeight: 20 },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: 2 },
+  priceBlock: { alignItems: 'flex-end', flexShrink: 0 },
+  price: { color: colors.text, fontWeight: '900', fontSize: 18, textAlign: 'right' },
+  duration: { color: colors.textMuted, marginTop: 4, fontSize: 12 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' },
   cardHeaderLeft: { flex: 1, gap: 10, paddingRight: 8 },
   cardBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(207,64,40,0.08)', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, alignSelf: 'flex-start' },
   cardBadgeText: { color: colors.accent, fontSize: 11, fontWeight: '700' },
-  priceBlock: { alignItems: 'flex-end', flexShrink: 0 },
-  price: { color: colors.text, fontWeight: '900', fontSize: 18, textAlign: 'right' },
-  duration: { color: colors.textMuted, marginTop: 4, fontSize: 12 },
   cardName: { color: colors.text, fontSize: 22, fontWeight: '900', letterSpacing: 0.2, lineHeight: 28 },
-  cardDesc: { color: colors.textMuted, lineHeight: 22, fontSize: 14 },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: 2 },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  metaChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.background, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: colors.border },
-  metaChipText: { color: colors.text, fontSize: 12, fontWeight: '600' },
-  sectionBlock: { marginTop: 12, paddingHorizontal: 4 },
-  sectionBlockLabel: { color: colors.text, fontSize: 13, fontWeight: '800', marginBottom: 4 },
-  sectionBlockValue: { color: colors.textMuted, fontSize: 13, lineHeight: 20 },
-  cardActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  actionBtnEdit: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(207,64,40,0.08)', paddingVertical: 12, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(207,64,40,0.12)' },
-  actionBtnDanger: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(255,138,138,0.1)', paddingVertical: 12, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,138,138,0.12)' },
   actionIconWrapEdit: { width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(207,64,40,0.16)', justifyContent: 'center', alignItems: 'center' },
   actionIconWrapDanger: { width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,138,138,0.16)', justifyContent: 'center', alignItems: 'center' },
-  actionTextEdit: { color: colors.accent, fontWeight: '800' },
-  actionTextDanger: { color: '#ff6b6b', fontWeight: '800' },
 
   emptyState: { marginTop: 10, borderRadius: 22, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed', backgroundColor: '#fff', padding: 24, alignItems: 'center', gap: 10 },
   emptyTitle: { color: colors.text, fontWeight: '800', fontSize: 16 },
@@ -644,6 +971,7 @@ const styles = StyleSheet.create({
   mediaEditor: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   mediaItem: { width: 84, height: 84, borderRadius: 14 },
   mediaPreviewImage: { width: 48, height: 48, borderRadius: 12 },
+
   mediaItemText: { color: colors.text, fontWeight: '700' },
   inputField: { backgroundColor: '#1e1c26', borderRadius: 16, padding: 16, color: '#FFFBF0', fontSize: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   tagPreviewChip: { backgroundColor: 'rgba(207,64,40,0.1)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(207,64,40,0.2)' },
@@ -653,4 +981,67 @@ const styles = StyleSheet.create({
   saveBtn: { backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 16, alignItems: 'center', marginTop: 6, marginBottom: 8 },
   saveBtnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   saveBtnText: { color: '#fff', fontWeight: '900', letterSpacing: 0.4 },
+
+  // ── Toggle expand/collapse ──
+  toggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: 'rgba(207,64,40,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(207,64,40,0.12)',
+    borderStyle: 'dashed',
+    marginTop: 2,
+  },
+  toggleBtnText: { color: colors.accent, fontWeight: '700', fontSize: 13 },
+
+  // ── Expanded detail sections ──
+  detailSection: {
+    gap: 8,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(26,26,15,0.06)',
+  },
+  detailSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  detailSectionTitle: {
+    color: colors.accent,
+    fontSize: 12.5,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  detailSectionBody: {
+    color: colors.textMuted,
+    fontSize: 13.5,
+    lineHeight: 21,
+  },
+
+  // ── Feature / Requirement list ──
+  featureList: { gap: 6 },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  featureItemText: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 13.5,
+    lineHeight: 20,
+  },
+
+  // ── Expanded photo grid ──
+  expandedPhotoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  expandedPhotoItem: { width: 80, height: 80, borderRadius: 10 },
 });

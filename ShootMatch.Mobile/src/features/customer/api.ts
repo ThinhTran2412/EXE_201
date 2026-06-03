@@ -316,6 +316,15 @@ export async function getPhotographerAvailability(
   }
 }
 
+export async function getPhotographerServicePackages(photographerId: string): Promise<any[]> {
+  try {
+    const { data } = await apiClient.get<any[]>(`/api/photographers/${photographerId}/service-packages`);
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
 // ── Matches ───────────────────────────────────────────────────────────────────
 export async function getMyMatches(): Promise<Match[]> {
   const data = await gql<{ myMatches: Match[] }>(`

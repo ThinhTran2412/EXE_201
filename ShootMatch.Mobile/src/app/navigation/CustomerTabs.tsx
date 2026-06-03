@@ -18,6 +18,7 @@ import ProfileScreen    from '../../features/customer/screens/ProfileScreen';
 // Stack screens (pushed on top of tabs)
 import PhotographerProfileScreen from '../../features/customer/screens/PhotographerProfileScreen';
 import PhotographerPortfolioScreen from '../../features/customer/screens/PhotographerPortfolioScreen';
+import PhotographerServicePackagesScreen from '../../features/customer/screens/PhotographerServicePackagesScreen';
 import CheckoutScreen            from '../../features/customer/screens/CheckoutScreen';
 import BookingSuccessScreen      from '../../features/customer/screens/BookingSuccessScreen';
 import BookingDetailScreen       from '../../features/customer/screens/BookingDetailScreen';
@@ -30,7 +31,6 @@ import CallScreen                from '../../features/chat/screens/CallScreen';
 
 const Tab   = createBottomTabNavigator<CustomerTabParamList>();
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
-
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 const TAB_CONFIG: Record<keyof CustomerTabParamList, { label: string; icon: IconName; iconActive: IconName }> = {
@@ -79,6 +79,7 @@ export default function CustomerTabs() {
       <Stack.Screen name="CustomerRoot"         component={CustomerTabNavigator} />
       <Stack.Screen name="PhotographerProfile"  component={PhotographerProfileScreen} />
       <Stack.Screen name="PhotographerPortfolio" component={PhotographerPortfolioScreen} />
+      <Stack.Screen name="PhotographerServicePackages" component={PhotographerServicePackagesScreen} />
       <Stack.Screen name="Checkout"             component={CheckoutScreen} />
       <Stack.Screen name="BookingSuccess"       component={BookingSuccessScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="BookingDetail"        component={BookingDetailScreen} />

@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { getPhotographer, Photographer, getMyConversations, getMyMatches, recordSwipe, getPhotographerAvailability, type PhotographerAvailabilitySlot } from '../api';
+import { getPhotographer, Photographer, getMyConversations, getMyMatches, recordSwipe, getPhotographerAvailability, type PhotographerAvailabilitySlot, getPhotographerServicePackages } from '../api';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { addFavorite, removeFavorite, isFavorite } from '../utils/favorites';
 import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
@@ -75,12 +75,6 @@ const DUMMY_EQUIPMENT = [
   { icon: 'bulb-outline', name: 'Profoto B10 Plus', desc: '500Ws Studio Flash' },
 ];
 
-const DUMMY_SERVICES = [
-  { name: 'Portrait Session', duration: '1 giờ', price: '1.200.000₫', desc: '20 ảnh retouched' },
-  { name: 'Fashion Editorial', duration: '3 giờ', price: '2.500.000₫', desc: '50 ảnh + video BTS' },
-  { name: 'Full Day Event', duration: '8 giờ', price: '5.800.000₫', desc: 'Unlimited ảnh + album' },
-];
-
 const DUMMY_REVIEWS = [
   { name: 'Trân Ngọc', date: '15/01/2026', rating: 5, text: 'Chụp ảnh cực kỳ chuyên nghiệp và tận tâm. Ảnh ra đẹp hơn mong đợi nhiều lần!' },
   { name: 'Minh Hiếu', date: '02/01/2026', rating: 4, text: 'Phong cách độc đáo, rất sáng tạo. Phản hồi nhanh và linh hoạt với yêu cầu của khách hàng.' },
@@ -99,6 +93,7 @@ export default function PhotographerProfileScreen() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [availabilitySlots, setAvailabilitySlots] = useState<PhotographerAvailabilitySlot[]>([]);
+  const [servicePackages, setServicePackages] = useState<any[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(true);
   const [scheduleExpanded, setScheduleExpanded] = useState(false);
   const [selectedScheduleDate, setSelectedScheduleDate] = useState(new Date());
@@ -115,12 +110,14 @@ export default function PhotographerProfileScreen() {
       getMyMatches().catch(() => []),
       getMyConversations().catch(() => []),
       getPhotographerAvailability(photographerId).catch(() => []),
+      getPhotographerServicePackages(photographerId).catch(() => []),
     ])
-      .then(([data, favoriteStatus, matches, convs, availability]) => {
+      .then(([data, favoriteStatus, matches, convs, availability, packages]) => {
         if (!mounted) return;
         setP(data);
         setFav(favoriteStatus);
         setAvailabilitySlots(availability);
+        setServicePackages(packages);
 
         const existingMatch = matches.find((m: any) => m.photographerId === photographerId);
         if (existingMatch) setMatchId(existingMatch.id);
@@ -217,7 +214,7 @@ export default function PhotographerProfileScreen() {
     }
   };
 
-  const handleBookPress = async () => {
+  const handleBookPress = async (packageId?: string) => {
     if (!p) return;
     let currentMatchId = matchId;
     
@@ -252,7 +249,7 @@ export default function PhotographerProfileScreen() {
     }
     
     // Navigate so CheckoutScreen can proceed
-    navigation.navigate('Checkout', { photographer: p, matchId: currentMatchId || undefined });
+    navigation.navigate('Checkout', { photographer: p, matchId: currentMatchId || undefined, packageId, packages: servicePackages });
   };
 
   const normalizeAvailabilityDate = (value?: string | null) => {
@@ -474,20 +471,46 @@ export default function PhotographerProfileScreen() {
         </View>
 
         {/* ── SERVICES & PRICING ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dịch Vụ & Giá</Text>
-          <View style={{ gap: 8 }}>
-            {DUMMY_SERVICES.map((s, i) => (
-              <View key={i} style={styles.serviceItem}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.accent }}>{s.name}</Text>
-                  <Text style={{ fontSize: 11, opacity: 0.5, color: THEME.accent, marginTop: 2 }}>{s.duration} · {s.desc}</Text>
-                </View>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.accent }}>{s.price}</Text>
-              </View>
-            ))}
+        {servicePackages.length > 0 && (
+          <View style={[styles.section, { paddingHorizontal: 0 }]}>
+            <View style={{ paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Gói Dịch Vụ Nổi Bật</Text>
+              <Pressable onPress={() => navigation.navigate('PhotographerServicePackages', { photographer: p, packages: servicePackages })}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.orange, textTransform: 'uppercase' }}>Xem tất cả</Text>
+              </Pressable>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}>
+              {servicePackages.map((s, i) => (
+                <Pressable key={s.id || i} style={styles.packageCardSquare} onPress={() => handleBookPress(s.id)}>
+                  {s.media && s.media.length > 0 ? (
+                    <Image source={{ uri: formatImageUrl(s.media[0].imageUrl) }} style={styles.packageCardImg} />
+                  ) : (
+                    <View style={[styles.packageCardImg, { backgroundColor: 'rgba(26,26,15,0.05)', justifyContent: 'center', alignItems: 'center' }]}>
+                      <Ionicons name="images-outline" size={32} color="rgba(26,26,15,0.2)" />
+                    </View>
+                  )}
+                  <LinearGradient
+                    colors={['transparent', 'rgba(26,26,15,0.85)']}
+                    locations={[0.3, 1]}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View style={styles.packageCardContent}>
+                    <View>
+                      <Text style={styles.packageCardTitle} numberOfLines={2}>{s.title}</Text>
+                      <Text style={styles.packageCardDuration} numberOfLines={1}>{s.durationHours} giờ · {s.subtitle}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                      <Text style={styles.packageCardPrice}>{s.price.toLocaleString('vi-VN')}₫</Text>
+                      <View style={styles.packageCardBtn}>
+                        <Text style={styles.packageCardBtnText}>Đặt</Text>
+                      </View>
+                    </View>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
-        </View>
+        )}
 
         {/* ── SCHEDULE ── */}
         <View style={styles.section}>
@@ -636,7 +659,7 @@ export default function PhotographerProfileScreen() {
         </Pressable>
         <Pressable
           style={styles.bookBtn}
-          onPress={handleBookPress}
+          onPress={() => handleBookPress()}
           disabled={chatLoading}
         >
           <Text style={styles.bookBtnText}>Đặt Lịch Ngay</Text>
@@ -690,9 +713,18 @@ const styles = StyleSheet.create({
   viewAllBtnText: { fontSize: 13, fontWeight: '700', color: THEME.accent, letterSpacing: 1 },
 
   equipItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, backgroundColor: 'rgba(26,26,15,0.03)', borderWidth: 1, borderColor: 'rgba(26,26,15,0.06)' },
-  serviceItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(26,26,15,0.08)' },
+  serviceItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(26,26,15,0.08)' },
 
-  scheduleHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 },
+  packageCardSquare: { width: W * 0.7, height: W * 0.7, borderRadius: 16, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 1, borderColor: 'rgba(26,26,15,0.08)' },
+  packageCardImg: { ...StyleSheet.absoluteFillObject, resizeMode: 'cover' },
+  packageCardContent: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16 },
+  packageCardTitle: { fontSize: 16, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  packageCardDuration: { fontSize: 12, color: 'rgba(255,255,255,0.7)' },
+  packageCardPrice: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  packageCardBtn: { backgroundColor: THEME.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  packageCardBtnText: { color: THEME.accent, fontSize: 12, fontWeight: '800' },
+
+  scheduleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   scheduleToggle: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(26,26,15,0.12)', backgroundColor: 'rgba(26,26,15,0.03)', flexShrink: 0, maxWidth: 120 },
   scheduleToggleText: { fontSize: 12, fontWeight: '700', color: THEME.accent },
   dayPager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, padding: 10, borderRadius: 14, backgroundColor: 'rgba(26,26,15,0.03)' },

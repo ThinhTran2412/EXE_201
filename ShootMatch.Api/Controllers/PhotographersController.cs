@@ -46,6 +46,15 @@ public sealed class PhotographersController(
         return Ok(items);
     }
 
+    [HttpGet("{id:guid}/service-packages")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetPhotographerServicePackagesPublic(Guid id, CancellationToken cancellationToken)
+    {
+        var packages = await servicePackageRepository.GetByPhotographerIdAsync(id, cancellationToken);
+        var activePackages = packages.Where(p => p.IsActive).ToList();
+        return Ok(activePackages);
+    }
+
     [HttpPost("availability/block")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> BlockAvailability([FromBody] BlockPhotographerAvailabilityBatchRequest request, CancellationToken cancellationToken)
@@ -356,6 +365,22 @@ public sealed class PhotographersController(
         await using var stream = file.OpenReadStream();
         var objectName = $"photographers/{id}/{kind}-{Guid.NewGuid():N}{System.IO.Path.GetExtension(file.FileName)}";
         var photoUrl = await storageService.UploadAsync(stream, objectName, file.ContentType ?? "application/octet-stream", ct);
+        return Ok(new { photoUrl });
+    }
+
+    [HttpPost("service-packages/media/upload")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadServicePackageMedia([FromForm] UploadPhotographerPhotoRequest request, CancellationToken ct)
+    {
+        if (request.File.Length <= 0) return BadRequest("Empty file.");
+        if (request.File.Length > 10 * 1024 * 1024) return BadRequest("File exceeds 10 MB limit.");
+        
+        var id = GetPhotographerIdOrThrow(User);
+        
+        await using var stream = request.File.OpenReadStream();
+        var objectName = $"photographers/{id}/packages/{Guid.NewGuid():N}{System.IO.Path.GetExtension(request.File.FileName)}";
+        var photoUrl = await storageService.UploadAsync(stream, objectName, request.File.ContentType ?? "image/jpeg", ct);
+        
         return Ok(new { photoUrl });
     }
 
