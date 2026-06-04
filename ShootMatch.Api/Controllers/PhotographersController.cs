@@ -124,7 +124,9 @@ public sealed class PhotographersController(
                 GoogleId              = existing.GoogleId,
                 CreatedAt             = existing.CreatedAt,
                 UpdatedAt             = DateTime.UtcNow,
-                PortfolioEmbeddings   = existing.PortfolioEmbeddings
+                DeletedAt             = existing.DeletedAt,
+                PortfolioEmbeddings   = existing.PortfolioEmbeddings,
+                PortfolioPhotos       = existing.PortfolioPhotos
             };
 
             await photographerRepository.UpsertAsync(updated, cancellationToken);
