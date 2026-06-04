@@ -67,7 +67,7 @@ export default function PAllChatScreen() {
           <Animated.View entering={FadeInDown.duration(400).delay(index * 60)}>
             <Pressable
               style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-              onPress={() => navigation.getParent()?.getParent()?.navigate('Chat', { conversationId: c.id, participantName: c.customerName ?? `Khách hàng #${(c.customerId ?? '').slice(0, 6)}` })}
+              onPress={() => navigation.navigate('Chat', { conversationId: c.id, participantName: c.customerName ?? `Khách hàng #${(c.customerId ?? '').slice(0, 6)}` })}
             >
               <Image source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&q=80' }} style={styles.avatar} />
               <View style={styles.rowContent}>
