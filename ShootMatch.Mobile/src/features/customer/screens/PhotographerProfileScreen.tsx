@@ -197,7 +197,7 @@ export default function PhotographerProfileScreen() {
       }
       
       if (currentConvId) {
-        navigation.navigate('ChatThread', {
+        navigation.navigate('Chat', {
           conversationId: currentConvId,
           name: p.displayName,
           participantName: p.displayName,

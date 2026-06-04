@@ -27,7 +27,7 @@ export default function SharedNotificationsScreen() {
           name: 'Tin nhắn',
         });
       } else {
-        navigation.navigate('ChatThread', {
+        navigation.navigate('Chat', {
           conversationId: payload.conversationId,
           name: 'Tin nhắn',
         });
