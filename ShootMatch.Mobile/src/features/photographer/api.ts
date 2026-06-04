@@ -78,7 +78,12 @@ export async function updatePersonalInfo(payload: {
 }
 
 export async function uploadProfileImage(uri: string, mimeType: string, kind: 'avatar' | 'cover') {
-  const filename = uri.split('/').pop() ?? `${kind}_${Date.now()}.jpg`;
+  const ext = mimeType?.split('/')[1] || 'jpg';
+  let filename = uri.split('/').pop() ?? `${kind}_${Date.now()}.${ext}`;
+  if (!filename.includes('.')) {
+    filename = `${filename}.${ext}`;
+  }
+
   const form = new FormData();
   form.append('file', {
     uri,
@@ -162,7 +167,11 @@ export async function getPortfolioPhotos(): Promise<string[]> {
 
 /** Upload a portfolio photo. Returns the public Supabase URL. */
 export async function uploadPortfolioPhoto(uri: string, mimeType: string): Promise<string> {
-  const filename = uri.split('/').pop() ?? `photo_${Date.now()}.jpg`;
+  const ext = mimeType?.split('/')[1] || 'jpg';
+  let filename = uri.split('/').pop() ?? `photo_${Date.now()}.${ext}`;
+  if (!filename.includes('.')) {
+    filename = `${filename}.${ext}`;
+  }
 
   const form = new FormData();
   form.append('file', {
@@ -180,7 +189,11 @@ export async function uploadPortfolioPhoto(uri: string, mimeType: string): Promi
 }
 
 export async function uploadServicePackageMedia(uri: string, mimeType: string): Promise<string> {
-  const filename = uri.split('/').pop() ?? `package_${Date.now()}.jpg`;
+  const ext = mimeType?.split('/')[1] || 'jpg';
+  let filename = uri.split('/').pop() ?? `package_${Date.now()}.${ext}`;
+  if (!filename.includes('.')) {
+    filename = `${filename}.${ext}`;
+  }
 
   const form = new FormData();
   form.append('file', {

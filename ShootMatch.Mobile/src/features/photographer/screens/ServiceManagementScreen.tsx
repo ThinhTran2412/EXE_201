@@ -765,9 +765,22 @@ export default function ServiceManagementScreen() {
                         onPress={() =>
                           setForm(prev => {
                             const newMedia = [...prev.media];
-                            const [selected] = newMedia.splice(index, 1);
-                            newMedia.unshift(selected);
-                            return { ...prev, media: newMedia };
+                            const selected = newMedia[index];
+                            if (!selected) return prev;
+
+                            // Swap: replace the selected gallery item with the old cover image
+                            const oldCover = prev.coverImageUrl;
+                            if (oldCover) {
+                              newMedia[index] = { imageUrl: oldCover, sortOrder: selected.sortOrder };
+                            } else {
+                              newMedia.splice(index, 1);
+                            }
+
+                            return {
+                              ...prev,
+                              coverImageUrl: selected.imageUrl,
+                              media: newMedia,
+                            };
                           })
                         }
                       >
