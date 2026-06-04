@@ -1,13 +1,16 @@
 import { gql } from '../../shared/api/graphql';
 
 export interface Message {
-  id:          string;
-  senderId:    string;
-  senderRole:  string;
-  content:     string;
+  id: string;
+  senderId: string;
+  senderRole: string;
+  content: string;
   contentType: string;
-  sentAt:      string;
-  readAt?:     string;
+  sentAt: string;
+  readAt?: string;
+  mediaPreviewUrl?: string | null;
+  mediaExpiresAt?: string | null;
+  displayContent?: string | null;
 }
 
 export interface ConversationWithPhotographer {

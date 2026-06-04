@@ -63,7 +63,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       try {
         await ChatHub.connect();
         if (cancelled) return;
-        cleanup = ChatHub.onReceiveNotification((incoming) => {
+        cleanup = ChatHub.onReceiveNotification((incoming: {
+          id: string;
+          category: string;
+          title: string;
+          body: string;
+          payloadJson?: string | null;
+          actionType?: string | null;
+          createdAt: string;
+          read?: boolean;
+        }) => {
           const n: AppNotification = {
             id: incoming.id,
             category: (incoming.category as NotificationCategory) ?? 'system',

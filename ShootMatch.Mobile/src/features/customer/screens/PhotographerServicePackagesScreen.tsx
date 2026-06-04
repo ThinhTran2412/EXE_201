@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, Dimensions } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,7 +9,6 @@ import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-const { width: W } = Dimensions.get('window');
 
 const THEME = {
   primary: '#fff7e1',
@@ -73,7 +72,7 @@ export default function PhotographerServicePackagesScreen() {
           return (
             <Animated.View key={item.id} entering={FadeInDown.duration(400).delay(i * 100)} style={styles.cardWrapper}>
               <View style={styles.card}>
-                <Pressable onPress={() => setExpandedId(isExpanded ? null : item.id)} activeOpacity={0.9}>
+                <Pressable onPress={() => setExpandedId(isExpanded ? null : item.id)}>
                   {/* ── Cover Image ── */}
                   <View style={styles.cardCover}>
                     {item.media && item.media.length > 0 ? (

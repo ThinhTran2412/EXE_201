@@ -47,11 +47,32 @@ export async function sendMessage(conversationId: string, content: string) {
   await conn.invoke('SendMessage', conversationId, content);
 }
 
+export async function sendImageMessage(conversationId: string, photoUrl: string, previewUrl?: string) {
+  const conn = await connect();
+  await conn.invoke('SendImageMessage', conversationId, photoUrl, previewUrl ?? null);
+}
+
 export function onReceiveMessage(
   handler: (msg: { senderId: string; senderRole: string; content: string; sentAt: string }) => void
 ) {
   connection?.on('ReceiveMessage', handler);
   return () => connection?.off('ReceiveMessage', handler);
+}
+
+export function onReceiveNotification(
+  handler: (incoming: {
+    id: string;
+    category: string;
+    title: string;
+    body: string;
+    payloadJson?: string | null;
+    actionType?: string | null;
+    createdAt: string;
+    read?: boolean;
+  }) => void
+) {
+  connection?.on('ReceiveNotification', handler);
+  return () => connection?.off('ReceiveNotification', handler);
 }
 
 // ── Calling Methods ───────────────────────────────────────────────────────────

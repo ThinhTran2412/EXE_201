@@ -3,11 +3,17 @@ import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 
 /** URL hiển thị — sau 3 ngày dùng bản preview. */
 export function getMessageDisplayContent(msg: Message): string {
-  if (msg.contentType === 'Image') {
-    const expired = msg.mediaExpiresAt && new Date(msg.mediaExpiresAt) <= new Date();
-    if (expired && msg.mediaPreviewUrl) return msg.mediaPreviewUrl;
+  const typed = msg as Message & {
+    mediaExpiresAt?: string | null;
+    mediaPreviewUrl?: string | null;
+    displayContent?: string | null;
+  };
+
+  if (typed.contentType === 'Image') {
+    const expired = typed.mediaExpiresAt && new Date(typed.mediaExpiresAt) <= new Date();
+    if (expired && typed.mediaPreviewUrl) return typed.mediaPreviewUrl;
   }
-  return msg.displayContent ?? msg.content;
+  return typed.displayContent ?? typed.content;
 }
 
 export function getMessageImageUri(msg: Message): string {
