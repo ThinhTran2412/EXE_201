@@ -17,15 +17,6 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 }
 
-function getUserIdFromToken(token: string): string {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.user_id ?? payload.sub ?? '';
-  } catch {
-    return '';
-  }
-}
-
 function Bubble({ msg, isMe }: { msg: Message; isMe: boolean }) {
   return (
     <View style={[styles.bubbleWrapper, isMe ? styles.bubbleWrapperMe : styles.bubbleWrapperThem]}>
@@ -47,11 +38,6 @@ export default function ChatScreen() {
   const { session } = useAuth();
   const { conversationId, name, participantName } = route.params as { conversationId: string; name?: string; participantName?: string };
   const headerTitle = participantName ?? name ?? 'Đang trò chuyện';
-
-  const currentUserId = useMemo(
-    () => session?.accessToken ? getUserIdFromToken(session.accessToken) : '',
-    [session?.accessToken],
-  );
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [text,     setText]     = useState('');
@@ -88,8 +74,8 @@ export default function ChatScreen() {
   }, [conversationId]);
 
   const listData = useMemo(
-    () => messages.map((msg) => ({ msg, isMe: msg.senderId === currentUserId })),
-    [messages, currentUserId],
+    () => messages.map((msg) => ({ msg, isMe: msg.senderId === session?.userId })),
+    [messages, session?.userId],
   );
 
   async function handleSend() {
