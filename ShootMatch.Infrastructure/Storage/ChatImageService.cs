@@ -1,6 +1,6 @@
+using ShootMatch.Application.Abstractions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using ShootMatch.Application.Abstractions;
 
 namespace ShootMatch.Infrastructure.Storage;
 

@@ -15,7 +15,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../../app/theme/colors';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { radius, spacing, shadows } from '../../../app/theme/spacing';
-import { blockAvailability, getAvailability, unblockAvailability, type PhotographerAvailabilitySlot } from '../api';
+import {
+  blockAvailability,
+  getAvailability,
+  unblockAvailability,
+  type PhotographerAvailabilitySlot,
+} from '../api';
 
 type BookingStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Busy';
 
@@ -147,7 +152,7 @@ export default function PBookingCalendarScreen() {
   useEffect(() => {
     let mounted = true;
     getAvailability()
-      .then((slots) => {
+      .then((slots: PhotographerAvailabilitySlot[]) => {
         if (!mounted) return;
         setAvailabilitySlots(slots);
       });

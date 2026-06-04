@@ -1,6 +1,14 @@
 import { apiClient } from '../../shared/api/client';
 import { gql } from '../../shared/api/graphql';
 
+export interface PhotographerAvailabilitySlot {
+  id?: string;
+  specificDate: string;
+  startTime: string;
+  endTime: string;
+  slotType: 'Blocked' | 'Available';
+}
+
 export interface PhotographerProfile {
   id:                 string;
   displayName:        string;
@@ -93,6 +101,35 @@ export async function setAvailability(isAvailable: boolean) {
   await apiClient.patch('/api/photographers/availability', { isAvailable });
 }
 
+export async function getAvailability(): Promise<PhotographerAvailabilitySlot[]> {
+  try {
+    const { data } = await apiClient.get<PhotographerAvailabilitySlot[]>('/api/photographers/availability');
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function blockAvailability(
+  specificDate: string,
+  slots: PhotographerAvailabilitySlot[],
+): Promise<void> {
+  await apiClient.post('/api/photographers/availability/block', {
+    specificDate,
+    slots,
+  });
+}
+
+export async function unblockAvailability(
+  specificDate: string,
+  slots: PhotographerAvailabilitySlot[],
+): Promise<void> {
+  await apiClient.post('/api/photographers/availability/unblock', {
+    specificDate,
+    slots,
+  });
+}
+
 export async function getMyBookingsAsPhotographer(): Promise<PBooking[]> {
   const data = await gql<{ myBookingsAsPhotographer: PBooking[] }>(`
     query { myBookingsAsPhotographer {
@@ -163,4 +200,49 @@ export async function uploadServicePackageMedia(uri: string, mimeType: string): 
 /** Delete a portfolio photo by its Supabase public URL. */
 export async function deletePortfolioPhoto(photoUrl: string): Promise<void> {
   await apiClient.delete('/api/photographers/portfolio', { data: { photoUrl } });
+}
+
+export interface ServicePackageMedia {
+  id?: string;
+  imageUrl: string;
+  sortOrder: number;
+}
+
+export interface ServicePackage {
+  id: string;
+  photographerId: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  callToAction: string;
+  price: number;
+  durationHours: number;
+  isActive: boolean;
+  createdAt: string;
+  media: ServicePackageMedia[];
+}
+
+export async function getMyServicePackages(): Promise<ServicePackage[]> {
+  try {
+    const { data } = await apiClient.get<ServicePackage[]>('/api/photographers/service-packages');
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveServicePackage(payload: Partial<ServicePackage>): Promise<ServicePackage> {
+  if (payload.id) {
+    const { data } = await apiClient.put<ServicePackage>(`/api/photographers/service-packages/${payload.id}`, payload);
+    return data;
+  } else {
+    const { data } = await apiClient.post<ServicePackage>('/api/photographers/service-packages', payload);
+    return data;
+  }
+}
+
+export async function deleteServicePackage(id: string): Promise<void> {
+  await apiClient.delete(`/api/photographers/service-packages/${id}`);
 }

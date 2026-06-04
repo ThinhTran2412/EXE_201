@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   Alert,
+  Image,
   ImageBackground,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../../app/theme/colors';
+import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { spacing } from '../../../app/theme/spacing';
 import { radius } from '../../../app/theme/spacing';
 import { deleteServicePackage, getMyServicePackages, saveServicePackage, uploadServicePackageMedia, type ServicePackage, type ServicePackageMedia } from '../api';
@@ -30,6 +32,7 @@ type ServiceForm = {
   price: string;
   durationHours: string;
   isActive: boolean;
+  coverImageUrl: string;
   media: ServicePackageMedia[];
 };
 
@@ -42,6 +45,7 @@ const DEFAULT_FORM: ServiceForm = {
   price: '',
   durationHours: '4',
   isActive: true,
+  coverImageUrl: '',
   media: [],
 };
 
@@ -140,6 +144,9 @@ export default function ServiceManagementScreen() {
   function openEdit(item: ServicePackage) {
     setEditingId(item.id);
     const parsed = splitDescriptionSections(item.description);
+    // First media item is the cover
+    const cover = item.media[0]?.imageUrl ?? '';
+    const galleryMedia = cover ? item.media.slice(1) : item.media;
     setForm({
       title: item.title,
       tags: parsed.tags,
@@ -149,16 +156,26 @@ export default function ServiceManagementScreen() {
       price: String(item.price),
       durationHours: String(item.durationHours),
       isActive: item.isActive,
-      media: item.media,
+      coverImageUrl: cover,
+      media: galleryMedia,
     });
     setTagInput('');
     setEditorVisible(true);
   }
 
   async function save() {
-    const media = form.media.slice(0, 10);
+    if (!form.coverImageUrl) {
+      Alert.alert('Thiếu ảnh bìa', 'Vui lòng chọn ảnh bìa cho gói dịch vụ.');
+      return;
+    }
+
+    // Cover image is always first in the media array
+    const coverItem: ServicePackageMedia = { imageUrl: form.coverImageUrl, sortOrder: 0 };
+    const galleryItems = form.media.slice(0, 9).map((m, i) => ({ ...m, sortOrder: i + 1 }));
+    const media = [coverItem, ...galleryItems];
+
     if (media.length < 5) {
-      Alert.alert('Thiếu ảnh', 'Mỗi gói dịch vụ cần tối thiểu 5 ảnh.');
+      Alert.alert('Thiếu ảnh', 'Mỗi gói dịch vụ cần tối thiểu 5 ảnh (1 ảnh bìa + 4 ảnh gallery).');
       return;
     }
 
@@ -218,6 +235,30 @@ export default function ServiceManagementScreen() {
     ]);
   }
 
+  async function pickCoverImage() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Thiếu quyền', 'Cần cho phép truy cập thư viện ảnh.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: false,
+      quality: 0.9,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    setSaving(true);
+    try {
+      const url = await uploadServicePackageMedia(asset.uri, asset.mimeType ?? 'image/jpeg');
+      setForm(prev => ({ ...prev, coverImageUrl: url }));
+    } catch {
+      Alert.alert('Lỗi', 'Không tải được ảnh bìa lên.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function pickImagesFromDevice() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -228,13 +269,13 @@ export default function ServiceManagementScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
-      selectionLimit: 10,
+      selectionLimit: 9,
       quality: 0.85,
     });
 
     if (result.canceled) return;
 
-    const selected = result.assets.slice(0, 10 - form.media.length);
+    const selected = result.assets.slice(0, 9 - form.media.length);
     if (selected.length === 0) return;
 
     setSaving(true);
@@ -248,7 +289,7 @@ export default function ServiceManagementScreen() {
 
       setForm((prev) => ({
         ...prev,
-        media: [...prev.media, ...uploaded].slice(0, 10),
+        media: [...prev.media, ...uploaded].slice(0, 9),
       }));
     } catch {
       Alert.alert('Lỗi', 'Không tải được ảnh lên.');
@@ -335,10 +376,9 @@ export default function ServiceManagementScreen() {
                 {/* ── Cover image with gradient overlay ── */}
                 <View style={styles.cardCoverWrap}>
                   {coverImage ? (
-                    <PortfolioImageCell
-                      uri={coverImage}
+                    <Image
+                      source={{ uri: formatImageUrl(coverImage) }}
                       style={styles.cardCoverImg}
-                      borderRadius={0}
                       resizeMode="cover"
                     />
                   ) : (
@@ -665,8 +705,33 @@ export default function ServiceManagementScreen() {
                   </View>
                 </View>
 
+                {/* ── Cover Image ── */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.fieldLabel}>Ảnh bìa gói dịch vụ</Text>
+                  <Pressable onPress={pickCoverImage} style={styles.coverPickerWrap}>
+                    {form.coverImageUrl ? (
+                      <Image
+                        source={{ uri: formatImageUrl(form.coverImageUrl) }}
+                        style={styles.coverPickerImg}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={styles.coverPickerEmpty}>
+                        <Ionicons name="camera-outline" size={32} color="rgba(255,255,255,0.45)" />
+                        <Text style={styles.coverPickerEmptyText}>Chạm để chọn ảnh bìa</Text>
+                      </View>
+                    )}
+                    <View style={styles.coverPickerOverlay}>
+                      <Ionicons name="camera" size={18} color="#fff" />
+                      <Text style={styles.coverPickerOverlayText}>
+                        {form.coverImageUrl ? 'Thay ảnh bìa' : 'Chọn ảnh bìa'}
+                      </Text>
+                    </View>
+                  </Pressable>
+                </View>
+
                 <View style={styles.mediaHead}>
-                  <Text style={styles.fieldLabel}>Ảnh gói dịch vụ</Text>
+                  <Text style={styles.fieldLabel}>Ảnh gallery (tối đa 9)</Text>
                   <Pressable onPress={pickImagesFromDevice} style={styles.mediaAddBtn}>
                     <Ionicons name="images-outline" size={14} color="#fff" />
                     <Text style={styles.mediaAddText}>Chọn ảnh từ máy</Text>
@@ -674,14 +739,41 @@ export default function ServiceManagementScreen() {
                 </View>
 
                 <View style={styles.mediaEditor}>
-                  {form.media.map((item) => (
-                    <PortfolioImageCell
-                      key={`${item.sortOrder}-${item.imageUrl}`}
-                      uri={item.imageUrl}
-                      borderRadius={14}
-                      style={styles.mediaItem}
-                      resizeMode="cover"
-                    />
+                  {form.media.map((item, index) => (
+                    <View key={`${item.sortOrder}-${item.imageUrl}`} style={styles.mediaItemWrap}>
+                      <PortfolioImageCell
+                        uri={item.imageUrl}
+                        borderRadius={14}
+                        style={styles.mediaItem}
+                        resizeMode="cover"
+                      />
+                      {/* Remove button */}
+                      <Pressable
+                        style={styles.mediaRemoveBtn}
+                        onPress={() =>
+                          setForm(prev => ({
+                            ...prev,
+                            media: prev.media.filter((_, i) => i !== index),
+                          }))
+                        }
+                      >
+                        <Ionicons name="close" size={14} color="#fff" />
+                      </Pressable>
+                      {/* Set as cover button */}
+                      <Pressable
+                        style={styles.mediaCoverBtn}
+                        onPress={() =>
+                          setForm(prev => {
+                            const newMedia = [...prev.media];
+                            const [selected] = newMedia.splice(index, 1);
+                            newMedia.unshift(selected);
+                            return { ...prev, media: newMedia };
+                          })
+                        }
+                      >
+                        <Ionicons name="star" size={14} color="#ffd700" />
+                      </Pressable>
+                    </View>
                   ))}
                 </View>
 
@@ -969,7 +1061,9 @@ const styles = StyleSheet.create({
   mediaStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   mediaThumb: { width: 92, height: 92, borderRadius: 14 },
   mediaEditor: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  mediaItemWrap: { position: 'relative' },
   mediaItem: { width: 84, height: 84, borderRadius: 14 },
+  mediaRemoveBtn: { position: 'absolute', top: -6, right: -6, backgroundColor: '#e05252', borderRadius: 12, padding: 2, borderWidth: 1, borderColor: '#fff' },
   mediaPreviewImage: { width: 48, height: 48, borderRadius: 12 },
 
   mediaItemText: { color: colors.text, fontWeight: '700' },
@@ -980,7 +1074,7 @@ const styles = StyleSheet.create({
   textArea: { minHeight: 100, textAlignVertical: 'top' },
   saveBtn: { backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 16, alignItems: 'center', marginTop: 6, marginBottom: 8 },
   saveBtnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  saveBtnText: { color: '#fff', fontWeight: '900', letterSpacing: 0.4 },
+  fieldLabel: { color: colors.text, fontSize: 13, fontWeight: '600', marginBottom: 4 },
 
   // ── Toggle expand/collapse ──
   toggleBtn: {
@@ -1044,4 +1138,69 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   expandedPhotoItem: { width: 80, height: 80, borderRadius: 10 },
+
+  // ── Media editor cover button ──
+  mediaCoverBtn: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 12,
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // ── Save button text ──
+  saveBtnText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 15,
+    letterSpacing: 0.3,
+  },
+
+  // ── Cover image picker ──
+  coverPickerWrap: {
+    width: '100%',
+    height: 180,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderStyle: 'dashed',
+    position: 'relative',
+  },
+  coverPickerImg: {
+    width: '100%',
+    height: '100%',
+  },
+  coverPickerEmpty: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  coverPickerEmptyText: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  coverPickerOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  coverPickerOverlayText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
 });
