@@ -53,6 +53,7 @@ export type PhotographerStackParamList = {
   ServiceManagement: undefined;
   BookingCalendar: undefined;
   PersonalInfo: undefined;
+  CustomerProfile: { customerId: string; customerName?: string };
   Call: {
     conversationId: string;
     callSessionId?: string;

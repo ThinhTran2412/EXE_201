@@ -20,6 +20,9 @@ export interface ConversationWithPhotographer {
   photographerId: string;
   status:         string;
   lastMessageAt?: string;
+  customerDisplayName?: string;
+  customerAvatarUrl?:   string;
+  lastMessageContent?:  string;
 }
 
 export async function getConversationMessages(conversationId: string): Promise<Message[]> {
@@ -37,6 +40,7 @@ export async function getConversationsByPhotographer(): Promise<ConversationWith
   const data = await gql<{ myConversationsAsPhotographer: ConversationWithPhotographer[] }>(`
     query { myConversationsAsPhotographer {
       id matchId customerId photographerId status lastMessageAt
+      customerDisplayName customerAvatarUrl lastMessageContent
     }}
   `);
   return data.myConversationsAsPhotographer ?? [];

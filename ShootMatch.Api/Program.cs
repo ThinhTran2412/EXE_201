@@ -151,6 +151,7 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services
     .AddGraphQLServer()
     .AddQueryType<MatchingQuery>()
+    .AddTypeExtension<ConversationExtensions>()
     .TryAddTypeInterceptor<IgnoreDomainEventsTypeInterceptor>()
     .AddAuthorization();
 

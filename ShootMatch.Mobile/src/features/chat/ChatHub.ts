@@ -8,12 +8,13 @@ let connection: signalR.HubConnection | null = null;
 export async function connect(): Promise<signalR.HubConnection> {
   if (connection?.state === signalR.HubConnectionState.Connected) return connection;
 
-  const token = await tokenStorage.getAccess();
-
   connection = new signalR.HubConnectionBuilder()
     .withUrl(HUB_URL, {
       // WebSocket doesn't support Authorization header — send via query string
-      accessTokenFactory: () => token ?? '',
+      accessTokenFactory: async () => {
+        const token = await tokenStorage.getAccess();
+        return token ?? '';
+      },
       transport: signalR.HttpTransportType.WebSockets,
     })
     .withAutomaticReconnect()
@@ -49,11 +50,11 @@ export async function sendMessage(conversationId: string, content: string) {
 
 export async function sendImageMessage(conversationId: string, photoUrl: string, previewUrl?: string) {
   const conn = await connect();
-  await conn.invoke('SendImageMessage', conversationId, photoUrl, previewUrl ?? null);
+  await conn.invoke('SendImageMessage', conversationId, photoUrl);
 }
 
 export function onReceiveMessage(
-  handler: (msg: { senderId: string; senderRole: string; content: string; sentAt: string }) => void
+  handler: (msg: { senderId: string; senderRole: string; content: string; contentType?: string; sentAt: string }) => void
 ) {
   connection?.on('ReceiveMessage', handler);
   return () => connection?.off('ReceiveMessage', handler);

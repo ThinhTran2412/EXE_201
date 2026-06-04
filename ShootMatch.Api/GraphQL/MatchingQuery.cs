@@ -50,6 +50,19 @@ public sealed class MatchingQuery
         return await customerService.GetProfileAsync(customerId, cancellationToken);
     }
 
+    /// <summary>
+    /// Returns a customer profile by ID — for photographers to view their client's profile (read-only).
+    /// Requires photographer authentication.
+    /// </summary>
+    [Authorize(Roles = new[] { "photographer" })]
+    public async Task<CustomerProfile?> CustomerById(
+        Guid id,
+        [Service] CustomerService customerService,
+        CancellationToken cancellationToken)
+    {
+        return await customerService.GetProfileAsync(id, cancellationToken);
+    }
+
     // ── Photographer Public Profile ───────────────────────────────────────────
 
     /// <summary>

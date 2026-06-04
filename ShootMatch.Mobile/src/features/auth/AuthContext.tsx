@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/api/client';
 import { tokenStorage } from '../../shared/storage/tokenStorage';
+import { getUserIdFromAccessToken } from '../../shared/auth/currentUser';
+import * as ChatHub from '../chat/ChatHub';
 
 export type UserRole = 'customer' | 'photographer' | null;
 
@@ -31,8 +33,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       const access = await tokenStorage.getAccess();
       const role   = await tokenStorage.getRole() as UserRole;
-      const userId = await tokenStorage.getUserId();
-      if (access && role) setSession({ accessToken: access, role, userId: userId ?? '' });
+      if (access && role) {
+        const userId = getUserIdFromAccessToken(access, role);
+        setSession({ accessToken: access, role, userId });
+      }
     })().finally(() => setInitializing(false));
   }, []);
 
@@ -86,12 +90,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   async function logout() {
+    try {
+      await ChatHub.disconnect();
+    } catch (e) {
+      console.warn('Failed to disconnect ChatHub on logout:', e);
+    }
     await tokenStorage.clear();
     setSession(null);
   }
 
   async function _saveSession(data: any, role: UserRole) {
-    const userId = data.customerId ?? data.photographerId ?? '';
+    const userId = getUserIdFromAccessToken(data.accessToken, role);
     await tokenStorage.save(data.accessToken, data.refreshToken, role ?? 'customer', userId);
     setSession({ accessToken: data.accessToken, role, userId });
   }

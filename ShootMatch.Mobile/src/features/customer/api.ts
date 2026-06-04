@@ -213,6 +213,19 @@ export async function getCustomerProfile(): Promise<CustomerProfile | null> {
   }
 }
 
+export async function getCustomerById(customerId: string): Promise<CustomerProfile | null> {
+  const data = await gql<{ customerById: CustomerProfile | null }>(`
+    query GetCustomerById($id: UUID!) {
+      customerById(id: $id) {
+        id displayName phone email region avatarUrl coverPhotoUrl
+        highlightPhoto1Url highlightPhoto2Url highlightPhoto3Url
+        rollPreviewPhotos preferredStyles isVerified createdAt
+      }
+    }
+  `, { id: customerId });
+  return data.customerById ?? null;
+}
+
 export type CustomerPhotoSlot = 'avatar' | 'cover' | 'highlight1' | 'highlight2' | 'highlight3';
 
 export async function updateCustomerProfile(payload: Partial<Pick<CustomerProfile,
