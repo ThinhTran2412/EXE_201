@@ -204,6 +204,7 @@ export async function deletePortfolioPhoto(photoUrl: string): Promise<void> {
 
 export interface ServicePackageMedia {
   id?: string;
+  servicePackageId?: string;
   imageUrl: string;
   sortOrder: number;
 }
@@ -220,7 +221,8 @@ export interface ServicePackage {
   price: number;
   durationHours: number;
   isActive: boolean;
-  createdAt: string;
+  createdAt?: string;
+  updatedAt?: string;
   media: ServicePackageMedia[];
 }
 
@@ -233,7 +235,7 @@ export async function getMyServicePackages(): Promise<ServicePackage[]> {
   }
 }
 
-export async function saveServicePackage(payload: Partial<ServicePackage>): Promise<ServicePackage> {
+export async function saveServicePackage(payload: any): Promise<ServicePackage> {
   if (payload.id) {
     const { data } = await apiClient.put<ServicePackage>(`/api/photographers/service-packages/${payload.id}`, payload);
     return data;

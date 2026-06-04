@@ -120,7 +120,7 @@ export default function ServiceManagementScreen() {
   useEffect(() => {
     let mounted = true;
     getMyServicePackages()
-      .then((data) => { if (mounted) setServices(data); })
+      .then((data: ServicePackage[]) => { if (mounted) setServices(data); })
       .catch(() => Alert.alert('Lỗi', 'Không tải được danh sách gói dịch vụ.'))
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
@@ -466,7 +466,7 @@ export default function ServiceManagementScreen() {
                       )}
                       {item.media.length > 1 && (
                         <View style={styles.thumbStrip}>
-                          {item.media.slice(1, 5).map((media, mi) => (
+                          {item.media.slice(1, 5).map((media: ServicePackageMedia, mi: number) => (
                             <PortfolioImageCell
                               key={media.id ?? mi}
                               uri={media.imageUrl}
@@ -543,7 +543,7 @@ export default function ServiceManagementScreen() {
                             <Text style={styles.detailSectionTitle}>Ảnh gói ({item.media.length})</Text>
                           </View>
                           <View style={styles.expandedPhotoGrid}>
-                            {item.media.map((media, mi) => (
+                            {item.media.map((media: ServicePackageMedia, mi: number) => (
                               <PortfolioImageCell
                                 key={media.id ?? mi}
                                 uri={media.imageUrl}

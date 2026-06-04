@@ -283,10 +283,15 @@ public sealed class PhotographersController(
 
         var package = await BuildServicePackageAsync(id, packageId, new ServicePackageRequest(
             request.Title,
+            request.Subtitle,
             request.Description,
+            request.HeroTitle,
+            request.HeroSubtitle,
+            request.CallToAction,
             request.Price,
             request.DurationHours,
-            request.IsActive), cancellationToken);
+            request.IsActive,
+            request.Media), cancellationToken);
         return Ok(package);
     }
 
@@ -305,21 +310,46 @@ public sealed class PhotographersController(
         CancellationToken cancellationToken)
     {
         var title = request.Title.Trim();
+        var subtitle = request.Subtitle.Trim();
         var description = request.Description.Trim();
+        var heroTitle = request.HeroTitle.Trim();
+        var heroSubtitle = request.HeroSubtitle.Trim();
+        var callToAction = request.CallToAction.Trim();
 
-        if (string.IsNullOrWhiteSpace(title))
-            throw new DomainException("Thiếu tiêu đề cho gói dịch vụ.");
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(heroTitle) || string.IsNullOrWhiteSpace(callToAction))
+            throw new DomainException("Thiếu thông tin tiêu đề hoặc CTA cho gói dịch vụ.");
+
+        var media = request.Media
+            .OrderBy(x => x.SortOrder)
+            .Take(10)
+            .Select(x => new ServicePackageMedia
+            {
+                Id = Guid.NewGuid(),
+                ServicePackageId = packageId == Guid.Empty ? Guid.NewGuid() : packageId,
+                ImageUrl = x.ImageUrl.Trim(),
+                SortOrder = x.SortOrder,
+            })
+            .ToList();
+
+        if (media.Count < 5)
+            throw new DomainException("Mỗi gói dịch vụ cần tối thiểu 5 ảnh.");
 
         var package = new ServicePackage
         {
             Id = packageId == Guid.Empty ? Guid.NewGuid() : packageId,
             PhotographerId = photographerId,
             Title = title,
+            Subtitle = subtitle,
             Description = description,
+            HeroTitle = heroTitle,
+            HeroSubtitle = heroSubtitle,
+            CallToAction = callToAction,
             Price = request.Price,
             DurationHours = request.DurationHours,
             IsActive = request.IsActive,
             CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            Media = media,
         };
 
         await servicePackageRepository.UpsertAsync(package, cancellationToken);

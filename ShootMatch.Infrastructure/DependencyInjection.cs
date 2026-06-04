@@ -43,6 +43,8 @@ public static class DependencyInjection
         services.AddScoped<IConversationQueryService,        EfConversationQueryService>();
         services.AddScoped<ICallSessionRepository,           EfCallSessionRepository>();
         services.AddScoped<IVerificationRequestRepository,   EfVerificationRequestRepository>();
+        services.AddScoped<IServicePackageRepository,        EfServicePackageRepository>();
+        services.AddScoped<IPhotographerAvailabilityRepository, EfPhotographerAvailabilityRepository>();
 
         // ── Still InMemory (no EF model yet — replace when ready) ────────────
         services.AddSingleton<IMatchResultStore,        InMemoryMatchResultStore>();

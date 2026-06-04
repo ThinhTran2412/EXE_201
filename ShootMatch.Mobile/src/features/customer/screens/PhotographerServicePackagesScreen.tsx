@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, Dimensions, TouchableOpacity } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -72,7 +72,7 @@ export default function PhotographerServicePackagesScreen() {
           return (
             <Animated.View key={item.id} entering={FadeInDown.duration(400).delay(i * 100)} style={styles.cardWrapper}>
               <View style={styles.card}>
-                <Pressable onPress={() => setExpandedId(isExpanded ? null : item.id)}>
+                <TouchableOpacity onPress={() => setExpandedId(isExpanded ? null : item.id)} activeOpacity={0.9}>
                   {/* ── Cover Image ── */}
                   <View style={styles.cardCover}>
                     {item.media && item.media.length > 0 ? (
@@ -235,7 +235,7 @@ export default function PhotographerServicePackagesScreen() {
                       <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="rgba(26,26,15,0.4)" />
                     </View>
                   </View>
-                </Pressable>
+                </TouchableOpacity>
               </View>
               
               {/* Floating Book Button for Collapsed State */}

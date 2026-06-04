@@ -20,12 +20,14 @@ public sealed class ShootMatchDbContext(
     // New
     public DbSet<PortfolioPhotoRecord> PortfolioPhotos => Set<PortfolioPhotoRecord>();
     public DbSet<ServicePackageRecord> ServicePackages => Set<ServicePackageRecord>();
+    public DbSet<ServicePackageMediaRecord> ServicePackageMedia => Set<ServicePackageMediaRecord>();
     public DbSet<MatchRecord> Matches => Set<MatchRecord>();
     public DbSet<BookingRecord> Bookings => Set<BookingRecord>();
     public DbSet<ReviewRecord> Reviews => Set<ReviewRecord>();
     public DbSet<VerificationRequestRecord> VerificationRequests => Set<VerificationRequestRecord>();
     public DbSet<PhotographerAvailabilityRecord> PhotographerAvailabilities => Set<PhotographerAvailabilityRecord>();
     public DbSet<OtpRecordEntry> OtpRecords => Set<OtpRecordEntry>();
+    public DbSet<AppNotificationRecord> AppNotifications => Set<AppNotificationRecord>();
 
     // Conversation & Messaging
     public DbSet<ConversationRecord> Conversations => Set<ConversationRecord>();
@@ -106,9 +108,23 @@ public sealed class ShootMatchDbContext(
             entity.ToTable("service_packages");
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Title).HasMaxLength(200);
+            entity.Property(x => x.Subtitle).HasMaxLength(200);
             entity.Property(x => x.Description).HasMaxLength(2000);
+            entity.Property(x => x.HeroTitle).HasMaxLength(200);
+            entity.Property(x => x.HeroSubtitle).HasMaxLength(500);
+            entity.Property(x => x.CallToAction).HasMaxLength(100);
             entity.Property(x => x.Price).HasColumnType("numeric(18,2)");
             entity.HasIndex(x => x.PhotographerId);
+            entity.HasMany(x => x.Media).WithOne(x => x.ServicePackage).HasForeignKey(x => x.ServicePackageId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── ServicePackageMedia ──────────────────────────────────────────────
+        modelBuilder.Entity<ServicePackageMediaRecord>(entity =>
+        {
+            entity.ToTable("service_package_media");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ImageUrl).HasMaxLength(1024);
+            entity.HasIndex(x => new { x.ServicePackageId, x.SortOrder });
         });
 
         // ── Customer ────────────────────────────────────────────────────────

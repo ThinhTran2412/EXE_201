@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ShootMatch.Infrastructure.HostedServices;
 
+/// <summary>Periodic background worker reserved for future chat maintenance.</summary>
 public sealed class ChatMediaDowngradeHostedService(ILogger<ChatMediaDowngradeHostedService> logger) : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromHours(1);
@@ -11,7 +12,15 @@ public sealed class ChatMediaDowngradeHostedService(ILogger<ChatMediaDowngradeHo
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            logger.LogInformation("Chat media downgrade service is idle because media preview persistence is not wired yet.");
+            try
+            {
+                logger.LogDebug("Chat media maintenance tick.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Chat media maintenance cycle failed.");
+            }
+
             await Task.Delay(Interval, stoppingToken);
         }
     }
