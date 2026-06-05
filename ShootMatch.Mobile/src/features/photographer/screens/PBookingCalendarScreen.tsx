@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../../app/theme/colors';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
@@ -19,7 +20,11 @@ import {
   blockAvailability,
   getAvailability,
   unblockAvailability,
+  getMyBookingsAsPhotographer,
+  confirmBooking,
+  cancelBooking,
   type PhotographerAvailabilitySlot,
+  type PBooking,
 } from '../api';
 
 type BookingStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Busy';
@@ -120,9 +125,11 @@ function getMonthGrid(year: number, month: number) {
 }
 
 export default function PBookingCalendarScreen() {
+  const navigation = useNavigation<any>();
   const [selected, setSelected] = useState(new Date());
   const [events, setEvents] = useState<BookingEvent[]>(INITIAL_EVENTS);
   const [availabilitySlots, setAvailabilitySlots] = useState<PhotographerAvailabilitySlot[]>([]);
+  const [realBookings, setRealBookings] = useState<PBooking[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [selectionEnabled, setSelectionEnabled] = useState(false);
   const [collapsedShifts, setCollapsedShifts] = useState<Record<ShiftKey, boolean>>({
@@ -149,22 +156,30 @@ export default function PBookingCalendarScreen() {
     return map;
   }, [events]);
 
-  useEffect(() => {
-    let mounted = true;
-    getAvailability()
-      .then((slots: PhotographerAvailabilitySlot[]) => {
-        if (!mounted) return;
-        setAvailabilitySlots(slots);
-      });
+  const loadData = async () => {
+    try {
+      const [slots, realBookingsList] = await Promise.all([
+        getAvailability().catch(() => []),
+        getMyBookingsAsPhotographer().catch(() => []),
+      ]);
+      setAvailabilitySlots(slots);
+      setRealBookings(realBookingsList);
+    } catch (err) {
+      console.warn('Failed to load availability/bookings', err);
+    }
+  };
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  useEffect(() => {
+    loadData();
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadData();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   useEffect(() => {
-    syncBusyFromAvailability(availabilitySlots);
-  }, [availabilitySlots]);
+    syncBusyFromAvailability(availabilitySlots, realBookings);
+  }, [availabilitySlots, realBookings]);
 
   const monthLabel = selected.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
   const pendingCount = events.filter((e) => e.status === 'Pending').length;
@@ -201,8 +216,31 @@ export default function PBookingCalendarScreen() {
     setSelectionEnabled(false);
   }
 
-  function syncBusyFromAvailability(slots: PhotographerAvailabilitySlot[]) {
+  function syncBusyFromAvailability(slots: PhotographerAvailabilitySlot[], realBookingsList: PBooking[]) {
     const base = INITIAL_EVENTS();
+
+    // Map real bookings to BookingEvent format
+    const bookingEvents: BookingEvent[] = realBookingsList.map((b) => {
+      const dateObj = new Date(b.scheduledAt);
+      const dateStr = toKey(dateObj);
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      const timeStr = `${hours}:${minutes}`;
+
+      return {
+        id: b.id,
+        date: dateStr,
+        time: timeStr,
+        title: b.note || 'Yêu cầu chụp',
+        customer: b.phone ? `Khách (${b.phone})` : 'Khách hàng',
+        shootType: b.requirements || 'Gói dịch vụ',
+        city: '-',
+        status: b.status as BookingStatus,
+        location: b.location || 'Chưa xác định',
+        price: b.agreedPrice,
+      };
+    });
+
     const uniqueBlocked = new Map<string, PhotographerAvailabilitySlot>();
 
     slots
@@ -224,7 +262,7 @@ export default function PBookingCalendarScreen() {
       price: 0,
     }));
 
-    setEvents([...base, ...blockedEvents]);
+    setEvents([...base, ...bookingEvents, ...blockedEvents]);
   }
 
   function applyBusySelectedSlots() {
@@ -286,14 +324,36 @@ export default function PBookingCalendarScreen() {
     ]);
   }
 
-  function acceptBooking(eventId: string) {
-    setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, status: 'Confirmed' } : event)));
-    Alert.alert('Đã chấp nhận', 'Booking đã được chuyển sang lịch xác nhận của photographer.');
+  async function acceptBooking(eventId: string) {
+    const isReal = !['1', '2', '3', '4'].includes(eventId) && !eventId.startsWith('blocked-');
+    if (isReal) {
+      try {
+        await confirmBooking(eventId);
+        Alert.alert('Thành công', 'Đã chấp nhận lịch hẹn.');
+        await loadData();
+      } catch (err) {
+        Alert.alert('Lỗi', 'Không thể xác nhận lịch hẹn.');
+      }
+    } else {
+      setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, status: 'Confirmed' } : event)));
+      Alert.alert('Đã chấp nhận', 'Booking đã được chuyển sang lịch xác nhận của photographer (Demo).');
+    }
   }
 
-  function rejectBooking(eventId: string) {
-    setEvents((prev) => prev.filter((event) => event.id !== eventId));
-    Alert.alert('Đã từ chối', 'Booking đã được gỡ khỏi lịch.');
+  async function rejectBooking(eventId: string) {
+    const isReal = !['1', '2', '3', '4'].includes(eventId) && !eventId.startsWith('blocked-');
+    if (isReal) {
+      try {
+        await cancelBooking(eventId, 'Từ chối yêu cầu đặt lịch');
+        Alert.alert('Thành công', 'Đã từ chối lịch hẹn.');
+        await loadData();
+      } catch (err) {
+        Alert.alert('Lỗi', 'Không thể từ chối lịch hẹn.');
+      }
+    } else {
+      setEvents((prev) => prev.filter((event) => event.id !== eventId));
+      Alert.alert('Đã từ chối', 'Booking đã được gỡ khỏi lịch (Demo).');
+    }
   }
 
   return (

@@ -5,5 +5,9 @@ public sealed record CreateBookingCommand(
     Guid MatchId,
     Guid? ServicePackageId,
     decimal AgreedPrice,
-    decimal CommissionRate,    // e.g. 0.10 = 10%
-    DateTime ScheduledAt);
+    decimal Commission,
+    DateTime ScheduledAt,
+    string? Phone,
+    string? Location,
+    string? Note,
+    string? Requirements);

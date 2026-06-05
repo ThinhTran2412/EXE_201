@@ -46,8 +46,12 @@ public sealed class BookingsController(
                 MatchId:          request.MatchId,
                 ServicePackageId: request.ServicePackageId,
                 AgreedPrice:      request.AgreedPrice,
-                CommissionRate:   DefaultCommissionRate,
-                ScheduledAt:      request.ScheduledAt),
+                Commission:       request.Commission,
+                ScheduledAt:      request.ScheduledAt,
+                Phone:            request.Phone,
+                Location:         request.Location,
+                Note:             request.Note,
+                Requirements:     request.Requirements),
                 cancellationToken);
 
             return CreatedAtAction(nameof(CreateBooking), new { id = bookingId }, new { bookingId });

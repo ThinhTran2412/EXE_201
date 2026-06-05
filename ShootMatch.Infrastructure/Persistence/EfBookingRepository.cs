@@ -27,7 +27,11 @@ public sealed class EfBookingRepository(ShootMatchDbContext db) : IBookingReposi
                 CreatedAt        = booking.CreatedAt,
                 CompletedAt      = booking.CompletedAt,
                 CancelledAt      = booking.CancelledAt,
-                CancellationReason = booking.CancellationReason
+                CancellationReason = booking.CancellationReason,
+                Phone            = booking.Phone,
+                Location         = booking.Location,
+                Note             = booking.Note,
+                Requirements     = booking.Requirements
             }, cancellationToken);
         }
         else
@@ -37,6 +41,10 @@ public sealed class EfBookingRepository(ShootMatchDbContext db) : IBookingReposi
             existing.CompletedAt        = booking.CompletedAt;
             existing.CancelledAt        = booking.CancelledAt;
             existing.CancellationReason = booking.CancellationReason;
+            existing.Phone              = booking.Phone;
+            existing.Location           = booking.Location;
+            existing.Note               = booking.Note;
+            existing.Requirements       = booking.Requirements;
         }
         await db.SaveChangesAsync(cancellationToken);
     }
@@ -83,5 +91,6 @@ public sealed class EfBookingRepository(ShootMatchDbContext db) : IBookingReposi
             Enum.Parse<BookingStatus>(r.Status),
             Enum.Parse<EscrowStatus>(r.EscrowStatus),
             r.AgreedPrice, r.Commission, r.ScheduledAt,
-            r.CreatedAt, r.CompletedAt, r.CancelledAt, r.CancellationReason);
+            r.CreatedAt, r.CompletedAt, r.CancelledAt, r.CancellationReason,
+            r.Phone, r.Location, r.Note, r.Requirements);
 }

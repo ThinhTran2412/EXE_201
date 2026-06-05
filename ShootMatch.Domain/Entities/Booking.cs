@@ -18,4 +18,8 @@ public sealed class Booking
     public DateTime? CompletedAt { get; init; }
     public DateTime? CancelledAt { get; init; }
     public string? CancellationReason { get; init; }
+    public string? Phone { get; init; }
+    public string? Location { get; init; }
+    public string? Note { get; init; }
+    public string? Requirements { get; init; }
 }

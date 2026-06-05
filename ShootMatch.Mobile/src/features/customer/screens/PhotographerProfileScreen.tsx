@@ -476,7 +476,7 @@ export default function PhotographerProfileScreen() {
           <View style={[styles.section, { paddingHorizontal: 0 }]}>
             <View style={{ paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Gói Dịch Vụ Nổi Bật</Text>
-              <Pressable onPress={() => navigation.navigate('PhotographerServicePackages', { photographer: p, packages: servicePackages })}>
+              <Pressable onPress={() => navigation.navigate('PhotographerServicePackages', { photographer: p, packages: servicePackages, matchId: matchId || undefined })}>
                 <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.orange, textTransform: 'uppercase' }}>Xem tất cả</Text>
               </Pressable>
             </View>

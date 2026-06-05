@@ -163,7 +163,83 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ShootMatch.Infrastructure.Persistence.ShootMatchDbContext>();
-    await db.Database.MigrateAsync();
+    await ShootMatch.Infrastructure.Persistence.DatabaseBootstrap.ApplyAsync(db, app.Logger);
+
+    try
+    {
+        var list = await db.Bookings.AsNoTracking().ToListAsync();
+        app.Logger.LogInformation(">>> DB_CHECK: TOTAL BOOKINGS IN DB = {Count}", list.Count);
+        foreach (var b in list)
+        {
+            app.Logger.LogInformation(">>> DB_CHECK: Booking Id={Id}, Cust={CustId}, Photo={PhotoId}, Date={Date}, Status={Status}", 
+                b.Id, b.CustomerId, b.PhotographerId, b.ScheduledAt, b.Status);
+        }
+
+        // Ensure every customer has a booking with every photographer for testing
+        var templateBooking = await db.Bookings.FirstOrDefaultAsync(x => x.Id == Guid.Parse("713cc895-62f4-4a72-b1c8-5d72c73ffee2"));
+        var allCustomers = await db.Customers.ToListAsync();
+        var allPhotographers = await db.Photographers.ToListAsync();
+
+        foreach (var cust in allCustomers)
+        {
+            foreach (var photo in allPhotographers)
+            {
+                // Generate a deterministic Guid for the combination of customer and photographer
+                byte[] cBytes = cust.Id.ToByteArray();
+                byte[] pBytes = photo.Id.ToByteArray();
+                byte[] combinedBytes = new byte[16];
+                for (int i = 0; i < 16; i++)
+                {
+                    combinedBytes[i] = (byte)(cBytes[i] ^ pBytes[i]);
+                }
+                Guid deterministicId = new Guid(combinedBytes);
+
+                var existing = await db.Bookings.FirstOrDefaultAsync(x => x.Id == deterministicId);
+                if (existing == null)
+                {
+                    app.Logger.LogInformation(">>> DB_CHECK: Seeding booking {Id} for customer {CustId} and photographer {PhotoId}", deterministicId, cust.Id, photo.Id);
+                    var newRecord = new ShootMatch.Infrastructure.Persistence.Entities.BookingRecord
+                    {
+                        Id = deterministicId,
+                        CustomerId = cust.Id,
+                        PhotographerId = photo.Id,
+                        MatchId = templateBooking?.MatchId ?? Guid.Parse("a7fd16c1-9609-40f3-8a96-6e3a2aa11c80"),
+                        ServicePackageId = templateBooking?.ServicePackageId ?? Guid.Parse("55a402a2-0837-45aa-be39-3d10d54a837e"),
+                        Status = templateBooking?.Status ?? "Pending",
+                        EscrowStatus = templateBooking?.EscrowStatus ?? "Held",
+                        AgreedPrice = templateBooking?.AgreedPrice ?? 4500.00m,
+                        Commission = templateBooking?.Commission ?? 450.00m,
+                        ScheduledAt = templateBooking?.ScheduledAt ?? DateTime.SpecifyKind(new DateTime(2026, 6, 5, 2, 0, 0), DateTimeKind.Utc),
+                        CreatedAt = DateTime.UtcNow,
+                        Phone = templateBooking?.Phone ?? "0348064033",
+                        Location = templateBooking?.Location ?? "Hồ Chí Minh",
+                        Note = templateBooking?.Note ?? "Yêu cầu",
+                        Requirements = templateBooking?.Requirements ?? "Có sẵn quần áo"
+                    };
+                    await db.Bookings.AddAsync(newRecord);
+                    await db.SaveChangesAsync();
+                }
+            }
+        }
+
+        var phs = await db.Photographers.AsNoTracking().ToListAsync();
+        app.Logger.LogInformation(">>> DB_CHECK: TOTAL PHOTOGRAPHERS IN DB = {Count}", phs.Count);
+        foreach (var p in phs)
+        {
+            app.Logger.LogInformation(">>> DB_CHECK: Photographer Id={Id}, Name={Name}, Phone={Phone}", p.Id, p.DisplayName, p.Phone);
+        }
+
+        var custs = await db.Customers.AsNoTracking().ToListAsync();
+        app.Logger.LogInformation(">>> DB_CHECK: TOTAL CUSTOMERS IN DB = {Count}", custs.Count);
+        foreach (var c in custs)
+        {
+            app.Logger.LogInformation(">>> DB_CHECK: Customer Id={Id}, Name={Name}, Phone={Phone}", c.Id, c.DisplayName, c.Phone);
+        }
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, ">>> DB_CHECK: Error checking bookings table");
+    }
 }
 
 app.UseSwagger();

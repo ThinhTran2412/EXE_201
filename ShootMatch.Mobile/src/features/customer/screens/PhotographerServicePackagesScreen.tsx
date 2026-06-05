@@ -47,7 +47,7 @@ export default function PhotographerServicePackagesScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
-  const { photographer, packages } = route.params as { photographer: Photographer; packages: any[] };
+  const { photographer, packages, matchId } = route.params as { photographer: Photographer; packages: any[]; matchId?: string };
   
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -222,7 +222,7 @@ export default function PhotographerServicePackagesScreen() {
                         
                         <Pressable 
                           style={styles.bookBtnExpanded} 
-                          onPress={() => navigation.navigate('Checkout', { photographer, packages, packageId: item.id })}
+                          onPress={() => navigation.navigate('Checkout', { photographer, packages, packageId: item.id, matchId })}
                         >
                           <Text style={styles.bookBtnExpandedText}>Đặt Gói Này</Text>
                           <Ionicons name="arrow-forward" size={18} color="#fff" />
@@ -243,7 +243,7 @@ export default function PhotographerServicePackagesScreen() {
                 <View style={styles.floatingBookBtnContainer}>
                   <Pressable 
                     style={styles.floatingBookBtn}
-                    onPress={() => navigation.navigate('Checkout', { photographer, packages, packageId: item.id })}
+                    onPress={() => navigation.navigate('Checkout', { photographer, packages, packageId: item.id, matchId })}
                   >
                     <Text style={styles.floatingBookBtnText}>Đặt Ngay</Text>
                   </Pressable>

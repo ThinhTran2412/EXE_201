@@ -1,24 +1,85 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  ScrollView, StyleSheet, Text, View, Pressable, Alert, TextInput,
+  ScrollView, StyleSheet, Text, View, Pressable, Alert, TextInput, ActivityIndicator, Image, TouchableOpacity, Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { cancelBooking, submitReview, Booking } from '../api';
+import { LinearGradient } from 'expo-linear-gradient';
+import { cancelBooking, submitReview, getPhotographer, getPhotographerServicePackages, Booking, Photographer } from '../api';
 import { ClayCard } from '../../../shared/components/ClayCard';
 import { ClayButton } from '../../../shared/components/ClayButton';
+import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
+import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { colors } from '../../../app/theme/colors';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { radius, spacing } from '../../../app/theme/spacing';
 
-const STATUS_CFG: Record<string, { label: string; color: string; icon: string }> = {
-  Pending:   { label: 'Chờ xác nhận', color: colors.warning, icon: 'time-outline' },
-  Confirmed: { label: 'Đã xác nhận', color: colors.info,    icon: 'checkmark-circle-outline' },
-  Completed: { label: 'Hoàn thành',  color: colors.success, icon: 'checkmark-done-circle' },
-  Cancelled: { label: 'Đã hủy',      color: colors.accent,  icon: 'close-circle-outline' },
+const STATUS_CFG: Record<string, { label: string; color: string; bgColor: string; icon: string }> = {
+  Pending:    { label: 'Chờ xác nhận', color: '#b88d14', bgColor: '#fef9e7', icon: 'time' },
+  Processing: { label: 'Đang xử lý',    color: '#b88d14', bgColor: '#fef9e7', icon: 'sync' },
+  Confirmed:  { label: 'Đã xác nhận', color: '#1d4ed8', bgColor: '#eef2ff', icon: 'checkmark-circle' },
+  Completed:  { label: 'Hoàn thành',  color: '#15803d', bgColor: '#f0fdf4', icon: 'checkmark-done-circle' },
+  Cancelled:  { label: 'Đã hủy',      color: '#cf4028', bgColor: '#fef2f2', icon: 'close-circle' },
+  Disputed:   { label: 'Tranh chấp',  color: '#e07b39', bgColor: '#fff7ed', icon: 'warning' },
 };
+
+function splitTags(value: string) {
+  return value
+    .split(/[,\n]+/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .filter((tag, index, arr) => arr.indexOf(tag) === index)
+    .slice(0, 12);
+}
+
+function splitDescriptionSections(text: string) {
+  const getPart = (key: string) => {
+    const match = text.match(new RegExp(`(?:^|\\n)${key}\\s*([\\s\\S]*?)(?=\\n(?:Mô tả chi tiết:|Tag ảnh:|Features:|Yêu cầu buổi chụp:)|$)`, 'i'));
+    return match ? match[1].trim() : '';
+  };
+  const tagsStr = getPart('Tag ảnh:');
+  return {
+    description: getPart('Mô tả chi tiết:') || (!text.includes('Mô tả chi tiết:') ? text.split('\n')[0] : ''),
+    tags: tagsStr,
+    features: getPart('Features:'),
+    requirements: getPart('Yêu cầu buổi chụp:'),
+  };
+}
+
+function getArtisticConcept(bookingId: string) {
+  let hash = 0;
+  for (let i = 0; i < bookingId.length; i++) {
+    hash = bookingId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % 4;
+
+  const concepts = [
+    {
+      title: 'Chân dung tối giản & Đương đại',
+      tips: 'Mặc trang phục đơn sắc (trắng, đen, be). Trang điểm tự nhiên nhẹ nhàng.',
+      mood: 'Tập trung bắt trọn cảm xúc tự nhiên, góc máy cận cảnh nghệ thuật.'
+    },
+    {
+      title: 'Hoàng hôn ngoại cảnh thơ màng',
+      tips: 'Lựa chọn trang phục chất liệu bay bổng, tông màu pastel hoặc ấm.',
+      mood: 'Khung giờ vàng (Golden Hour), hiệu ứng ánh sáng điện ảnh mơ màng.'
+    },
+    {
+      title: 'Thời trang Đường phố cá tính',
+      tips: 'Chuẩn bị trang phục năng động, phá cách (Jeans, Blazer, Jacket tối giản).',
+      mood: 'Bắt trọn chuyển động ngẫu hứng trên phố, phong cách hiện đại.'
+    },
+    {
+      title: 'Khoảnh khắc gia đình ấm áp',
+      tips: 'Phối đồ đồng điệu màu sắc giữa các thành viên, tránh hoạ tiết cầu kỳ.',
+      mood: 'Ấm cúng, tự nhiên, tập trung vào sự kết nối gia đình ngọt ngào.'
+    }
+  ];
+
+  return concepts[index];
+}
 
 function StarRow({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
@@ -39,20 +100,44 @@ function StarRow({ value, onChange }: { value: number; onChange: (v: number) => 
 export default function BookingDetailScreen() {
   const navigation = useNavigation<any>();
   const route      = useRoute<any>();
+  const insets     = useSafeAreaInsets();
   const { booking } = route.params as { booking: Booking };
 
+  const [photographer, setPhotographer] = useState<Photographer | null>(null);
+  const [packages, setPackages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [packageExpanded, setPackageExpanded] = useState(false);
   const [rating,         setRating]         = useState(5);
   const [comment,        setComment]        = useState('');
   const [submittingRev,  setSubmittingRev]  = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [cancelling,     setCancelling]     = useState(false);
 
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [p, pkgs] = await Promise.all([
+          getPhotographer(booking.photographerId),
+          getPhotographerServicePackages(booking.photographerId),
+        ]);
+        if (p) setPhotographer(p);
+        if (pkgs) setPackages(pkgs);
+      } catch (err) {
+        console.log('Error loading booking detail screen data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [booking.photographerId]);
+
   const cfg = STATUS_CFG[booking.status] ?? STATUS_CFG.Pending;
   const canCancel = booking.status === 'Pending' || booking.status === 'Confirmed';
   const canReview = booking.status === 'Completed' && !reviewDone;
 
   async function handleCancel() {
-    Alert.alert('Hủy lịch hẹn', 'Bạn chắc chắn muốn hủy? Hành động này không thể hoàn tác.', [
+    Alert.alert('Hủy lịch hẹn', 'Bạn chắc chắn muốn hủy lịch hẹn này? Hành động này không thể hoàn tác.', [
       { text: 'Không', style: 'cancel' },
       {
         text: 'Xác nhận hủy',
@@ -63,7 +148,7 @@ export default function BookingDetailScreen() {
             await cancelBooking(booking.id, 'Khách hàng hủy');
             Alert.alert('Đã hủy', 'Lịch hẹn đã được hủy thành công.');
             navigation.goBack();
-          } catch { Alert.alert('Lỗi', 'Không thể hủy. Thử lại.'); }
+          } catch { Alert.alert('Lỗi', 'Không thể hủy. Vui lòng thử lại.'); }
           setCancelling(false);
         },
       },
@@ -81,103 +166,477 @@ export default function BookingDetailScreen() {
     setSubmittingRev(false);
   }
 
+  // Find matched package
+  const matchedPkg = booking.servicePackageId
+    ? packages.find((p) => p.id === booking.servicePackageId)
+    : null;
+
+  // Fallback concept
+  const concept = getArtisticConcept(booking.id);
+  const packageTitle = matchedPkg ? matchedPkg.title : concept.title;
+  const parsedDesc = matchedPkg ? splitDescriptionSections(matchedPkg.description || '') : null;
+  const packageMood = parsedDesc?.description || concept.mood;
+  const packageTips = parsedDesc?.requirements || concept.tips;
+
+  // Parse sections for package if matched
+  const tags = parsedDesc?.tags ? splitTags(parsedDesc.tags) : [];
+  const featureLines = parsedDesc?.features
+    ? parsedDesc.features.split('\n').map((l) => l.trim().replace(/^- /, '')).filter(Boolean)
+    : [];
+  const requirementLines = parsedDesc?.requirements
+    ? parsedDesc.requirements.split('\n').map((l) => l.trim().replace(/^- /, '')).filter(Boolean)
+    : [];
+
+  const pName = photographer?.displayName ?? 'Nhiếp ảnh gia';
+  const pAvatar = formatImageUrl(photographer?.avatarUrl) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+  const pCover = (photographer?.portfolioPhotos && photographer.portfolioPhotos.length > 0)
+    ? formatImageUrl(photographer.portfolioPhotos[0])
+    : 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=800';
+
+  const date = new Date(booking.scheduledAt);
+  const dayStr = date.getDate();
+  const months = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
+  const monthStr = months[date.getMonth()];
+  const yearStr = date.getFullYear();
+  const daysOfWeek = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  const dayOfWeekStr = daysOfWeek[date.getDay()];
+  
+  const dateLongStr = `${dayOfWeekStr}, Ngày ${dayStr} ${monthStr}, ${yearStr}`;
+  const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+  const renderPackageCard = () => {
+    if (!matchedPkg) {
+      // Fallback Concept Card
+      return (
+        <View style={styles.conceptCard}>
+          <View style={styles.conceptHeader}>
+            <Ionicons name="sparkles-outline" size={16} color={colors.accent} />
+            <Text style={styles.conceptTitleLabel}>CONCEPT CHỤP ẢNH</Text>
+          </View>
+          <Text style={styles.conceptTitle}>{concept.title}</Text>
+          <Text style={styles.conceptMood}>{concept.mood}</Text>
+          
+          <View style={styles.tipsBox}>
+            <View style={styles.tipsHeader}>
+              <Ionicons name="bulb-outline" size={14} color={colors.accent} />
+              <Text style={styles.tipsTitle}>Gợi ý chuẩn bị cho bạn</Text>
+            </View>
+            <Text style={styles.tipsText}>{concept.tips}</Text>
+          </View>
+        </View>
+      );
+    }
+
+    // Actual Photographer Package Card (Expandable/Collapsible)
+    const hasMedia = matchedPkg.media && matchedPkg.media.length > 0;
+    
+    return (
+      <View style={styles.packageCard}>
+        <TouchableOpacity onPress={() => setPackageExpanded(!packageExpanded)} activeOpacity={0.9}>
+          {/* Cover Image inside card */}
+          <View style={styles.packageCover}>
+            {hasMedia ? (
+              <Image source={{ uri: formatImageUrl(matchedPkg.media[0].imageUrl) }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+            ) : (
+              <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(26,26,15,0.05)', justifyContent: 'center', alignItems: 'center' }]}>
+                <Ionicons name="images-outline" size={36} color="rgba(26,26,15,0.2)" />
+              </View>
+            )}
+            <LinearGradient
+              colors={['rgba(0,0,0,0.1)', 'transparent', 'rgba(0,0,0,0.8)']}
+              locations={[0, 0.4, 1]}
+              style={StyleSheet.absoluteFillObject}
+            />
+            
+            <View style={styles.packageCoverContent}>
+              <View style={styles.packagePricePill}>
+                <Text style={styles.packagePriceText}>{matchedPkg.price?.toLocaleString('vi-VN')} đ</Text>
+                <Text style={styles.packagePriceSep}>/</Text>
+                <Text style={styles.packagePriceDuration}>{matchedPkg.durationHours}h</Text>
+              </View>
+              <Text style={styles.packageCoverTitle}>{matchedPkg.title}</Text>
+            </View>
+          </View>
+
+          {/* Package Body */}
+          <View style={styles.packageBody}>
+            {tags.length > 0 && (
+              <View style={styles.packageTagRow}>
+                {tags.map((tag, idx) => (
+                  <View key={idx} style={styles.packageTag}>
+                    <Text style={styles.packageTagText}>#{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <View style={styles.packageMetaRow}>
+              <View style={styles.packageMetaChip}>
+                <Ionicons name="time-outline" size={12} color={colors.dark} />
+                <Text style={styles.packageMetaChipText}>{matchedPkg.durationHours} giờ chụp</Text>
+              </View>
+              <View style={styles.packageMetaChip}>
+                <Ionicons name="images-outline" size={12} color={colors.dark} />
+                <Text style={styles.packageMetaChipText}>{matchedPkg.media?.length || 0} ảnh mẫu</Text>
+              </View>
+            </View>
+
+            {/* COLLAPSED STATE */}
+            {!packageExpanded && (
+              <>
+                {!!packageMood && (
+                  <Text style={styles.packageDesc} numberOfLines={2}>
+                    {packageMood}
+                  </Text>
+                )}
+                {matchedPkg.media && matchedPkg.media.length > 1 && (
+                  <View style={styles.packageThumbStrip}>
+                    {matchedPkg.media.slice(1, 5).map((media: any, mi: number) => (
+                      <PortfolioImageCell
+                        key={media.id ?? mi}
+                        uri={media.imageUrl}
+                        borderRadius={8}
+                        style={styles.packageThumbItem}
+                        resizeMode="cover"
+                      />
+                    ))}
+                    {matchedPkg.media.length > 5 && (
+                      <View style={styles.packageThumbMore}>
+                        <Text style={styles.packageThumbMoreText}>+{matchedPkg.media.length - 5}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </>
+            )}
+
+            {/* EXPANDED STATE */}
+            {packageExpanded && (
+              <Animated.View entering={FadeInDown.duration(350)} style={styles.packageExpandedContent}>
+                {/* Description */}
+                {!!packageMood && (
+                  <View style={styles.packageSection}>
+                    <View style={styles.packageSectionHeader}>
+                      <Ionicons name="document-text-outline" size={13} color={colors.dark} />
+                      <Text style={styles.packageSectionTitle}>Mô tả chi tiết</Text>
+                    </View>
+                    <Text style={styles.packageSectionBody}>{packageMood}</Text>
+                  </View>
+                )}
+
+                {/* Features */}
+                {featureLines.length > 0 && (
+                  <View style={styles.packageSection}>
+                    <View style={styles.packageSectionHeader}>
+                      <Ionicons name="sparkles-outline" size={13} color={colors.success} />
+                      <Text style={[styles.packageSectionTitle, { color: colors.success }]}>Đặc điểm nổi bật</Text>
+                    </View>
+                    <View style={styles.packageFeatureList}>
+                      {featureLines.map((line, idx) => (
+                        <View key={idx} style={styles.packageFeatureItem}>
+                          <Ionicons name="checkmark-circle" size={14} color={colors.success} style={{ marginTop: 2 }} />
+                          <Text style={styles.packageFeatureText}>{line}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {/* Requirements */}
+                {requirementLines.length > 0 && (
+                  <View style={styles.packageSection}>
+                    <View style={styles.packageSectionHeader}>
+                      <Ionicons name="clipboard-outline" size={13} color={colors.info} />
+                      <Text style={[styles.packageSectionTitle, { color: colors.info }]}>Yêu cầu buổi chụp</Text>
+                    </View>
+                    <View style={styles.packageFeatureList}>
+                      {requirementLines.map((line, idx) => (
+                        <View key={idx} style={styles.packageFeatureItem}>
+                          <Ionicons name="ellipse" size={5} color={colors.info} style={{ marginTop: 6 }} />
+                          <Text style={[styles.packageFeatureText, { color: colors.textMuted }]}>{line}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {/* Sample Photos Grid */}
+                {matchedPkg.media && matchedPkg.media.length > 0 && (
+                  <View style={styles.packageSection}>
+                    <View style={styles.packageSectionHeader}>
+                      <Ionicons name="images-outline" size={13} color={colors.dark} />
+                      <Text style={styles.packageSectionTitle}>Ảnh mẫu thực tế ({matchedPkg.media.length})</Text>
+                    </View>
+                    <View style={styles.packagePhotoGrid}>
+                      {matchedPkg.media.map((media: any, mi: number) => (
+                        <PortfolioImageCell
+                          key={media.id ?? mi}
+                          uri={media.imageUrl}
+                          borderRadius={8}
+                          style={styles.packagePhotoItem}
+                          resizeMode="cover"
+                        />
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </Animated.View>
+            )}
+
+            {/* Toggle Arrow Indicator */}
+            <View style={styles.packageToggleIndicator}>
+              <Ionicons name={packageExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(26,26,15,0.4)" />
+              <Text style={styles.packageToggleText}>
+                {packageExpanded ? 'Thu gọn chi tiết' : 'Xem chi tiết gói dịch vụ'}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={styles.loadingText}>Đang tải chi tiết đặt lịch...</Text>
+      </View>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
-      {/* Header */}
-      <Animated.View entering={FadeInUp.duration(500)} style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+    <View style={styles.container}>
+      {/* Editorial Header Banner */}
+      <View style={styles.coverSection}>
+        <Image
+          source={{ uri: pCover }}
+          style={styles.coverImage}
+        />
+        <LinearGradient
+          colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.1)', 'rgba(26,26,15,0.85)']}
+          style={StyleSheet.absoluteFillObject}
+        />
+        
+        {/* Floating Back Button with glass style */}
+        <Pressable
+          style={[styles.floatingBackBtn, { top: insets.top + 10 }]}
+          onPress={() => navigation.goBack()}
+        >
           <Ionicons name="arrow-back" size={20} color={colors.dark} />
         </Pressable>
-        <Text style={styles.headerTitle}>Chi tiết lịch hẹn</Text>
-      </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Status Hero */}
-        <Animated.View entering={FadeInDown.duration(500).delay(100)}>
-          <ClayCard style={styles.statusCard}>
-            <View style={styles.statusRow}>
-              <View style={[styles.statusIcon, { backgroundColor: cfg.color + '18' }]}>
-                <Ionicons name={cfg.icon as any} size={28} color={cfg.color} />
-              </View>
-              <View style={styles.statusInfo}>
-                <Text style={styles.statusLabel}>{cfg.label}</Text>
-                <Text style={styles.statusSub}>#{booking.id.slice(0, 8).toUpperCase()}</Text>
-              </View>
-              <Text style={[styles.statusPrice, { color: cfg.color }]}>
-                {booking.agreedPrice?.toLocaleString('vi-VN')}đ
+        {/* Cover Info Overlay */}
+        <View style={styles.coverInfoContainer}>
+          <View style={styles.photographerHeaderRow}>
+            <Image source={{ uri: pAvatar }} style={styles.headerAvatar} />
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerRole}>NHIẾP ẢNH GIA</Text>
+              <Text style={styles.headerName}>{pName}</Text>
+              <Text style={styles.headerRegion}>
+                <Ionicons name="pin-outline" size={11} color="rgba(255,255,255,0.7)" /> {photographer?.region}
               </Text>
+            </View>
+            {photographer?.rating ? (
+              <View style={styles.headerRatingBadge}>
+                <Ionicons name="star" size={11} color="#FFD700" />
+                <Text style={styles.headerRatingText}>{photographer.rating.toFixed(1)}</Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+      </View>
+
+      <ScrollView 
+        contentContainerStyle={styles.scroll} 
+        showsVerticalScrollIndicator={false}
+        style={styles.scrollView}
+      >
+        {/* Card 1: Time & Status Hero */}
+        <Animated.View entering={FadeInDown.duration(500).delay(100)}>
+          <ClayCard style={styles.card}>
+            <View style={styles.timeSection}>
+              <View style={styles.timeIconWrapper}>
+                <Ionicons name="calendar-outline" size={22} color={colors.accent} />
+              </View>
+              <View style={styles.timeTextWrapper}>
+                <Text style={styles.timeDateText}>{dateLongStr}</Text>
+                <Text style={styles.timeHourText}>{timeStr} • Khung giờ chụp</Text>
+              </View>
+            </View>
+
+            <View style={styles.cardDivider} />
+
+            <View style={styles.statusPriceRow}>
+              <View style={[styles.statusBadge, { backgroundColor: cfg.bgColor }]}>
+                <Ionicons name={cfg.icon as any} size={13} color={cfg.color} />
+                <Text style={[styles.statusLabelText, { color: cfg.color }]}>{cfg.label}</Text>
+              </View>
+              <View style={styles.priceContainer}>
+                <Text style={styles.priceLabel}>CHI PHÍ THỎA THUẬN</Text>
+                <Text style={styles.priceValue}>{booking.agreedPrice?.toLocaleString('vi-VN')} đ</Text>
+              </View>
             </View>
           </ClayCard>
         </Animated.View>
 
-        {/* Details */}
-        <Animated.View entering={FadeInDown.duration(500).delay(150)}>
-          <ClayCard style={styles.detailCard}>
-            <Text style={styles.sectionTitle}>Thông tin buổi chụp</Text>
-            {[
-              { icon: 'calendar-outline',   label: 'Thời gian',    value: new Date(booking.scheduledAt).toLocaleString('vi-VN') },
-              { icon: 'cash-outline',       label: 'Phí thỏa thuận', value: `${booking.agreedPrice?.toLocaleString('vi-VN')}đ` },
-              { icon: 'receipt-outline',    label: 'Mã đặt lịch',  value: `#${booking.id.slice(0, 8).toUpperCase()}` },
-              { icon: 'time-outline',       label: 'Đặt lúc',      value: new Date(booking.createdAt).toLocaleString('vi-VN') },
-            ].map((row) => (
-              <View key={row.label} style={styles.detailRow}>
-                <View style={styles.detailIcon}>
-                  <Ionicons name={row.icon as any} size={16} color={colors.textMuted} />
+        {/* Card 2: Package details card */}
+        <Animated.View entering={FadeInDown.duration(500).delay(160)}>
+          <ClayCard style={styles.card}>
+            <Text style={styles.cardTitle}>Gói dịch vụ đã đặt</Text>
+            {renderPackageCard()}
+          </ClayCard>
+        </Animated.View>
+
+        {/* Card 3: Photoshoot Schedule Details */}
+        <Animated.View entering={FadeInDown.duration(500).delay(220)}>
+          <ClayCard style={styles.card}>
+            <Text style={styles.cardTitle}>Chi tiết cuộc hẹn</Text>
+            
+            <View style={styles.detailsList}>
+              {[
+                { icon: 'pin-outline', label: 'Địa điểm chụp', value: booking.location || 'Chưa định cấu hình' },
+                { icon: 'call-outline', label: 'Số điện thoại', value: booking.phone || 'Chưa có' },
+                { icon: 'barcode-outline', label: 'Mã đặt lịch', value: `#${booking.id.toUpperCase()}` },
+                { icon: 'time-outline', label: 'Thời gian đặt', value: new Date(booking.createdAt).toLocaleString('vi-VN') },
+              ].map((row, idx) => (
+                <View key={idx} style={styles.detailsRow}>
+                  <View style={styles.detailsIconWrapper}>
+                    <Ionicons name={row.icon as any} size={15} color={colors.textMuted} />
+                  </View>
+                  <View style={styles.detailsTextWrapper}>
+                    <Text style={styles.detailsLabel}>{row.label}</Text>
+                    <Text style={styles.detailsValue}>{row.value}</Text>
+                  </View>
                 </View>
-                <Text style={styles.detailLabel}>{row.label}</Text>
-                <Text style={styles.detailValue}>{row.value}</Text>
+              ))}
+            </View>
+
+            {booking.note ? (
+              <View style={styles.noteBox}>
+                <Text style={styles.noteBoxTitle}>Ghi chú khách hàng</Text>
+                <Text style={styles.noteBoxText}>"{booking.note}"</Text>
               </View>
-            ))}
+            ) : null}
+
+            {booking.requirements ? (
+              <View style={[styles.noteBox, { borderLeftColor: colors.info }]}>
+                <Text style={[styles.noteBoxTitle, { color: colors.info }]}>Yêu cầu trang phục/chuẩn bị</Text>
+                <Text style={styles.noteBoxText}>"{booking.requirements}"</Text>
+              </View>
+            ) : null}
+
             {booking.cancellationReason && (
-              <View style={styles.cancelReason}>
-                <Ionicons name="information-circle" size={16} color={colors.accent} />
+              <View style={styles.cancelReasonBox}>
+                <Ionicons name="warning-outline" size={16} color={colors.accent} />
                 <Text style={styles.cancelReasonText}>Lý do hủy: {booking.cancellationReason}</Text>
               </View>
             )}
           </ClayCard>
         </Animated.View>
 
+        {/* Card 4: Timeline flow */}
+        <Animated.View entering={FadeInDown.duration(500).delay(280)}>
+          <ClayCard style={styles.card}>
+            <Text style={styles.cardTitle}>Trạng thái tiến trình</Text>
+            {(() => {
+              const getStepStatus = (index: number) => {
+                const status = booking.status;
+                if (status === 'Cancelled') return { done: false, active: false };
+                if (index === 0) return { done: true, active: status === 'Pending' };
+                if (index === 1) return { done: status === 'Confirmed' || status === 'Processing' || status === 'Completed', active: status === 'Confirmed' };
+                if (index === 2) return { done: status === 'Processing' || status === 'Completed', active: status === 'Processing' };
+                if (index === 3) return { done: status === 'Completed', active: status === 'Completed' };
+                return { done: false, active: false };
+              };
+
+              const steps = [
+                { label: 'Đặt lịch', ...getStepStatus(0) },
+                { label: 'Trao đổi', ...getStepStatus(1) },
+                { label: 'Chụp hình', ...getStepStatus(2) },
+                { label: 'Hoàn tất', ...getStepStatus(3) },
+              ];
+
+              return (
+                <View style={styles.progressTimeline}>
+                  {/* Step Labels */}
+                  <View style={styles.progressLabelsRow}>
+                    {steps.map((step, idx) => (
+                      <Text
+                        key={idx}
+                        style={[
+                          styles.progressLabel,
+                          step.active && styles.progressLabelActive,
+                          step.done && !step.active && styles.progressLabelDone
+                        ]}
+                      >
+                        {step.label}
+                      </Text>
+                    ))}
+                  </View>
+
+                  {/* Progress Bars */}
+                  <View style={styles.progressBarsRow}>
+                    {steps.map((step, idx) => (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.progressBarSegment,
+                          step.done && styles.progressBarSegmentDone,
+                          step.active && styles.progressBarSegmentActive
+                        ]}
+                      />
+                    ))}
+                  </View>
+                </View>
+              );
+            })()}
+          </ClayCard>
+        </Animated.View>
+
         {/* Review Section */}
         {canReview && (
-          <Animated.View entering={FadeInDown.duration(500).delay(200)}>
-            <ClayCard style={styles.reviewCard}>
-              <Text style={styles.sectionTitle}>⭐ Đánh giá buổi chụp</Text>
-              <Text style={styles.reviewSub}>Chia sẻ trải nghiệm để giúp cộng đồng</Text>
+          <Animated.View entering={FadeInDown.duration(500).delay(340)}>
+            <ClayCard style={styles.card}>
+              <Text style={styles.cardTitle}>⭐ Đánh giá buổi chụp</Text>
+              <Text style={styles.reviewSub}>Chia sẻ trải nghiệm của bạn để nâng cao dịch vụ</Text>
               <StarRow value={rating} onChange={setRating} />
               <TextInput
                 style={styles.reviewInput}
                 value={comment}
                 onChangeText={setComment}
-                placeholder="Nhận xét của bạn về nhiếp ảnh gia..."
+                placeholder="Nhận xét chi tiết của bạn về sản phẩm/phong cách nhiếp ảnh gia..."
                 placeholderTextColor={colors.textLight}
                 multiline
                 numberOfLines={4}
               />
-              <ClayButton
-                label="Gửi đánh giá"
-                onPress={handleSubmitReview}
-                loading={submittingRev}
-                variant="primary"
-                size="md"
-              />
+              <View style={{ marginTop: spacing[3] }}>
+                <ClayButton
+                  label="Gửi đánh giá"
+                  onPress={handleSubmitReview}
+                  loading={submittingRev}
+                  variant="primary"
+                  size="md"
+                />
+              </View>
             </ClayCard>
           </Animated.View>
         )}
 
         {reviewDone && (
-          <ClayCard style={[styles.reviewCard, { backgroundColor: colors.success + '08' }]}>
+          <ClayCard style={[styles.card, { backgroundColor: colors.success + '08', borderColor: colors.success + '20' }]}>
             <View style={styles.reviewDoneRow}>
               <Ionicons name="checkmark-circle" size={24} color={colors.success} />
-              <Text style={styles.reviewDoneText}>Cảm ơn bạn đã đánh giá! 🙏</Text>
+              <Text style={styles.reviewDoneText}>Cảm ơn bạn đã gửi đánh giá buổi chụp! 🙏</Text>
             </View>
           </ClayCard>
         )}
 
-        {/* Actions */}
+        {/* Action Buttons */}
         {canCancel && (
-          <Animated.View entering={FadeInDown.duration(500).delay(250)} style={styles.actions}>
+          <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.actions}>
             <ClayButton
-              label={cancelling ? 'Đang hủy...' : 'Hủy lịch hẹn'}
+              label={cancelling ? 'Đang hủy...' : 'Hủy lịch hẹn chụp'}
               onPress={handleCancel}
               loading={cancelling}
               variant="ghost"
@@ -186,40 +645,494 @@ export default function BookingDetailScreen() {
           </Animated.View>
         )}
 
-        <View style={{ height: spacing[10] }} />
+        <View style={{ height: spacing[12] }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[4], paddingTop: spacing[2], paddingBottom: spacing[4], borderBottomWidth: 1, borderBottomColor: colors.border },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
-  headerTitle: { fontSize: fontSizes.lg, fontWeight: fontWeights.bold, color: colors.dark },
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollView: { flex: 1 },
+  scroll: { padding: spacing[4], gap: spacing[4] },
 
-  scroll:  { padding: spacing[6], gap: spacing[4] },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, gap: spacing[3] },
+  loadingText: { fontSize: fontSizes.sm, color: colors.textMuted },
 
-  statusCard:  { padding: spacing[5] },
-  statusRow:   { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
-  statusIcon:  { width: 52, height: 52, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  statusInfo:  { flex: 1 },
-  statusLabel: { fontSize: fontSizes.md, fontWeight: fontWeights.bold, color: colors.dark },
-  statusSub:   { fontSize: fontSizes.xs, color: colors.textMuted, fontVariant: ['tabular-nums'] },
-  statusPrice: { fontSize: fontSizes.xl, fontWeight: fontWeights.extrabold },
+  // Editorial Header Banner Style
+  coverSection: {
+    height: 230,
+    width: '100%',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  floatingBackBtn: {
+    position: 'absolute',
+    left: spacing[4],
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+    zIndex: 100,
+  },
+  coverInfoContainer: {
+    position: 'absolute',
+    bottom: spacing[4],
+    left: spacing[4],
+    right: spacing[4],
+  },
+  photographerHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  headerRole: {
+    fontSize: 8,
+    fontWeight: fontWeights.bold,
+    color: '#ff4200',
+    letterSpacing: 1.5,
+  },
+  headerName: {
+    fontSize: 16,
+    fontWeight: fontWeights.bold,
+    color: '#ffffff',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  headerRegion: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 2,
+  },
+  headerRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(26,26,15,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  headerRatingText: {
+    fontSize: 11,
+    fontWeight: fontWeights.bold,
+    color: '#ffffff',
+  },
 
-  detailCard:  { padding: spacing[5], gap: spacing[3] },
-  sectionTitle: { fontSize: fontSizes.md, fontWeight: fontWeights.bold, color: colors.dark, marginBottom: spacing[1] },
-  detailRow:   { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
-  detailIcon:  { width: 32, height: 32, borderRadius: radius.sm, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
-  detailLabel: { flex: 1, fontSize: fontSizes.sm, color: colors.textMuted },
-  detailValue: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, color: colors.dark, textAlign: 'right', flex: 1 },
-  cancelReason: { flexDirection: 'row', gap: spacing[2], alignItems: 'flex-start', backgroundColor: colors.accent + '10', padding: spacing[3], borderRadius: radius.sm, marginTop: spacing[2] },
-  cancelReasonText: { flex: 1, fontSize: fontSizes.xs, color: colors.accent },
+  // Cards layout
+  card: {
+    padding: spacing[5],
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(26,26,15,0.06)',
+    shadowColor: '#b8a98a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  cardTitle: {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.bold,
+    color: colors.dark,
+    marginBottom: spacing[4],
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: 'rgba(26,26,15,0.06)',
+    marginVertical: spacing[4],
+  },
 
-  reviewCard:  { padding: spacing[5], gap: spacing[4] },
-  reviewSub:   { fontSize: fontSizes.sm, color: colors.textMuted },
-  starRow:     { flexDirection: 'row', gap: spacing[2] },
+  // Card 1 specific styles
+  timeSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  timeIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(207,64,40,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeTextWrapper: {
+    flex: 1,
+  },
+  timeDateText: {
+    fontSize: 15,
+    fontWeight: fontWeights.bold,
+    color: colors.dark,
+  },
+  timeHourText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  statusPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusLabelText: {
+    fontSize: 11.5,
+    fontWeight: fontWeights.bold,
+  },
+  priceContainer: {
+    alignItems: 'flex-end',
+  },
+  priceLabel: {
+    fontSize: 8,
+    fontWeight: fontWeights.bold,
+    color: colors.textLight,
+    letterSpacing: 0.8,
+  },
+  priceValue: {
+    fontSize: 18,
+    fontWeight: fontWeights.bold,
+    color: colors.accent,
+    marginTop: 2,
+  },
+
+  // Service package styling inside Card 2
+  packageCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(26,26,15,0.06)',
+    backgroundColor: '#fffcf7',
+  },
+  packageCover: { position: 'relative', height: 120 },
+  packageCoverContent: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    right: 10,
+    gap: 4,
+  },
+  packageCoverTitle: {
+    color: '#fffaf4',
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  packagePricePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(207,64,40,0.85)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  packagePriceText: { color: '#fffaf4', fontSize: 10.5, fontWeight: '900' },
+  packagePriceSep: { color: 'rgba(255,247,225,0.5)', fontSize: 8 },
+  packagePriceDuration: { color: 'rgba(255,247,225,0.8)', fontSize: 10, fontWeight: '600' },
+
+  packageBody: { padding: 12, gap: 8 },
+  packageDesc: { color: 'rgba(26,26,15,0.7)', lineHeight: 18, fontSize: 12 },
+
+  packageTagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  packageTag: {
+    backgroundColor: 'rgba(207,64,40,0.06)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  packageTagText: { color: colors.dark, fontSize: 10, fontWeight: '700' },
+
+  packageMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  packageMetaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fff7e1',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(26,26,15,0.05)',
+  },
+  packageMetaChipText: { color: colors.dark, fontSize: 10.5, fontWeight: '600' },
+
+  packageThumbStrip: { flexDirection: 'row', gap: 5, marginTop: 2 },
+  packageThumbItem: { width: 44, height: 44, borderRadius: 6 },
+  packageThumbMore: {
+    width: 44,
+    height: 44,
+    borderRadius: 6,
+    backgroundColor: 'rgba(26,26,15,0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  packageThumbMoreText: { color: 'rgba(26,26,15,0.6)', fontSize: 11, fontWeight: '800' },
+
+  packageToggleIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(26,26,15,0.05)',
+  },
+  packageToggleText: { fontSize: 10, color: colors.textMuted, fontWeight: '600' },
+
+  packageExpandedContent: { gap: 10, marginTop: 2 },
+  packageSection: {
+    gap: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(26,26,15,0.05)',
+  },
+  packageSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  packageSectionTitle: {
+    color: colors.dark,
+    fontSize: 10.5,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  packageSectionBody: {
+    color: 'rgba(26,26,15,0.7)',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+
+  packageFeatureList: { gap: 4 },
+  packageFeatureItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  packageFeatureText: {
+    flex: 1,
+    color: colors.dark,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+
+  packagePhotoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 5,
+  },
+  packagePhotoItem: { width: 62, height: 62, borderRadius: 6 },
+
+  // Fallback concept card styling
+  conceptCard: {
+    padding: spacing[4],
+    backgroundColor: '#fffcf7',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(26,26,15,0.06)',
+    gap: spacing[2],
+  },
+  conceptHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  conceptTitleLabel: {
+    fontSize: 8,
+    fontWeight: fontWeights.bold,
+    color: colors.accent,
+    letterSpacing: 1.2,
+  },
+  conceptTitle: {
+    fontSize: 15,
+    fontWeight: fontWeights.bold,
+    color: colors.dark,
+  },
+  conceptMood: {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    lineHeight: 17,
+    marginBottom: spacing[1],
+  },
+  tipsBox: {
+    backgroundColor: '#eae1c8',
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderColor: colors.accent,
+    padding: 8,
+  },
+  tipsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 2,
+  },
+  tipsTitle: {
+    fontSize: 10,
+    fontWeight: fontWeights.bold,
+    color: colors.dark,
+  },
+  tipsText: {
+    fontSize: 10,
+    color: colors.textMuted,
+    lineHeight: 14,
+  },
+
+  // Card 3 Details grid list
+  detailsList: {
+    gap: spacing[3],
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  detailsIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#fff7e1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(26,26,15,0.04)',
+  },
+  detailsTextWrapper: {
+    flex: 1,
+  },
+  detailsLabel: {
+    fontSize: 9,
+    color: colors.textLight,
+    fontWeight: fontWeights.bold,
+    textTransform: 'uppercase',
+  },
+  detailsValue: {
+    fontSize: 13,
+    color: colors.dark,
+    fontWeight: fontWeights.semibold,
+    marginTop: 1,
+  },
+  noteBox: {
+    backgroundColor: '#fffaf2',
+    borderLeftWidth: 3,
+    borderLeftColor: colors.accent,
+    padding: spacing[3],
+    borderRadius: 8,
+    marginTop: spacing[3],
+  },
+  noteBoxTitle: {
+    fontSize: 10,
+    fontWeight: fontWeights.bold,
+    color: colors.accent,
+    textTransform: 'uppercase',
+  },
+  noteBoxText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+    fontStyle: 'italic',
+    lineHeight: 16,
+  },
+  cancelReasonBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#fef2f2',
+    padding: spacing[3],
+    borderRadius: 8,
+    marginTop: spacing[3],
+  },
+  cancelReasonText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.accent,
+    fontWeight: fontWeights.semibold,
+  },
+
+  // Timeline
+  progressTimeline: {
+    marginTop: spacing[1],
+    gap: spacing[3],
+  },
+  progressLabelsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  progressLabel: {
+    fontSize: 9.5,
+    fontWeight: fontWeights.bold,
+    color: colors.textLight,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    flex: 1,
+  },
+  progressLabelActive: {
+    color: colors.accent,
+  },
+  progressLabelDone: {
+    color: colors.dark,
+  },
+  progressBarsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    height: 4,
+    marginTop: 4,
+  },
+  progressBarSegment: {
+    flex: 1,
+    height: '100%',
+    backgroundColor: '#eae1c8',
+    borderRadius: 2,
+  },
+  progressBarSegmentDone: {
+    backgroundColor: colors.accent,
+  },
+  progressBarSegmentActive: {
+    backgroundColor: colors.accent,
+  },
+
+  // Review & Rating
+  reviewSub:   { fontSize: fontSizes.sm, color: colors.textMuted, marginBottom: spacing[2] },
+  starRow:     { flexDirection: 'row', gap: spacing[2], marginBottom: spacing[3] },
   reviewInput: { backgroundColor: colors.background, borderRadius: radius.md, padding: spacing[4], fontSize: fontSizes.md, color: colors.dark, borderWidth: 1, borderColor: colors.border, height: 100, textAlignVertical: 'top' },
   reviewDoneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
   reviewDoneText: { fontSize: fontSizes.md, fontWeight: fontWeights.semibold, color: colors.success },

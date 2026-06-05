@@ -4,4 +4,9 @@ public sealed record CreateBookingRequest(
     Guid MatchId,
     Guid? ServicePackageId,
     decimal AgreedPrice,
-    DateTime ScheduledAt);
+    decimal Commission,
+    DateTime ScheduledAt,
+    string? Phone,
+    string? Location,
+    string? Note,
+    string? Requirements);

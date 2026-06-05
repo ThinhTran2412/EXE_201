@@ -34,8 +34,12 @@ public sealed class CreateBookingCommandHandler(
             matchId:         match.Id,
             servicePackageId: command.ServicePackageId,
             agreedPrice:     command.AgreedPrice,
-            commissionRate:  command.CommissionRate,
-            scheduledAt:     command.ScheduledAt);
+            commission:      command.Commission,
+            scheduledAt:     command.ScheduledAt,
+            phone:           command.Phone,
+            location:        command.Location,
+            note:            command.Note,
+            requirements:    command.Requirements);
 
         // 5. Persist both
         await matchRepository.SaveAsync(match, cancellationToken);

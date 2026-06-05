@@ -20,6 +20,7 @@ public static class DatabaseBootstrap
 
         await EnsureCallSessionsTableAsync(db, logger, cancellationToken);
         await EnsureChatMediaAndNotificationsAsync(db, logger, cancellationToken);
+        await EnsureBookingFieldsAsync(db, logger, cancellationToken);
     }
 
     private static async Task EnsureCallSessionsTableAsync(
@@ -115,6 +116,28 @@ public static class DatabaseBootstrap
         catch (Exception ex)
         {
             logger.LogWarning(ex, "chat media / notifications bootstrap skipped.");
+        }
+    }
+
+    private static async Task EnsureBookingFieldsAsync(
+        ShootMatchDbContext db,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """
+                ALTER TABLE bookings ADD COLUMN IF NOT EXISTS "Phone" character varying(50);
+                ALTER TABLE bookings ADD COLUMN IF NOT EXISTS "Location" character varying(500);
+                ALTER TABLE bookings ADD COLUMN IF NOT EXISTS "Note" character varying(2000);
+                ALTER TABLE bookings ADD COLUMN IF NOT EXISTS "Requirements" character varying(2000);
+                """,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "bookings fields bootstrap alteration skipped.");
         }
     }
 }

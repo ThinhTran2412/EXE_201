@@ -30,8 +30,18 @@ export type CustomerStackParamList = {
   PhotographerPortfolio: { photographerId: string; initialIndex?: number };
   PhotographerServicePackages: { photographer: any; packages: any[] };
   Checkout: { photographer: any; matchId?: string; packageId?: string; packages?: any[] };
-  BookingSuccess: undefined;
-  BookingDetail: { bookingId: string };
+  BookingSuccess: {
+    photographerId: string;
+    photographerName: string;
+    packageName: string;
+    dateDisplay: string;
+    price: number;
+    commission: number;
+    total: number;
+    location: string;
+    phone: string;
+  };
+  BookingDetail: { booking: any };
   Notifications: undefined;
   EditProfile: undefined;
   CustomerFavorites: undefined;

@@ -28,6 +28,10 @@ public sealed class BookingAggregate : AggregateRoot
     public DateTime? CompletedAt { get; private set; }
     public DateTime? CancelledAt { get; private set; }
     public string? CancellationReason { get; private set; }
+    public string? Phone { get; private set; }
+    public string? Location { get; private set; }
+    public string? Note { get; private set; }
+    public string? Requirements { get; private set; }
 
     private BookingAggregate() { } // EF / reconstitution
 
@@ -38,7 +42,8 @@ public sealed class BookingAggregate : AggregateRoot
         Guid id, Guid customerId, Guid photographerId, Guid matchId, Guid? servicePackageId,
         BookingStatus status, EscrowStatus escrowStatus,
         decimal agreedPrice, decimal commission, DateTime scheduledAt,
-        DateTime createdAt, DateTime? completedAt, DateTime? cancelledAt, string? cancellationReason) => new()
+        DateTime createdAt, DateTime? completedAt, DateTime? cancelledAt, string? cancellationReason,
+        string? phone, string? location, string? note, string? requirements) => new()
     {
         Id                 = id,
         CustomerId         = customerId,
@@ -53,7 +58,11 @@ public sealed class BookingAggregate : AggregateRoot
         CreatedAt          = createdAt,
         CompletedAt        = completedAt,
         CancelledAt        = cancelledAt,
-        CancellationReason = cancellationReason
+        CancellationReason = cancellationReason,
+        Phone              = phone,
+        Location           = location,
+        Note               = note,
+        Requirements       = requirements
     };
 
 
@@ -67,13 +76,17 @@ public sealed class BookingAggregate : AggregateRoot
         Guid matchId,
         Guid? servicePackageId,
         decimal agreedPrice,
-        decimal commissionRate,
-        DateTime scheduledAt)
+        decimal commission,
+        DateTime scheduledAt,
+        string? phone,
+        string? location,
+        string? note,
+        string? requirements)
     {
         if (agreedPrice <= 0)
             throw new DomainException("Agreed price must be positive.");
-        if (commissionRate is < 0 or > 1)
-            throw new DomainException("Commission rate must be between 0 and 1.");
+        if (commission < 0)
+            throw new DomainException("Commission must be non-negative.");
 
         return new BookingAggregate
         {
@@ -85,9 +98,13 @@ public sealed class BookingAggregate : AggregateRoot
             Status = BookingStatus.Pending,
             EscrowStatus = EscrowStatus.Held,
             AgreedPrice = agreedPrice,
-            Commission = Math.Round(agreedPrice * commissionRate, 2),
+            Commission = commission,
             ScheduledAt = scheduledAt,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            Phone = phone,
+            Location = location,
+            Note = note,
+            Requirements = requirements
         };
     }
 

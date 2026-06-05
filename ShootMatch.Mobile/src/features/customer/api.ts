@@ -59,9 +59,41 @@ export interface Booking {
   matchId:        string;
   status:         string;
   agreedPrice:    number;
+  commission:     number;
   scheduledAt:    string;
   createdAt:      string;
   cancellationReason?: string;
+  phone?:         string;
+  location?:      string;
+  note?:          string;
+  requirements?:  string;
+  servicePackageId?: string | null;
+}
+
+function normalizeStatus(status: string): string {
+  if (!status) return 'Pending';
+  const s = status.toUpperCase();
+  if (s === 'PENDING') return 'Pending';
+  if (s === 'PROCESSING') return 'Processing';
+  if (s === 'CONFIRMED') return 'Confirmed';
+  if (s === 'COMPLETED') return 'Completed';
+  if (s === 'CANCELLED') return 'Cancelled';
+  if (s === 'DISPUTED') return 'Disputed';
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+}
+
+export async function getMyBookings(): Promise<Booking[]> {
+  const data = await gql<{ myBookings: Booking[] }>(`
+    query { myBookings {
+      id customerId photographerId matchId status
+      agreedPrice commission scheduledAt createdAt cancellationReason
+      phone location note requirements servicePackageId
+    }}
+  `);
+  return (data.myBookings ?? []).map((b) => ({
+    ...b,
+    status: normalizeStatus(b.status),
+  }));
 }
 
 export interface Conversation {
@@ -331,8 +363,11 @@ export async function getPhotographerAvailability(
 
 export async function getPhotographerServicePackages(photographerId: string): Promise<any[]> {
   try {
-    const { data } = await apiClient.get<any[]>(`/api/photographers/${photographerId}/service-packages`);
-    return data ?? [];
+    const { data } = await apiClient.get<any>(`/api/photographers/${photographerId}/service-packages`);
+    // API returns { value: [...], Count: N } — extract the array
+    if (Array.isArray(data)) return data;
+    if (data?.value && Array.isArray(data.value)) return data.value;
+    return [];
   } catch {
     return [];
   }
@@ -347,20 +382,17 @@ export async function getMyMatches(): Promise<Match[]> {
 }
 
 // ── Bookings ──────────────────────────────────────────────────────────────────
-export async function getMyBookings(): Promise<Booking[]> {
-  const data = await gql<{ myBookings: Booking[] }>(`
-    query { myBookings {
-      id customerId photographerId matchId status
-      agreedPrice scheduledAt createdAt cancellationReason
-    }}
-  `);
-  return data.myBookings ?? [];
-}
 
 export async function createBooking(payload: {
-  matchId:     string;
-  agreedPrice: number;
-  scheduledAt: string;
+  matchId:          string;
+  servicePackageId?: string | null;
+  agreedPrice:       number;
+  commission:        number;
+  scheduledAt:       string;
+  phone:             string;
+  location:          string;
+  note:              string;
+  requirements:      string;
 }): Promise<string> {
   const { data } = await apiClient.post('/api/bookings', payload);
   return data.bookingId;

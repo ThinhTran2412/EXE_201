@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 import { getMyBookingsAsPhotographer, confirmBooking, completeBooking, cancelBooking, PBooking } from '../api';
 import { ClayCard } from '../../../shared/components/ClayCard';
 import { colors } from '../../../app/theme/colors';
@@ -43,6 +44,7 @@ function toKey(date: Date) {
 }
 
 export default function PBookingsScreen() {
+  const navigation = useNavigation<any>();
   const [tab, setTab] = useState<Tab>('Tất cả');
   const [bookings, setBookings] = useState<PBooking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +63,11 @@ export default function PBookingsScreen() {
 
   useEffect(() => {
     load();
-  }, []);
+    const unsubscribe = navigation.addListener('focus', () => {
+      load();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   async function doAction(b: PBooking, type: 'confirm' | 'complete' | 'cancel') {
     try {

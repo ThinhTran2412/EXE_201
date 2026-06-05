@@ -45,6 +45,11 @@ export interface PBooking {
   scheduledAt:    string;
   createdAt:      string;
   cancellationReason?: string;
+  phone?:         string;
+  location?:      string;
+  note?:          string;
+  requirements?:  string;
+  servicePackageId?: string | null;
 }
 
 export async function getPhotographerProfile(): Promise<PhotographerProfile | null> {
@@ -135,13 +140,28 @@ export async function unblockAvailability(
   });
 }
 
+function normalizeStatus(status: string): string {
+  if (!status) return 'Pending';
+  const s = status.toUpperCase();
+  if (s === 'PENDING') return 'Pending';
+  if (s === 'PROCESSING') return 'Processing';
+  if (s === 'CONFIRMED') return 'Confirmed';
+  if (s === 'COMPLETED') return 'Completed';
+  if (s === 'CANCELLED') return 'Cancelled';
+  if (s === 'DISPUTED') return 'Disputed';
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+}
+
 export async function getMyBookingsAsPhotographer(): Promise<PBooking[]> {
   const data = await gql<{ myBookingsAsPhotographer: PBooking[] }>(`
     query { myBookingsAsPhotographer {
-      id customerId matchId status agreedPrice commission scheduledAt createdAt
+      id customerId matchId status agreedPrice commission scheduledAt createdAt phone location note requirements servicePackageId
     }}
   `);
-  return data.myBookingsAsPhotographer ?? [];
+  return (data.myBookingsAsPhotographer ?? []).map((b) => ({
+    ...b,
+    status: normalizeStatus(b.status),
+  }));
 }
 
 export async function confirmBooking(id: string) {
