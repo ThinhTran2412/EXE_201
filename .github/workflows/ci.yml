@@ -9,7 +9,7 @@ on:
 
 jobs:
   backend-build:
-    name: Build backend
+    name: Build backend C# dotnet 9
     runs-on: ubuntu-latest
 
     steps:
