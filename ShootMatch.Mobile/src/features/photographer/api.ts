@@ -281,3 +281,12 @@ export async function saveServicePackage(payload: any): Promise<ServicePackage> 
 export async function deleteServicePackage(id: string): Promise<void> {
   await apiClient.delete(`/api/photographers/service-packages/${id}`);
 }
+
+export async function getMyReviewsReceived(): Promise<any[]> {
+  const data = await gql<{ myReviewsReceived: any[] }>(`
+    query { myReviewsReceived {
+      id bookingId rating comment createdAt authorName authorAvatarUrl
+    }}
+  `);
+  return data.myReviewsReceived ?? [];
+}

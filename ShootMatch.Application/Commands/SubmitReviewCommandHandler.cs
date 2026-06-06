@@ -1,3 +1,4 @@
+using System.Linq;
 using ShootMatch.Application.Abstractions;
 using ShootMatch.Domain.Entities;
 using ShootMatch.Domain.Exceptions;
@@ -11,7 +12,8 @@ namespace ShootMatch.Application.Commands;
 /// </summary>
 public sealed class SubmitReviewCommandHandler(
     IBookingRepository bookingRepository,
-    IReviewRepository reviewRepository)
+    IReviewRepository reviewRepository,
+    IPhotographerRepository photographerRepository)
 {
     public async Task<Guid> HandleAsync(
         SubmitReviewCommand command,
@@ -49,6 +51,50 @@ public sealed class SubmitReviewCommandHandler(
         };
 
         await reviewRepository.SaveAsync(review, cancellationToken);
+
+        // 6. Recalculate average rating for photographer
+        var photographer = await photographerRepository.GetByIdAsync(booking.PhotographerId, cancellationToken);
+        if (photographer is not null)
+        {
+            var allReviews = await reviewRepository.GetByPhotographerIdAsync(booking.PhotographerId, cancellationToken);
+            double newRating = allReviews.Count > 0 ? Math.Round(allReviews.Average(r => r.Rating), 1) : command.Rating;
+
+            var updatedPhotographer = new Photographer
+            {
+                Id = photographer.Id,
+                DisplayName = photographer.DisplayName,
+                Phone = photographer.Phone,
+                Email = photographer.Email,
+                Region = photographer.Region,
+                AvatarUrl = photographer.AvatarUrl,
+                CoverPhotoUrl = photographer.CoverPhotoUrl,
+                Bio = photographer.Bio,
+                Quote = photographer.Quote,
+                NationalId = photographer.NationalId,
+                PersonalAddress = photographer.PersonalAddress,
+                VerificationDocumentFrontUrl = photographer.VerificationDocumentFrontUrl,
+                VerificationDocumentBackUrl = photographer.VerificationDocumentBackUrl,
+                VerificationPortraitUrl = photographer.VerificationPortraitUrl,
+                InstagramUrl = photographer.InstagramUrl,
+                MinBudget = photographer.MinBudget,
+                MaxBudget = photographer.MaxBudget,
+                Rating = newRating,
+                IsPremium = photographer.IsPremium,
+                IsAvailable = photographer.IsAvailable,
+                AcceptsInstantBooking = photographer.AcceptsInstantBooking,
+                VerificationStatus = photographer.VerificationStatus,
+                PasswordHash = photographer.PasswordHash,
+                GoogleId = photographer.GoogleId,
+                CreatedAt = photographer.CreatedAt,
+                UpdatedAt = DateTime.UtcNow,
+                DeletedAt = photographer.DeletedAt,
+                PortfolioEmbeddings = photographer.PortfolioEmbeddings,
+                PortfolioPhotos = photographer.PortfolioPhotos
+            };
+
+            await photographerRepository.UpsertAsync(updatedPhotographer, cancellationToken);
+        }
+
         return review.Id;
     }
 }

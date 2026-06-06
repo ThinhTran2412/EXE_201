@@ -168,7 +168,7 @@ export default function BookingDetailScreen() {
 
   // Find matched package
   const matchedPkg = booking.servicePackageId
-    ? packages.find((p) => p.id === booking.servicePackageId)
+    ? packages.find((p) => p.id?.toLowerCase() === booking.servicePackageId?.toLowerCase())
     : null;
 
   // Fallback concept

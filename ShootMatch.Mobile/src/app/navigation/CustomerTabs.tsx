@@ -16,6 +16,7 @@ import ProfileScreen    from '../../features/customer/screens/ProfileScreen';
 
 // Stack screens (pushed on top of tabs)
 import PhotographerProfileScreen from '../../features/customer/screens/PhotographerProfileScreen';
+import SearchScreen              from '../../features/customer/screens/SearchScreen';
 import PhotographerPortfolioScreen from '../../features/customer/screens/PhotographerPortfolioScreen';
 import PhotographerServicePackagesScreen from '../../features/customer/screens/PhotographerServicePackagesScreen';
 import CheckoutScreen            from '../../features/customer/screens/CheckoutScreen';
@@ -72,6 +73,7 @@ export default function CustomerTabs() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CustomerRoot"         component={CustomerTabNavigator} />
+      <Stack.Screen name="Search"               component={SearchScreen} />
       <Stack.Screen name="PhotographerProfile"  component={PhotographerProfileScreen} />
       <Stack.Screen name="PhotographerPortfolio" component={PhotographerPortfolioScreen} />
       <Stack.Screen name="PhotographerServicePackages" component={PhotographerServicePackagesScreen} />

@@ -1,12 +1,14 @@
 using HotChocolate;
 using HotChocolate.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using ShootMatch.Application.Abstractions;
 using ShootMatch.Application.Contracts;
 using ShootMatch.Application.Queries;
 using ShootMatch.Application.Services;
 using ShootMatch.Domain.Aggregates;
 using ShootMatch.Domain.Entities;
+
 
 namespace ShootMatch.Api.GraphQL;
 
@@ -85,6 +87,155 @@ public sealed class MatchingQuery
     {
         return await photographerRepository.GetAllAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Searches and filters photographers based on text query, region, budget, package duration, styles/tags, and emergency status.
+    /// </summary>
+    public async Task<IReadOnlyList<PhotographerMatchCard>> SearchPhotographers(
+        string? query,
+        string? region,
+        decimal? minBudget,
+        decimal? maxBudget,
+        int? durationHours,
+        IReadOnlyList<string>? styles,
+        bool? isEmergency,
+        [Service] ShootMatch.Infrastructure.Persistence.ShootMatchDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var records = await dbContext.Photographers
+            .Include(x => x.PortfolioPhotos)
+            .Include(x => x.ServicePackages)
+            .Include(x => x.Availabilities)
+            .AsNoTracking()
+            .Where(x => x.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+
+        var keywords = new List<string>();
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            keywords.AddRange(query.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        var styleKeywords = new List<string>();
+        if (styles != null && styles.Count > 0)
+        {
+            styleKeywords.AddRange(styles.Select(s => s.ToLowerInvariant()));
+        }
+
+        var results = new List<PhotographerMatchCard>();
+
+        foreach (var p in records)
+        {
+            // 1. Filter by Region
+            if (!string.IsNullOrWhiteSpace(region) && !p.Region.Equals(region, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            // 2. Filter by Emergency/Instant Booking
+            if (isEmergency == true)
+            {
+                if (!p.IsAvailable || !p.AcceptsInstantBooking)
+                {
+                    continue;
+                }
+            }
+
+            // 3. Filter by Budget Range
+            if (minBudget.HasValue && p.MaxBudget < minBudget.Value)
+            {
+                continue;
+            }
+            if (maxBudget.HasValue && p.MinBudget > maxBudget.Value)
+            {
+                continue;
+            }
+
+            // 4. Filter by Package Duration (hours)
+            if (durationHours.HasValue)
+            {
+                var hasMatchingDuration = p.ServicePackages.Any(sp => sp.IsActive && sp.DurationHours == durationHours.Value);
+                if (!hasMatchingDuration)
+                {
+                    continue;
+                }
+            }
+
+            // 5. Filter by Style tags (if styles list provided)
+            if (styleKeywords.Count > 0)
+            {
+                var matchesStyle = false;
+                foreach (var style in styleKeywords)
+                {
+                    if (p.Bio.Contains(style, StringComparison.OrdinalIgnoreCase) ||
+                        p.Quote.Contains(style, StringComparison.OrdinalIgnoreCase) ||
+                        p.ServicePackages.Any(sp => sp.Title.Contains(style, StringComparison.OrdinalIgnoreCase) || sp.Description.Contains(style, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        matchesStyle = true;
+                        break;
+                    }
+                }
+                if (!matchesStyle)
+                {
+                    continue;
+                }
+            }
+
+            // 6. Text query keyword matching
+            var keywordMatchCount = 0;
+            if (keywords.Count > 0)
+            {
+                var textToSearch = $"{p.DisplayName} {p.Bio} {p.Quote} {string.Join(" ", p.ServicePackages.Select(sp => $"{sp.Title} {sp.Description}"))}".ToLowerInvariant();
+                foreach (var kw in keywords)
+                {
+                    if (textToSearch.Contains(kw))
+                    {
+                        keywordMatchCount++;
+                    }
+                }
+
+                if (keywordMatchCount == 0)
+                {
+                    continue;
+                }
+            }
+
+            // 7. Score Calculation
+            double similarity;
+            if (keywords.Count > 0)
+            {
+                similarity = 0.7d + Math.Min(0.25d, keywordMatchCount * 0.05d);
+            }
+            else
+            {
+                similarity = 0.5d + (new Random(p.Id.GetHashCode()).NextDouble() * 0.25d);
+            }
+
+            var premiumBoost = p.IsPremium ? 0.05d : 0d;
+            var ratingBoost = (Math.Clamp(p.Rating, 0d, 5d) / 5d) * 0.1d;
+
+            results.Add(new PhotographerMatchCard
+            {
+                PhotographerId = p.Id,
+                DisplayName = p.DisplayName,
+                Region = p.Region,
+                MinBudget = p.MinBudget,
+                MaxBudget = p.MaxBudget,
+                Rating = p.Rating,
+                IsPremium = p.IsPremium,
+                AvatarUrl = p.AvatarUrl,
+                SimilarityScore = similarity,
+                FinalScore = similarity + premiumBoost + ratingBoost,
+                PortfolioPhotos = p.PortfolioPhotos.OrderBy(x => x.DisplayOrder).Select(x => x.ImageUrl).ToList()
+            });
+        }
+
+        return results
+            .OrderByDescending(x => x.FinalScore)
+            .ThenByDescending(x => x.Rating)
+            .ToList();
+    }
+
 
     /// <summary>Customer home feed — featured photographer previews + latest portfolio photos.</summary>
     public async Task<CustomerHomeFeed> CustomerHomeFeed(

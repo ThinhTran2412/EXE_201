@@ -105,7 +105,7 @@ function BookingItem({
   const cfg = STATUS_CFG[booking.status] ?? STATUS_CFG.Pending;
   const concept = getArtisticConcept(booking.id);
   const matchedPkg = booking.servicePackageId
-    ? (packages || []).find((p: any) => p.id === booking.servicePackageId)
+    ? (packages || []).find((p: any) => p.id?.toLowerCase() === booking.servicePackageId?.toLowerCase())
     : null;
 
   const packageTitle = matchedPkg ? matchedPkg.title : concept.title;

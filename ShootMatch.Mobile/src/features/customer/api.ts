@@ -122,6 +122,8 @@ export interface Review {
   rating:              number;
   comment:             string;
   createdAt:           string;
+  authorName?:         string;
+  authorAvatarUrl?:    string;
 }
 
 export interface PhotographerAvailabilitySlot {
@@ -333,6 +335,43 @@ export async function getPhotographers(): Promise<Photographer[]> {
   return data.photographers ?? [];
 }
 
+export async function searchPhotographers(params: {
+  query?: string;
+  region?: string;
+  minBudget?: number;
+  maxBudget?: number;
+  durationHours?: number;
+  styles?: string[];
+  isEmergency?: boolean;
+}): Promise<PhotographerCard[]> {
+  const data = await gql<{ searchPhotographers: PhotographerCard[] }>(`
+    query SearchPhotographers(
+      $query: String
+      $region: String
+      $minBudget: Decimal
+      $maxBudget: Decimal
+      $durationHours: Int
+      $styles: [String!]
+      $isEmergency: Boolean
+    ) {
+      searchPhotographers(
+        query: $query
+        region: $region
+        minBudget: $minBudget
+        maxBudget: $maxBudget
+        durationHours: $durationHours
+        styles: $styles
+        isEmergency: $isEmergency
+      ) {
+        photographerId displayName region avatarUrl portfolioPhotos
+        minBudget maxBudget rating isPremium similarityScore finalScore
+      }
+    }
+  `, params);
+  return data.searchPhotographers ?? [];
+}
+
+
 export async function getPhotographer(id: string): Promise<Photographer | null> {
   const data = await gql<{ photographer: Photographer | null }>(`
     query GetPhotographer($id: UUID!) {
@@ -416,6 +455,17 @@ export async function submitReview(payload: {
   comment:   string;
 }) {
   await apiClient.post('/api/reviews', payload);
+}
+
+export async function getPhotographerReviews(photographerId: string): Promise<Review[]> {
+  const data = await gql<{ photographerReviews: Review[] }>(`
+    query GetPhotographerReviews($photographerId: UUID!) {
+      photographerReviews(photographerId: $photographerId) {
+        id bookingId rating comment createdAt authorName authorAvatarUrl
+      }
+    }
+  `, { photographerId });
+  return data.photographerReviews ?? [];
 }
 
 // ── Conversations ─────────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@ import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getPhotographerProfile, updateProfile, updatePersonalInfo, uploadProfileImage, submitVerification } from '../api';
+import { getPhotographerProfile, updateProfile, updatePersonalInfo, uploadProfileImage, submitVerification, getMyReviewsReceived } from '../api';
 import { formatRegion } from '../../../shared/constants/regions';
 import { colors } from '../../../app/theme/colors';
 import { spacing } from '../../../app/theme/spacing';
@@ -62,13 +62,19 @@ export default function PProfileScreen() {
     personalAddress: '',
     nationalId: '',
   });
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
   const loadProfile = React.useCallback(async (showSpinner = false) => {
     if (showSpinner) {
       setLoading(true);
+      setReviewsLoading(true);
     }
     try {
-      const p = await getPhotographerProfile();
+      const [p, revs] = await Promise.all([
+        getPhotographerProfile(),
+        getMyReviewsReceived().catch(() => [])
+      ]);
       if (p) {
         setProfile(p);
         setEditForm({ displayName: p.displayName || '', bio: p.bio || '', quote: p.quote || '' });
@@ -80,10 +86,12 @@ export default function PProfileScreen() {
           nationalId: p.nationalId || '',
         });
       }
+      setReviews(revs);
     } catch (err) {
       console.error('Load profile error:', err);
     } finally {
       setLoading(false);
+      setReviewsLoading(false);
     }
   }, []);
 
@@ -382,6 +390,55 @@ export default function PProfileScreen() {
             </View>
           </View>
 
+          {/* ── REVIEWS RECEIVED ── */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Đánh giá nhận được ({reviews.length})</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="star" size={14} color="#FFD700" />
+                <Text style={{ color: '#FFD700', fontSize: 14, fontWeight: '700' }}>
+                  {profile?.rating ? profile.rating.toFixed(1) : '0.0'}
+                </Text>
+              </View>
+            </View>
+            <View style={{ gap: 12 }}>
+              {reviewsLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : reviews.length === 0 ? (
+                <View style={styles.reviewEmptyState}>
+                  <Ionicons name="star-outline" size={18} color="rgba(255,251,240,0.3)" />
+                  <Text style={styles.reviewEmptyText}>Bạn chưa nhận được đánh giá nào.</Text>
+                </View>
+              ) : (
+                reviews.map((r, i) => (
+                  <View key={r.id || i} style={styles.reviewCard}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {r.authorAvatarUrl ? (
+                          <Image source={{ uri: formatPhotoUrl(r.authorAvatarUrl) }} style={styles.reviewAvatarImage} />
+                        ) : (
+                          <View style={styles.reviewAvatar}>
+                            <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#F7E7D2' }}>
+                              {r.authorName ? r.authorName.split(' ').map((n: string)=>n[0]).join('').substring(0,2) : 'KH'}
+                            </Text>
+                          </View>
+                        )}
+                        <View>
+                          <Text style={{ fontSize: 13, fontWeight: '600', color: '#FFFBF0' }}>{r.authorName || 'Khách hàng'}</Text>
+                          <Text style={{ fontSize: 10, opacity: 0.4, color: '#FFFBF0' }}>
+                            {new Date(r.createdAt).toLocaleDateString('vi-VN')}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={{ color: '#FFD700', fontSize: 10 }}>{'★'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}</Text>
+                    </View>
+                    <Text style={{ fontSize: 12, lineHeight: 18, opacity: 0.7, color: '#FFFBF0' }}>"{r.comment}"</Text>
+                  </View>
+                ))
+              )}
+            </View>
+          </View>
+
           <View style={styles.menu}>
             <MenuLink icon="card-outline" label="Quản lý dịch vụ & giá" onPress={() => navigation.navigate('ServiceManagement')} />
             <MenuLink icon="calendar-outline" label="Lịch hẹn dạng lịch" onPress={() => navigation.navigate('BookingCalendar')} />
@@ -550,6 +607,11 @@ const styles = StyleSheet.create({
   addPhotoPlaceholder: { borderRadius: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(230, 126, 34, 0.3)', justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: 'rgba(230, 126, 34, 0.05)' },
   addPhotoText: { color: colors.primary, fontSize: 12, fontWeight: '600' },
   menu: { gap: 12, marginTop: 10 },
+  reviewCard: { backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 16, marginBottom: 12 },
+  reviewAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
+  reviewAvatarImage: { width: 32, height: 32, borderRadius: 16 },
+  reviewEmptyState: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' },
+  reviewEmptyText: { fontSize: 12, opacity: 0.5, color: '#FFFBF0' },
   menuLink: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1e1c26', padding: 16, borderRadius: 16 },
   menuLinkLeft: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   menuIconWrapper: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(230, 126, 34, 0.1)', justifyContent: 'center', alignItems: 'center' },
