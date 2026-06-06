@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Wallet,
   Star,
+  Globe,
 } from "lucide-react";
 
 // ── Local images from /public/picture ─────────────────────────────────────────
@@ -88,16 +89,24 @@ export default function LandingPage() {
               <br />
               Pick đúng <span className="text-primary">khoảnh khắc</span>
             </h1>
-            <div className="mt-6 inline-flex items-center bg-white/10 backdrop-blur-sm rounded-full border border-white/20 px-2 py-2 gap-2">
-              <span className="px-4 text-white/80 text-sm flex items-center gap-2">
+            <div className="mt-6 inline-flex flex-col sm:flex-row items-stretch sm:items-center bg-white/10 backdrop-blur-sm rounded-3xl sm:rounded-full border border-white/20 px-2 py-2 gap-2">
+              <span className="px-4 text-white/80 text-sm flex items-center gap-2 justify-center sm:justify-start">
                 <Search className="w-4 h-4 text-white/50" /> Khám phá nhiếp ảnh gia
               </span>
-              <Link
-                to="/auth"
-                className="bg-primary text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-orange-600 transition-colors flex items-center gap-1"
-              >
-                Tìm ngay <ArrowRight className="w-4 h-4" />
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Link
+                  to="/auth"
+                  className="bg-primary text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-orange-600 transition-colors flex items-center justify-center gap-1"
+                >
+                  Tìm ngay <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  to="/web"
+                  className="bg-white/10 text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-white/20 transition-colors flex items-center justify-center gap-1 border border-white/15"
+                >
+                  Mở web <Globe className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
           </div>
         </section>
