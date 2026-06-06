@@ -10,7 +10,7 @@ import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getPhotographerProfile, updateProfile, updatePersonalInfo, uploadProfileImage, submitVerification, getMyReviewsReceived } from '../api';
+import { getPhotographerProfile, updateProfile, updatePersonalInfo, uploadProfileImage, submitVerification, getMyReviewsReceived, proposeStyle, proposeConcept } from '../api';
 import { formatRegion } from '../../../shared/constants/regions';
 import { colors } from '../../../app/theme/colors';
 import { spacing } from '../../../app/theme/spacing';
@@ -64,6 +64,11 @@ export default function PProfileScreen() {
   });
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
+  
+  const [proposeModalVisible, setProposeModalVisible] = useState(false);
+  const [proposeType, setProposeType] = useState<'style' | 'concept'>('style');
+  const [proposeForm, setProposeForm] = useState({ name: '', description: '', keywords: '' });
+  const [proposing, setProposing] = useState(false);
 
   const loadProfile = React.useCallback(async (showSpinner = false) => {
     if (showSpinner) {
@@ -174,6 +179,37 @@ export default function PProfileScreen() {
       Alert.alert('Lỗi', typeof message === 'string' ? message : 'Không thể gửi yêu cầu xác minh.');
     } finally {
       setSubmittingVerify(false);
+    }
+  }
+
+  async function handleProposeTag() {
+    const name = proposeForm.name.trim();
+    if (!name) {
+      Alert.alert('Lỗi', 'Tên phong cách/chủ đề không được để trống.');
+      return;
+    }
+
+    try {
+      setProposing(true);
+      if (proposeType === 'style') {
+        await proposeStyle(name, proposeForm.description, proposeForm.keywords);
+      } else {
+        await proposeConcept(name, proposeForm.description, proposeForm.keywords);
+      }
+      
+      Alert.alert(
+        'Thành công',
+        `Yêu cầu đề xuất ${proposeType === 'style' ? 'phong cách' : 'concept'} "${name}" đã được gửi và đang chờ phê duyệt.`
+      );
+      
+      setProposeForm({ name: '', description: '', keywords: '' });
+      setProposeModalVisible(false);
+    } catch (err: any) {
+      console.error('Propose tag failed:', err?.response?.status, err?.response?.data ?? err);
+      const message = err?.response?.data?.message || err?.response?.data || err?.message || 'Có lỗi xảy ra khi gửi đề xuất.';
+      Alert.alert('Lỗi', typeof message === 'string' ? message : 'Có lỗi xảy ra khi gửi đề xuất.');
+    } finally {
+      setProposing(false);
     }
   }
 
@@ -442,6 +478,7 @@ export default function PProfileScreen() {
           <View style={styles.menu}>
             <MenuLink icon="card-outline" label="Quản lý dịch vụ & giá" onPress={() => navigation.navigate('ServiceManagement')} />
             <MenuLink icon="calendar-outline" label="Lịch hẹn dạng lịch" onPress={() => navigation.navigate('BookingCalendar')} />
+            <MenuLink icon="pricetags-outline" label="Đề xuất Style / Concept mới" onPress={() => { setProposeForm({ name: '', description: '', keywords: '' }); setProposeModalVisible(true); }} />
             <MenuLink icon="shield-checkmark-outline" label="Xác minh danh tính" onPress={handleSubmitVerification} />
             <MenuLink icon="notifications-outline" label="Cài đặt thông báo" onPress={() => { }} />
           </View>
@@ -510,6 +547,90 @@ export default function PProfileScreen() {
               >
                 <LinearGradient colors={[colors.primary, '#E67E22']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveBtnGradient}>
                   <Text style={styles.saveBtnText}>Lưu thông tin</Text>
+                </LinearGradient>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={proposeModalVisible} animationType="slide" transparent>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalWrapper}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Đề xuất Tag mới</Text>
+              <Pressable onPress={() => setProposeModalVisible(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={24} color="#FFFBF0" />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+              <Text style={styles.inputLabel}>Loại đề xuất</Text>
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 4, marginBottom: 10 }}>
+                <Pressable
+                  style={{
+                    flex: 1,
+                    backgroundColor: proposeType === 'style' ? colors.primary : '#1e1c26',
+                    padding: 12,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: proposeType === 'style' ? colors.primary : 'rgba(255,255,255,0.05)',
+                  }}
+                  onPress={() => setProposeType('style')}
+                >
+                  <Text style={{ color: '#FFFBF0', fontWeight: 'bold', fontSize: 13 }}>Style (Phong cách)</Text>
+                </Pressable>
+                <Pressable
+                  style={{
+                    flex: 1,
+                    backgroundColor: proposeType === 'concept' ? colors.primary : '#1e1c26',
+                    padding: 12,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: proposeType === 'concept' ? colors.primary : 'rgba(255,255,255,0.05)',
+                  }}
+                  onPress={() => setProposeType('concept')}
+                >
+                  <Text style={{ color: '#FFFBF0', fontWeight: 'bold', fontSize: 13 }}>Concept (Chủ đề)</Text>
+                </Pressable>
+              </View>
+
+              <Text style={styles.inputLabel}>Tên phong cách/chủ đề</Text>
+              <TextInput
+                style={styles.inputField}
+                value={proposeForm.name}
+                onChangeText={(t) => setProposeForm(prev => ({ ...prev, name: t }))}
+                placeholder="Ví dụ: Cyberpunk, Indie Film..."
+                placeholderTextColor={colors.textMuted}
+              />
+
+              <Text style={styles.inputLabel}>Từ khóa liên quan (cách nhau bằng dấu phẩy)</Text>
+              <TextInput
+                style={styles.inputField}
+                value={proposeForm.keywords}
+                onChangeText={(t) => setProposeForm(prev => ({ ...prev, keywords: t }))}
+                placeholder="Ví dụ: neon, tối, tương lai..."
+                placeholderTextColor={colors.textMuted}
+              />
+
+              <Text style={styles.inputLabel}>Mô tả ngắn</Text>
+              <TextInput
+                style={[styles.inputField, styles.textArea]}
+                value={proposeForm.description}
+                onChangeText={(t) => setProposeForm(prev => ({ ...prev, description: t }))}
+                placeholder="Mô tả phong cách hoặc concept này..."
+                placeholderTextColor={colors.textMuted}
+                multiline
+              />
+
+              <Pressable style={styles.saveBtn} onPress={handleProposeTag} disabled={proposing}>
+                <LinearGradient colors={[colors.primary, '#E67E22']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveBtnGradient}>
+                  {proposing ? (
+                    <ActivityIndicator size="small" color="#FFFBF0" />
+                  ) : (
+                    <Text style={styles.saveBtnText}>Gửi đề xuất</Text>
+                  )}
                 </LinearGradient>
               </Pressable>
             </ScrollView>

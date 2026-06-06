@@ -33,4 +33,6 @@ public sealed class PhotographerRecord
     public ICollection<PortfolioPhotoRecord> PortfolioPhotos { get; set; } = [];
     public ICollection<ServicePackageRecord> ServicePackages { get; set; } = [];
     public ICollection<PhotographerAvailabilityRecord> Availabilities { get; set; } = [];
+    public ICollection<StyleRecord> Styles { get; set; } = [];
+    public ICollection<ConceptRecord> Concepts { get; set; } = [];
 }

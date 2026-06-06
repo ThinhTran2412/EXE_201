@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ShootMatch.Application.Abstractions;
 using ShootMatch.Domain.Entities;
+using ShootMatch.Infrastructure.Persistence;
+using ShootMatch.Infrastructure.Persistence.Entities;
 using System.Security.Claims;
 
 namespace ShootMatch.Api.Controllers;
@@ -11,7 +14,8 @@ namespace ShootMatch.Api.Controllers;
 [Authorize(Roles = "staff")]
 public sealed class StaffController(
     IPhotographerRepository photographerRepository,
-    IVerificationRequestRepository verificationRequestRepository) : ControllerBase
+    IVerificationRequestRepository verificationRequestRepository,
+    ShootMatchDbContext db) : ControllerBase
 {
     [HttpGet("verification-requests")]
     [ProducesResponseType(typeof(IReadOnlyList<VerificationRequest>), StatusCodes.Status200OK)]
@@ -79,4 +83,98 @@ public sealed class StaffController(
         PortfolioEmbeddings = p.PortfolioEmbeddings,
         PortfolioPhotos = p.PortfolioPhotos
     };
+
+    [HttpGet("tags/pending")]
+    public async Task<IActionResult> ListPendingTags(CancellationToken ct)
+    {
+        var pendingStyles = await db.Styles
+            .Where(x => x.Status == "Pending")
+            .Select(x => new PendingTagDto("Style", x.Id, x.Name, x.Description, x.CreatedById, x.CreatedAt))
+            .ToListAsync(ct);
+
+        var pendingConcepts = await db.Concepts
+            .Where(x => x.Status == "Pending")
+            .Select(x => new PendingTagDto("Concept", x.Id, x.Name, x.Description, x.CreatedById, x.CreatedAt))
+            .ToListAsync(ct);
+
+        var allPending = pendingStyles.Concat(pendingConcepts).OrderByDescending(x => x.CreatedAt).ToList();
+        return Ok(allPending);
+    }
+
+    [HttpPost("tags/approve")]
+    public async Task<IActionResult> ApproveTag([FromBody] ReviewTagRequest request, CancellationToken ct)
+    {
+        var staffIdStr = User.FindFirst("user_id")?.Value ?? "staff";
+        Guid? staffId = Guid.TryParse(staffIdStr, out var g) ? g : null;
+
+        if (string.Equals(request.Type, "Style", StringComparison.OrdinalIgnoreCase))
+        {
+            var style = await db.Styles.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
+            if (style is null) return NotFound("Style not found.");
+            
+            var entry = db.Entry(style);
+            style.Status = "Approved";
+            style.ApprovedById = staffId;
+            style.UpdatedAt = DateTime.UtcNow;
+            entry.State = EntityState.Modified;
+        }
+        else if (string.Equals(request.Type, "Concept", StringComparison.OrdinalIgnoreCase))
+        {
+            var concept = await db.Concepts.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
+            if (concept is null) return NotFound("Concept not found.");
+            
+            var entry = db.Entry(concept);
+            concept.Status = "Approved";
+            concept.ApprovedById = staffId;
+            concept.UpdatedAt = DateTime.UtcNow;
+            entry.State = EntityState.Modified;
+        }
+        else
+        {
+            return BadRequest("Invalid tag type. Must be 'Style' or 'Concept'.");
+        }
+
+        await db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    [HttpPost("tags/reject")]
+    public async Task<IActionResult> RejectTag([FromBody] ReviewTagRequest request, CancellationToken ct)
+    {
+        var staffIdStr = User.FindFirst("user_id")?.Value ?? "staff";
+        Guid? staffId = Guid.TryParse(staffIdStr, out var g) ? g : null;
+
+        if (string.Equals(request.Type, "Style", StringComparison.OrdinalIgnoreCase))
+        {
+            var style = await db.Styles.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
+            if (style is null) return NotFound("Style not found.");
+            
+            var entry = db.Entry(style);
+            style.Status = "Rejected";
+            style.ApprovedById = staffId;
+            style.UpdatedAt = DateTime.UtcNow;
+            entry.State = EntityState.Modified;
+        }
+        else if (string.Equals(request.Type, "Concept", StringComparison.OrdinalIgnoreCase))
+        {
+            var concept = await db.Concepts.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
+            if (concept is null) return NotFound("Concept not found.");
+            
+            var entry = db.Entry(concept);
+            concept.Status = "Rejected";
+            concept.ApprovedById = staffId;
+            concept.UpdatedAt = DateTime.UtcNow;
+            entry.State = EntityState.Modified;
+        }
+        else
+        {
+            return BadRequest("Invalid tag type. Must be 'Style' or 'Concept'.");
+        }
+
+        await db.SaveChangesAsync(ct);
+        return NoContent();
+    }
 }
+
+public record PendingTagDto(string Type, Guid Id, string Name, string Description, Guid? CreatedById, DateTime CreatedAt);
+public record ReviewTagRequest(string Type, Guid Id);

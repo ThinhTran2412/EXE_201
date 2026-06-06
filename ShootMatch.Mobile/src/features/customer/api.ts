@@ -343,6 +343,10 @@ export async function searchPhotographers(params: {
   durationHours?: number;
   styles?: string[];
   isEmergency?: boolean;
+  locationType?: string | null;
+  ageGroup?: string | null;
+  groupSize?: string | null;
+  colorTone?: string;
 }): Promise<PhotographerCard[]> {
   const data = await gql<{ searchPhotographers: PhotographerCard[] }>(`
     query SearchPhotographers(
@@ -353,6 +357,10 @@ export async function searchPhotographers(params: {
       $durationHours: Int
       $styles: [String!]
       $isEmergency: Boolean
+      $locationType: LocationType
+      $ageGroup: AgeGroup
+      $groupSize: GroupSize
+      $colorTone: String
     ) {
       searchPhotographers(
         query: $query
@@ -362,6 +370,10 @@ export async function searchPhotographers(params: {
         durationHours: $durationHours
         styles: $styles
         isEmergency: $isEmergency
+        locationType: $locationType
+        ageGroup: $ageGroup
+        groupSize: $groupSize
+        colorTone: $colorTone
       ) {
         photographerId displayName region avatarUrl portfolioPhotos
         minBudget maxBudget rating isPremium similarityScore finalScore

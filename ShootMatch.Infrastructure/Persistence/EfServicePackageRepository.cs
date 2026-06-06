@@ -55,6 +55,9 @@ public sealed class EfServicePackageRepository(ShootMatchDbContext db) : IServic
         record.CallToAction = servicePackage.CallToAction;
         record.Price = servicePackage.Price;
         record.DurationHours = servicePackage.DurationHours;
+        record.LocationType = servicePackage.LocationType;
+        record.AgeGroup = servicePackage.AgeGroup;
+        record.GroupSize = servicePackage.GroupSize;
         record.IsActive = servicePackage.IsActive;
         record.UpdatedAt = DateTime.UtcNow;
 
@@ -100,6 +103,9 @@ public sealed class EfServicePackageRepository(ShootMatchDbContext db) : IServic
         CallToAction = r.CallToAction,
         Price = r.Price,
         DurationHours = r.DurationHours,
+        LocationType = r.LocationType,
+        AgeGroup = r.AgeGroup,
+        GroupSize = r.GroupSize,
         IsActive = r.IsActive,
         CreatedAt = r.CreatedAt,
         UpdatedAt = r.UpdatedAt,

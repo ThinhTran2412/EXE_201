@@ -290,3 +290,22 @@ export async function getMyReviewsReceived(): Promise<any[]> {
   `);
   return data.myReviewsReceived ?? [];
 }
+
+export async function proposeStyle(name: string, description: string, keywords: string): Promise<any> {
+  const { data } = await apiClient.post('/api/photographers/styles/propose', {
+    name,
+    description,
+    keywords,
+  });
+  return data;
+}
+
+export async function proposeConcept(name: string, description: string, keywords: string): Promise<any> {
+  const { data } = await apiClient.post('/api/photographers/concepts/propose', {
+    name,
+    description,
+    keywords,
+  });
+  return data;
+}
+

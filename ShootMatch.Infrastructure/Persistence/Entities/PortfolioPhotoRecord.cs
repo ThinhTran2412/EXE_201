@@ -8,6 +8,9 @@ public sealed class PortfolioPhotoRecord
     public string ThumbnailUrl { get; set; } = string.Empty;
     public int DisplayOrder { get; set; }
     public bool IsIndexed { get; set; }
+    public string DominantColors { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public PhotographerRecord Photographer { get; set; } = null!;
+    public ICollection<StyleRecord> Styles { get; set; } = [];
+    public ICollection<ConceptRecord> Concepts { get; set; } = [];
 }

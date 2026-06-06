@@ -23,4 +23,6 @@ public sealed class CustomerRecord
     public DateTime CreatedAt { get; set; }
     public DateTime? LastSeenAt { get; set; }
     public DateTime? DeletedAt { get; set; }
+    public ICollection<StyleRecord> PreferredStyleRecords { get; set; } = [];
+    public ICollection<ConceptRecord> PreferredConceptRecords { get; set; } = [];
 }

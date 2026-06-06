@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ShootMatch.Api.Contracts;
 using ShootMatch.Application.Abstractions;
 using ShootMatch.Domain.Entities;
 using ShootMatch.Domain.Exceptions;
 using ShootMatch.Domain.ValueObjects;
+using ShootMatch.Infrastructure.Persistence;
+using ShootMatch.Infrastructure.Persistence.Entities;
 using System.Security.Claims;
 
 namespace ShootMatch.Api.Controllers;
@@ -290,6 +293,9 @@ public sealed class PhotographersController(
             request.CallToAction,
             request.Price,
             request.DurationHours,
+            request.LocationType,
+            request.AgeGroup,
+            request.GroupSize,
             request.IsActive,
             request.Media), cancellationToken);
         return Ok(package);
@@ -346,6 +352,9 @@ public sealed class PhotographersController(
             CallToAction = callToAction,
             Price = request.Price,
             DurationHours = request.DurationHours,
+            LocationType = request.LocationType,
+            AgeGroup = request.AgeGroup,
+            GroupSize = request.GroupSize,
             IsActive = request.IsActive,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -391,4 +400,62 @@ public sealed class PhotographersController(
         if (!Guid.TryParse(claim, out var id)) throw new UnauthorizedAccessException("Missing photographer_id claim.");
         return id;
     }
+
+    [HttpPost("styles/propose")]
+    public async Task<IActionResult> ProposeStyle([FromBody] ProposeTagRequest request, [FromServices] ShootMatchDbContext db, CancellationToken ct)
+    {
+        var name = request.Name.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return BadRequest("Name is required.");
+        
+        var photographerId = GetPhotographerIdOrThrow(User);
+        
+        var exists = await db.Styles.AnyAsync(x => x.Name.ToLower() == name.ToLower(), ct);
+        if (exists) return BadRequest("Style name already exists.");
+
+        var style = new StyleRecord
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Description = request.Description?.Trim() ?? string.Empty,
+            Keywords = request.Keywords?.Trim() ?? string.Empty,
+            Status = "Pending",
+            CreatedById = photographerId,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await db.Styles.AddAsync(style, ct);
+        await db.SaveChangesAsync(ct);
+        return Ok(style);
+    }
+
+    [HttpPost("concepts/propose")]
+    public async Task<IActionResult> ProposeConcept([FromBody] ProposeTagRequest request, [FromServices] ShootMatchDbContext db, CancellationToken ct)
+    {
+        var name = request.Name.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return BadRequest("Name is required.");
+        
+        var photographerId = GetPhotographerIdOrThrow(User);
+        
+        var exists = await db.Concepts.AnyAsync(x => x.Name.ToLower() == name.ToLower(), ct);
+        if (exists) return BadRequest("Concept name already exists.");
+
+        var concept = new ConceptRecord
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Description = request.Description?.Trim() ?? string.Empty,
+            Keywords = request.Keywords?.Trim() ?? string.Empty,
+            Status = "Pending",
+            CreatedById = photographerId,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await db.Concepts.AddAsync(concept, ct);
+        await db.SaveChangesAsync(ct);
+        return Ok(concept);
+    }
 }
+
+public record ProposeTagRequest(string Name, string? Description, string? Keywords);

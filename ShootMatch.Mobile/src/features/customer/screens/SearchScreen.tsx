@@ -51,6 +51,43 @@ const DURATIONS = [
   { label: '5 Giờ', value: 5 },
 ];
 
+const LOCATION_TYPES = [
+  { label: 'Tất cả địa điểm', value: '' },
+  { label: 'Studio', value: 'STUDIO' },
+  { label: 'Ngoại cảnh', value: 'OUTDOOR' },
+  { label: 'Trong nhà / Cafe', value: 'INDOOR' },
+  { label: 'Linh hoạt', value: 'FLEXIBLE' }
+];
+
+const AGE_GROUPS = [
+  { label: 'Mọi độ tuổi', value: '' },
+  { label: 'Sơ sinh & Bé', value: 'NEWBORN' },
+  { label: 'Trẻ em & Gia đình', value: 'KIDS' },
+  { label: 'Giới trẻ (Gen Z)', value: 'YOUTH' },
+  { label: 'Người lớn', value: 'ADULTS' },
+  { label: 'Người cao tuổi', value: 'SENIORS' },
+  { label: 'Thú cưng', value: 'PETS' }
+];
+
+const GROUP_SIZES = [
+  { label: 'Mọi số lượng', value: '' },
+  { label: 'Cá nhân (Solo)', value: 'SOLO' },
+  { label: 'Cặp đôi', value: 'COUPLE' },
+  { label: 'Nhóm nhỏ (< 5 người)', value: 'SMALL_GROUP' },
+  { label: 'Nhóm lớn (>= 5 người)', value: 'LARGE_GROUP' }
+];
+
+const COLOR_TONES = [
+  { label: 'Tất cả tông màu', value: '', color: '#CCCCCC' },
+  { label: 'Cổ điển / Trầm', value: '#8B4513', color: '#8B4513' },
+  { label: 'Ấm áp / Đỏ cam', value: '#FF5733', color: '#FF5733' },
+  { label: 'Trong sáng / Vàng', value: '#FFC300', color: '#FFC300' },
+  { label: 'Tươi tắn / Xanh', value: '#2ECC71', color: '#2ECC71' },
+  { label: 'Lạnh / Xanh biển', value: '#3498DB', color: '#3498DB' },
+  { label: 'Mơ mộng / Tím', value: '#9B59B6', color: '#9B59B6' },
+  { label: 'Huyền bí / Tối', value: '#2C3E50', color: '#2C3E50' }
+];
+
 const CONCEPTS = [
   { name: 'Chân dung', tag: 'Portrait', subtitle: 'Góc mặt nghệ thuật', coverIndex: 5 },
   { name: 'Ảnh cưới', tag: 'Wedding', subtitle: 'Khoảnh khắc trọn đời', coverIndex: 35 },
@@ -114,6 +151,10 @@ export default function SearchScreen() {
   const [selectedDuration, setSelectedDuration] = useState<number>(0);
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [isEmergency, setIsEmergency] = useState(false);
+  const [selectedLocationType, setSelectedLocationType] = useState('');
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState('');
+  const [selectedGroupSize, setSelectedGroupSize] = useState('');
+  const [selectedColorTone, setSelectedColorTone] = useState('');
 
   // UI States
   const [showFilters, setShowFilters] = useState(false);
@@ -128,7 +169,7 @@ export default function SearchScreen() {
   const [loadingDiscovery, setLoadingDiscovery] = useState(true);
 
   // Check if user is actively searching
-  const isSearching = query.length > 0 || selectedRegion !== '' || minBudget !== '' || maxBudget !== '' || selectedDuration > 0 || selectedStyles.length > 0 || isEmergency;
+  const isSearching = query.length > 0 || selectedRegion !== '' || minBudget !== '' || maxBudget !== '' || selectedDuration > 0 || selectedStyles.length > 0 || isEmergency || selectedLocationType !== '' || selectedAgeGroup !== '' || selectedGroupSize !== '' || selectedColorTone !== '';
 
   // Fetch Discovery Data
   const loadDiscoveryData = useCallback(async () => {
@@ -210,6 +251,10 @@ export default function SearchScreen() {
         durationHours: dur,
         styles: selectedStyles.length > 0 ? selectedStyles : undefined,
         isEmergency: isEmergency || undefined,
+        locationType: selectedLocationType || undefined,
+        ageGroup: selectedAgeGroup || undefined,
+        groupSize: selectedGroupSize || undefined,
+        colorTone: selectedColorTone || undefined,
       });
 
       setResults(data);
@@ -218,12 +263,35 @@ export default function SearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, [query, selectedRegion, minBudget, maxBudget, selectedDuration, selectedStyles, isEmergency, isSearching]);
+  }, [
+    query,
+    selectedRegion,
+    minBudget,
+    maxBudget,
+    selectedDuration,
+    selectedStyles,
+    isEmergency,
+    selectedLocationType,
+    selectedAgeGroup,
+    selectedGroupSize,
+    selectedColorTone,
+    isSearching
+  ]);
 
   // Trigger search on filter changes
   useEffect(() => {
     handleSearch();
-  }, [selectedRegion, selectedDuration, selectedStyles, isEmergency, handleSearch]);
+  }, [
+    selectedRegion,
+    selectedDuration,
+    selectedStyles,
+    isEmergency,
+    selectedLocationType,
+    selectedAgeGroup,
+    selectedGroupSize,
+    selectedColorTone,
+    handleSearch
+  ]);
 
   const toggleStyle = (style: string) => {
     setSelectedStyles((prev) =>
@@ -249,6 +317,10 @@ export default function SearchScreen() {
     setSelectedDuration(0);
     setSelectedStyles([]);
     setIsEmergency(false);
+    setSelectedLocationType('');
+    setSelectedAgeGroup('');
+    setSelectedGroupSize('');
+    setSelectedColorTone('');
     setShowFilters(false);
     setResults([]);
   };
@@ -407,6 +479,71 @@ export default function SearchScreen() {
               onChangeText={setMaxBudget}
             />
           </View>
+
+          <Text style={styles.filterTitle}>Địa điểm chụp</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.regionList}>
+            {LOCATION_TYPES.map((loc) => (
+              <Pressable
+                key={loc.value}
+                style={[styles.regionChip, selectedLocationType === loc.value && styles.regionChipActive]}
+                onPress={() => setSelectedLocationType(loc.value)}
+              >
+                <Text style={[styles.regionChipText, selectedLocationType === loc.value && styles.regionChipTextActive]}>
+                  {loc.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          <Text style={styles.filterTitle}>Đối tượng chụp</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.regionList}>
+            {AGE_GROUPS.map((age) => (
+              <Pressable
+                key={age.value}
+                style={[styles.regionChip, selectedAgeGroup === age.value && styles.regionChipActive]}
+                onPress={() => setSelectedAgeGroup(age.value)}
+              >
+                <Text style={[styles.regionChipText, selectedAgeGroup === age.value && styles.regionChipTextActive]}>
+                  {age.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          <Text style={styles.filterTitle}>Số lượng người</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.regionList}>
+            {GROUP_SIZES.map((gs) => (
+              <Pressable
+                key={gs.value}
+                style={[styles.regionChip, selectedGroupSize === gs.value && styles.regionChipActive]}
+                onPress={() => setSelectedGroupSize(gs.value)}
+              >
+                <Text style={[styles.regionChipText, selectedGroupSize === gs.value && styles.regionChipTextActive]}>
+                  {gs.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          <Text style={styles.filterTitle}>Tông màu chính</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.regionList}>
+            {COLOR_TONES.map((colorTone) => (
+              <Pressable
+                key={colorTone.value}
+                style={[
+                  styles.regionChip,
+                  selectedColorTone === colorTone.value && styles.regionChipActive,
+                  { flexDirection: 'row', alignItems: 'center', gap: 6 }
+                ]}
+                onPress={() => setSelectedColorTone(colorTone.value)}
+              >
+                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colorTone.color }} />
+                <Text style={[styles.regionChipText, selectedColorTone === colorTone.value && styles.regionChipTextActive]}>
+                  {colorTone.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
       )}
 

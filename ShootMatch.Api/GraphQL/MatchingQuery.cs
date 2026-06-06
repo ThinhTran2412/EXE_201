@@ -89,7 +89,7 @@ public sealed class MatchingQuery
     }
 
     /// <summary>
-    /// Searches and filters photographers based on text query, region, budget, package duration, styles/tags, and emergency status.
+    /// Searches and filters photographers based on text query, region, budget, package duration, styles/tags, emergency status, location type, age group, group size, and dominant colors.
     /// </summary>
     public async Task<IReadOnlyList<PhotographerMatchCard>> SearchPhotographers(
         string? query,
@@ -99,12 +99,21 @@ public sealed class MatchingQuery
         int? durationHours,
         IReadOnlyList<string>? styles,
         bool? isEmergency,
+        LocationType? locationType,
+        AgeGroup? ageGroup,
+        GroupSize? groupSize,
+        string? colorTone,
         [Service] ShootMatch.Infrastructure.Persistence.ShootMatchDbContext dbContext,
         CancellationToken cancellationToken)
     {
         var records = await dbContext.Photographers
             .Include(x => x.PortfolioPhotos)
+                .ThenInclude(p => p.Styles)
+            .Include(x => x.PortfolioPhotos)
+                .ThenInclude(p => p.Concepts)
             .Include(x => x.ServicePackages)
+            .Include(x => x.Styles)
+            .Include(x => x.Concepts)
             .Include(x => x.Availabilities)
             .AsNoTracking()
             .Where(x => x.DeletedAt == null)
@@ -120,6 +129,26 @@ public sealed class MatchingQuery
         if (styles != null && styles.Count > 0)
         {
             styleKeywords.AddRange(styles.Select(s => s.ToLowerInvariant()));
+        }
+
+        // Relative search: Find Styles/Concepts in DB matching keywords
+        var matchingStyleIds = new List<Guid>();
+        var matchingConceptIds = new List<Guid>();
+        if (keywords.Count > 0)
+        {
+            var allStyles = await dbContext.Styles.Where(s => s.Status == "Approved").ToListAsync(cancellationToken);
+            matchingStyleIds = allStyles
+                .Where(s => keywords.Any(kw => s.Name.Contains(kw, StringComparison.OrdinalIgnoreCase) || 
+                                               s.Keywords.Contains(kw, StringComparison.OrdinalIgnoreCase)))
+                .Select(s => s.Id)
+                .ToList();
+
+            var allConcepts = await dbContext.Concepts.Where(c => c.Status == "Approved").ToListAsync(cancellationToken);
+            matchingConceptIds = allConcepts
+                .Where(c => keywords.Any(kw => c.Name.Contains(kw, StringComparison.OrdinalIgnoreCase) || 
+                                               c.Keywords.Contains(kw, StringComparison.OrdinalIgnoreCase)))
+                .Select(c => c.Id)
+                .ToList();
         }
 
         var results = new List<PhotographerMatchCard>();
@@ -161,7 +190,47 @@ public sealed class MatchingQuery
                 }
             }
 
-            // 5. Filter by Style tags (if styles list provided)
+            // 5. Filter by LocationType
+            if (locationType.HasValue)
+            {
+                var hasMatchingLoc = p.ServicePackages.Any(sp => sp.IsActive && sp.LocationType == locationType.Value);
+                if (!hasMatchingLoc)
+                {
+                    continue;
+                }
+            }
+
+            // 6. Filter by AgeGroup
+            if (ageGroup.HasValue)
+            {
+                var hasMatchingAge = p.ServicePackages.Any(sp => sp.IsActive && sp.AgeGroup == ageGroup.Value);
+                if (!hasMatchingAge)
+                {
+                    continue;
+                }
+            }
+
+            // 7. Filter by GroupSize
+            if (groupSize.HasValue)
+            {
+                var hasMatchingSize = p.ServicePackages.Any(sp => sp.IsActive && sp.GroupSize == groupSize.Value);
+                if (!hasMatchingSize)
+                {
+                    continue;
+                }
+            }
+
+            // 8. Filter by Color Tone / Dominant Colors
+            if (!string.IsNullOrWhiteSpace(colorTone))
+            {
+                var hasColorMatch = p.PortfolioPhotos.Any(ph => ph.DominantColors.Contains(colorTone, StringComparison.OrdinalIgnoreCase));
+                if (!hasColorMatch)
+                {
+                    continue;
+                }
+            }
+
+            // 9. Filter by Style tags (if styles list provided)
             if (styleKeywords.Count > 0)
             {
                 var matchesStyle = false;
@@ -169,6 +238,10 @@ public sealed class MatchingQuery
                 {
                     if (p.Bio.Contains(style, StringComparison.OrdinalIgnoreCase) ||
                         p.Quote.Contains(style, StringComparison.OrdinalIgnoreCase) ||
+                        p.Styles.Any(s => s.Name.Contains(style, StringComparison.OrdinalIgnoreCase)) ||
+                        p.Concepts.Any(c => c.Name.Contains(style, StringComparison.OrdinalIgnoreCase)) ||
+                        p.PortfolioPhotos.Any(ph => ph.Styles.Any(s => s.Name.Contains(style, StringComparison.OrdinalIgnoreCase)) || 
+                                                    ph.Concepts.Any(c => c.Name.Contains(style, StringComparison.OrdinalIgnoreCase))) ||
                         p.ServicePackages.Any(sp => sp.Title.Contains(style, StringComparison.OrdinalIgnoreCase) || sp.Description.Contains(style, StringComparison.OrdinalIgnoreCase)))
                     {
                         matchesStyle = true;
@@ -181,8 +254,9 @@ public sealed class MatchingQuery
                 }
             }
 
-            // 6. Text query keyword matching
+            // 10. Text query keyword matching + Relative search
             var keywordMatchCount = 0;
+            var relativeMatch = false;
             if (keywords.Count > 0)
             {
                 var textToSearch = $"{p.DisplayName} {p.Bio} {p.Quote} {string.Join(" ", p.ServicePackages.Select(sp => $"{sp.Title} {sp.Description}"))}".ToLowerInvariant();
@@ -194,17 +268,27 @@ public sealed class MatchingQuery
                     }
                 }
 
-                if (keywordMatchCount == 0)
+                // Check relative match (styles or concepts tagged to photographer or their portfolio photos)
+                if (p.Styles.Any(s => matchingStyleIds.Contains(s.Id)) ||
+                    p.Concepts.Any(c => matchingConceptIds.Contains(c.Id)) ||
+                    p.PortfolioPhotos.Any(ph => ph.Styles.Any(s => matchingStyleIds.Contains(s.Id)) || 
+                                                ph.Concepts.Any(c => matchingConceptIds.Contains(c.Id))))
+                {
+                    relativeMatch = true;
+                }
+
+                if (keywordMatchCount == 0 && !relativeMatch)
                 {
                     continue;
                 }
             }
 
-            // 7. Score Calculation
+            // 11. Score Calculation
             double similarity;
             if (keywords.Count > 0)
             {
-                similarity = 0.7d + Math.Min(0.25d, keywordMatchCount * 0.05d);
+                var scoreBase = relativeMatch ? 0.8d : 0.7d;
+                similarity = scoreBase + Math.Min(0.15d, keywordMatchCount * 0.05d);
             }
             else
             {
@@ -429,5 +513,67 @@ public sealed class MatchingQuery
         CancellationToken cancellationToken)
     {
         return await conversationRepository.GetMessagesAsync(conversationId, cancellationToken);
+    }
+
+    /// <summary>Returns list of styles, optionally filtered by status (Approved, Pending, Rejected).</summary>
+    public async Task<IReadOnlyList<Style>> Styles(
+        string? status,
+        [Service] ShootMatch.Infrastructure.Persistence.ShootMatchDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var query = db.Styles.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(x => x.Status == status);
+        }
+        else
+        {
+            query = query.Where(x => x.Status == "Approved");
+        }
+
+        var records = await query.ToListAsync(cancellationToken);
+        return records.Select(r => new Style
+        {
+            Id = r.Id,
+            Name = r.Name,
+            Description = r.Description,
+            Keywords = r.Keywords,
+            Status = r.Status,
+            CreatedById = r.CreatedById,
+            ApprovedById = r.ApprovedById,
+            CreatedAt = r.CreatedAt,
+            UpdatedAt = r.UpdatedAt
+        }).ToList();
+    }
+
+    /// <summary>Returns list of concepts, optionally filtered by status (Approved, Pending, Rejected).</summary>
+    public async Task<IReadOnlyList<Concept>> Concepts(
+        string? status,
+        [Service] ShootMatch.Infrastructure.Persistence.ShootMatchDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var query = db.Concepts.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(x => x.Status == status);
+        }
+        else
+        {
+            query = query.Where(x => x.Status == "Approved");
+        }
+
+        var records = await query.ToListAsync(cancellationToken);
+        return records.Select(r => new Concept
+        {
+            Id = r.Id,
+            Name = r.Name,
+            Description = r.Description,
+            Keywords = r.Keywords,
+            Status = r.Status,
+            CreatedById = r.CreatedById,
+            ApprovedById = r.ApprovedById,
+            CreatedAt = r.CreatedAt,
+            UpdatedAt = r.UpdatedAt
+        }).ToList();
     }
 }
