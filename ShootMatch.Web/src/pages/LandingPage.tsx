@@ -472,7 +472,7 @@ export default function LandingPage() {
               <div>
                 <h2
                   className="font-anton text-[#fff7e1] font-medium"
-                  style={{ fontSize: "clamp(2rem, 4.5vw, 3.5rem)", letterSpacing: "-0.01em", lineHeight: 1.15 }}
+                  style={{ fontSize: "clamp(2rem, 4.5vw, 3.5rem)", letterSpacing: "0.02em", lineHeight: 1.4 }}
                 >
                   Lưu giữ câu chuyện <br />
                   của bạn ngay hôm nay
