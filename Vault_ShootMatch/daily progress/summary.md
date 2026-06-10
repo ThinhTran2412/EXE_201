@@ -3,11 +3,24 @@
 Tài liệu tích lũy các hạng mục đã triển khai trong ShootMatch.
 
 **Vault index:** [INDEX.md](../INDEX.md)  
-**Cập nhật lần cuối:** 2026-05-20
+**Cập nhật lần cuối:** 2026-06-10
+
+---
+
+## 2026-06-10
+
+- Cập nhật ghi nhận cho `ShootMatch.Web`: landing page, social dock cạnh phải, social links config type-safe.
+- Bổ sung mốc mới vào `implementation-log.md` và `UI-progress.md`.
+- Đồng bộ lại README để phản ánh phần web hiện có.
 
 ---
 
 ## Đã hoàn thiện (tích lũy)
+
+### Frontend web
+- `ShootMatch.Web` đã có landing page dùng React + Vite + Tailwind + Framer Motion.
+- Landing page có CTA chính và cụm social/support ở cạnh màn hình, link được tách cấu hình sang `src/config/social-links.ts`.
+- UI web đã được chỉnh lại nhiều vòng trước đó, nhưng Vault chưa ghi nhận đầy đủ theo mốc ngày nên mục này được bổ sung lại vào bản tổng hợp.
 
 ### Backend
 - Clean Architecture 4 layer (.NET 9).

@@ -31,6 +31,17 @@
 
 **Data:** GraphQL `customerHomeFeed` + fallback `picture/` local.
 
+## Web Landing Page (`ShootMatch.Web`) — ✅ 2026-06-10
+
+| Area | Component / Behavior | Trạng thái |
+|------|----------------------|------------|
+| Hero landing | `LandingPage.tsx` | ✅ |
+| CTA phụ | Social dock cạnh phải | ✅ mặc định ẩn, mở rộng khi cần |
+| Social links | `src/config/social-links.ts` | ✅ type-safe config |
+| UI polish | Glow viền, nháy nhẹ, không đè footer | ✅ |
+
+**Data:** link social lấy từ config TS, không hardcode trực tiếp trong JSX.
+
 ---
 
 ## Screens — Customer

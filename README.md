@@ -15,6 +15,7 @@ ShootMatch là nền tảng kết nối giữa **Khách hàng** và **Nhiếp �
 - Đặt lịch, theo dõi booking, xác nhận và hoàn tất dịch vụ.
 - Chat thời gian thực qua SignalR.
 - Đánh giá và phản hồi sau dịch vụ.
+- Frontend `ShootMatch.Web` đang được dùng cho landing page, với CTA social/support, config link type-safe trong `src/config/social-links.ts`.
 
 ## Cấu trúc dự án
 - `ShootMatch.Domain`: thực thể, value object, logic cốt lõi.

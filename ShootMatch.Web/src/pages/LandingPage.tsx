@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
 import { ArrowRight, Menu, X } from "lucide-react";
 import logoCreamHorizontal from "../assets/Logo Pickic/cream_horizontal.png";
 import logoCreamOriginalSquare from "../assets/Logo Pickic/cream_original_square.png";
+import { socialLinks as socialLinksData } from "../config/social-links";
 
 const VIDEO_URL = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260521_064421_279656fd-e76f-40a0-8fed-7456d4f7715a.mp4";
 
@@ -30,14 +31,40 @@ function SectionLead({ children, align = "center" }: { children: React.ReactNode
   );
 }
 
+function SocialActionLink({
+  href,
+  label,
+  children,
+}: {
+  href: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      className="group flex items-center justify-between gap-3 rounded-full border border-[#fff7e1]/10 bg-[#0a0a06]/75 px-4 py-3 text-[#fff7e1]/80 shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-300 hover:border-[#fff7e1]/20 hover:bg-[#14130d]/90 hover:text-[#fff7e1] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff4200]/80"
+    >
+      <span className="font-mono text-[11px] font-bold uppercase tracking-[0.18em]">{children}</span>
+      <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+    </a>
+  );
+}
 
 export default function LandingPage() {
   const [arrowCycle, setArrowCycle] = useState(0);
   const [footerArrowCycle, setFooterArrowCycle] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showSocialDock, setShowSocialDock] = useState(false);
+  const [socialDockExpanded, setSocialDockExpanded] = useState(false);
+  const [socialLinks] = useState(socialLinksData);
   const videoRef = useRef<HTMLVideoElement>(null);
   const screen3Ref = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLElement>(null);
   const { scrollY } = useScroll();
   const headerY = useTransform(scrollY, [0, 500, 800], [0, 0, -150]);
 
@@ -62,9 +89,42 @@ export default function LandingPage() {
     return () => video.removeEventListener("canplaythrough", onReady);
   }, []);
 
+  useEffect(() => {
+    const footerEl = footerRef.current;
+    if (!footerEl) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowSocialDock(!entry.isIntersecting && window.scrollY > 1200);
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -120px 0px" }
+    );
+
+    observer.observe(footerEl);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const toggleSocialDock = () => {
+      const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const triggerPoint = Math.max(0, scrollableHeight - 900);
+      setShowSocialDock(window.scrollY >= triggerPoint);
+    };
+
+    toggleSocialDock();
+    window.addEventListener("scroll", toggleSocialDock, { passive: true });
+    window.addEventListener("resize", toggleSocialDock);
+
+    return () => {
+      window.removeEventListener("scroll", toggleSocialDock);
+      window.removeEventListener("resize", toggleSocialDock);
+    };
+  }, []);
+
   return (
     <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Anton&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap');:root{--cream:#fff7e1;--dark:#0a0a06;--orange:#ff4200;--purple:#3617cf;--glass:rgba(255,247,225,0.05);--border:rgba(255,247,225,0.09);--font-sans:'Plus Jakarta Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;}body{background-color:var(--dark);color:var(--cream);font-family:var(--font-sans);overflow-x:hidden;}.font-anton{font-family:'Anton',sans-serif;text-transform:uppercase;}.film-grain{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:50;opacity:0.04;background-image:url("https://lh3.googleusercontent.com/aida-public/AB6AXuAqoVzK0YGRAP5LeOe6bASYgBEIQM4OF5Cak1yvOq57mrUHqcFvm9SkCz0ZRIGkRVZiAG7JhjAM17f5Ma4ENgN4ngzSrjQfwK7ZQGWbZNNwpUgOa5AytKXU_dlXRVid-C8cx8JRzlbo0SyC8YHTS9hydT7-kZyVsK2-hCQYXAX8sU6ky3RSo8hvtvKoKlMzYLgB9lRhKnAvKTX7Wos8vT2OzOEBFlLlOZby4hyJMaecoAvpAl-iBnlrlGxJ-Tl_5NFLO9NrUfZHtXA");}.hero-orb{position:absolute;bottom:-100px;left:50%;transform:translateX(-50%);width:700px;height:700px;background:radial-gradient(circle,rgba(255,66,0,0.16),transparent 70%);filter:blur(50px);z-index:1;pointer-events:none;}.hero-vig-top{position:absolute;top:0;left:0;right:0;height:220px;background:linear-gradient(to bottom,rgba(10,10,6,0.95),transparent);z-index:2;pointer-events:none;}.hero-vig-bot{position:absolute;bottom:0;left:0;right:0;height:300px;background:linear-gradient(to top,rgba(10,10,6,1) 20%,transparent);z-index:2;pointer-events:none;}.hero-vig-side{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 30%,rgba(10,10,6,0.55) 100%);z-index:2;pointer-events:none;}@keyframes flyOutUp{0%{transform:translateY(0);}100%{transform:translateY(-150%);}}@keyframes flyInUp{0%{transform:translateY(150%);}100%{transform:translateY(0);}}.animate-fly-out-up{animation:flyOutUp .4s cubic-bezier(.4,0,.2,1) forwards;}.animate-fly-in-up{animation:flyInUp .4s cubic-bezier(.4,0,.2,1) forwards;}@keyframes flyOutRight{0%{transform:translateX(0);}100%{transform:translateX(250%);}}@keyframes flyInLeft{0%{transform:translateX(-250%);}100%{transform:translateX(0);}}.animate-fly-out{animation:flyOutRight .5s cubic-bezier(.4,0,.2,1) forwards;}.animate-fly-in{animation:flyInLeft .5s cubic-bezier(.4,0,.2,1) forwards;}.scroll-reveal{margin:0;}.scroll-reveal-text{display:flex;flex-wrap:wrap;margin:0;}.word{display:inline-block;white-space:pre;}::-webkit-scrollbar{width:8px;}::-webkit-scrollbar-track{background:var(--dark);}::-webkit-scrollbar-thumb{background:rgba(255,247,225,0.12);border-radius:4px;}::-webkit-scrollbar-thumb:hover{background:rgba(255,247,225,0.25);}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Anton&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap');:root{--cream:#fff7e1;--dark:#0a0a06;--orange:#ff4200;--purple:#3617cf;--glass:rgba(255,247,225,0.05);--border:rgba(255,247,225,0.09);--font-sans:'Plus Jakarta Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;}body{background-color:var(--dark);color:var(--cream);font-family:var(--font-sans);overflow-x:hidden;}.font-anton{font-family:'Anton',sans-serif;text-transform:uppercase;}.film-grain{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:50;opacity:0.04;background-image:url("https://lh3.googleusercontent.com/aida-public/AB6AXuAqoVzK0YGRAP5LeOe6bASYgBEIQM4OF5Cak1yvOq57mrUHqcFvm9SkCz0ZRIGkRVZiAG7JhjAM17f5Ma4ENgN4ngzSrjQfwK7ZQGWbZNNwpUgOa5AytKXU_dlXRVid-C8cx8JRzlbo0SyC8YHTS9hydT7-kZyVsK2-hCQYXAX8sU6ky3RSo8hvtvKoKlMzYLgB9lRhKnAvKTX7Wos8vT2OzOEBFlLlOZby4hyJMaecoAvpAl-iBnlrlGxJ-Tl_5NFLO9NrUfZHtXA");}.hero-orb{position:absolute;bottom:-100px;left:50%;transform:translateX(-50%);width:700px;height:700px;background:radial-gradient(circle,rgba(255,66,0,0.16),transparent 70%);filter:blur(50px);z-index:1;pointer-events:none;}.hero-vig-top{position:absolute;top:0;left:0;right:0;height:220px;background:linear-gradient(to bottom,rgba(10,10,6,0.95),transparent);z-index:2;pointer-events:none;}.hero-vig-bot{position:absolute;bottom:0;left:0;right:0;height:300px;background:linear-gradient(to top,rgba(10,10,6,1) 20%,transparent);z-index:2;pointer-events:none;}.hero-vig-side{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 30%,rgba(10,10,6,0.55) 100%);z-index:2;pointer-events:none;}@keyframes flyOutUp{0%{transform:translateY(0);}100%{transform:translateY(-150%);}}@keyframes flyInUp{0%{transform:translateY(150%);}100%{transform:translateY(0);}}.animate-fly-out-up{animation:flyOutUp .4s cubic-bezier(.4,0,.2,1) forwards;}.animate-fly-in-up{animation:flyInUp .4s cubic-bezier(.4,0,.2,1) forwards;}@keyframes flyOutRight{0%{transform:translateX(0);}100%{transform:translateX(250%);}}@keyframes flyInLeft{0%{transform:translateX(-250%);}100%{transform:translateX(0);}}.animate-fly-out{animation:flyOutRight .5s cubic-bezier(.4,0,.2,1) forwards;}.animate-fly-in{animation:flyInLeft .5s cubic-bezier(.4,0,.2,1) forwards;}@keyframes softGlowPulse{0%,100%{opacity:.82;transform:scale(1);}50%{opacity:1;transform:scale(1.02);}}.animate-soft-glow-pulse{animation:softGlowPulse 2.6s ease-in-out infinite;}.scroll-reveal{margin:0;}.scroll-reveal-text{display:flex;flex-wrap:wrap;margin:0;}.word{display:inline-block;white-space:pre;}::-webkit-scrollbar{width:8px;}::-webkit-scrollbar-track{background:var(--dark);}::-webkit-scrollbar-thumb{background:rgba(255,247,225,0.12);border-radius:4px;}::-webkit-scrollbar-thumb:hover{background:rgba(255,247,225,0.25);}`}</style>
       <AnimatePresence>
         {!isLoaded && (
           <motion.div
@@ -419,7 +479,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="w-[90%] max-w-[1100px] mx-auto py-28 md:py-40 border-t border-[#fff7e1]/[0.06] pointer-events-auto">
+        <section ref={footerRef} className="w-[90%] max-w-[1100px] mx-auto py-28 md:py-40 border-t border-[#fff7e1]/[0.06] pointer-events-auto">
           <div className="w-full mx-auto">
             <Reveal delay={0.1}>
               <SectionLead align="left">
@@ -614,6 +674,69 @@ export default function LandingPage() {
           </div>
         </section>
       </main>
+
+      <AnimatePresence>
+        {showSocialDock && (
+          <motion.aside
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 24 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed right-0 top-1/2 z-20 -translate-y-1/2 pointer-events-auto"
+          >
+            <div className="group flex items-center">
+              <button
+                type="button"
+                onClick={() => setSocialDockExpanded((v) => !v)}
+                aria-expanded={socialDockExpanded}
+                aria-controls="social-dock-panel"
+                aria-label={socialDockExpanded ? "Thu gọn menu kết nối" : "Mở menu kết nối nhanh"}
+                className="group relative flex h-[92px] w-[40px] -translate-x-[1px] items-center justify-center overflow-hidden rounded-l-[20px] border border-r-0 border-[#fff7e1]/10 bg-[#0a0a06]/88 text-[#fff7e1] shadow-[0_0_28px_rgba(255,66,0,0.34),0_0_70px_rgba(255,66,0,0.18),0_18px_52px_rgba(0,0,0,0.38)] backdrop-blur-xl transition-transform duration-300 hover:-translate-x-[4px] hover:bg-[#12110d] hover:shadow-[0_0_42px_rgba(255,66,0,0.58),0_0_110px_rgba(255,66,0,0.36),0_18px_52px_rgba(0,0,0,0.38)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff4200]/70 animate-soft-glow-pulse"
+              >
+                <span className="absolute inset-0 rounded-l-[20px] shadow-[inset_0_0_0_1px_rgba(255,66,0,0.28),0_0_30px_rgba(255,66,0,0.35)] transition-shadow duration-300 group-hover:shadow-[inset_0_0_0_1px_rgba(255,66,0,0.42),0_0_48px_rgba(255,66,0,0.55)]" aria-hidden />
+                <span className="absolute inset-y-3 right-1.5 w-px bg-gradient-to-b from-transparent via-[#ff4200]/60 to-transparent animate-pulse" aria-hidden />
+                <span className="absolute inset-0 rounded-l-[20px] bg-[radial-gradient(circle_at_50%_50%,rgba(255,66,0,0.18),transparent_60%)] opacity-70 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
+                <span className="relative flex items-center justify-center">
+                  <span className="font-mono text-[9px] font-bold uppercase tracking-[0.28em] text-[#fff7e1]/78 [writing-mode:vertical-rl] rotate-180">
+                    Social
+                  </span>
+                </span>
+                <span className="sr-only">{socialDockExpanded ? "Thu gọn" : "Mở rộng"}</span>
+              </button>
+              <motion.div
+                id="social-dock-panel"
+                initial={false}
+                animate={{ width: socialDockExpanded ? 248 : 0, opacity: socialDockExpanded ? 1 : 0 }}
+                transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
+                className="overflow-hidden rounded-l-[24px] border border-r-0 border-[#fff7e1]/10 bg-[#0a0a06]/86 shadow-[0_18px_52px_rgba(0,0,0,0.38)] backdrop-blur-xl"
+                style={{ pointerEvents: socialDockExpanded ? "auto" : "none" }}
+              >
+                <div className="w-[248px] p-3">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-[#ff4200]">
+                      Kết nối nhanh
+                    </p>
+                    <span className="rounded-full border border-[#fff7e1]/10 bg-white/5 px-2 py-0.5 text-[9px] font-mono uppercase tracking-[0.18em] text-[#fff7e1]/35">
+                      Social
+                    </span>
+                  </div>
+                  <div className="grid gap-2">
+                    <SocialActionLink href={socialLinks?.fanpage ?? "#"} label="Mở fanpage ShooMatch trên Facebook">
+                      Fanpage
+                    </SocialActionLink>
+                    <SocialActionLink href={socialLinks?.tiktok ?? "#"} label="Mở TikTok ShooMatch">
+                      TikTok
+                    </SocialActionLink>
+                    <SocialActionLink href={socialLinks?.support ?? "#"} label="Gửi email cho bộ phận hỗ trợ ShooMatch">
+                      Support
+                    </SocialActionLink>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
     </>
   );
 }

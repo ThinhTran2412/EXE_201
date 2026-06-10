@@ -514,3 +514,31 @@
   - pgvector thực tế cho PreferredStyles và portfolio embeddings.
   - Chuyển đổi các repo in-memory còn lại (`SearchSession`, `SwipeAction`, `Otp`).
 
+## Session 2026-06-06 → 2026-06-08 — Web landing page, booking polish, discovery/search filters
+- Goal: bám theo lịch sử commit thực tế trước 2026-06-10 để ghi lại các thay đổi đã diễn ra trong web, booking và discovery.
+- Changes:
+  - [Web] `0d5aade` — `feat(web): add WebExperience page with framer-motion and update LandingPage`
+    - thêm trải nghiệm web landing/experience bằng Framer Motion.
+    - cập nhật `LandingPage.tsx` theo hướng cinematic, scroll-driven.
+  - [Web] `aaf0349` + `d6d1c08` — redesign landing page và tinh chỉnh spacing text.
+    - làm lại hero và các section landing.
+    - chỉnh spacing/typography để UI gọn và rõ hơn.
+  - [Mobile] `71c3890` — `feat : Update booking Screen , detail booking and checkout Screen`
+    - cập nhật Booking Screen, Booking Detail và Checkout Screen.
+    - siết lại luồng đặt lịch và thanh toán trên mobile.
+  - [Backend] `6894525` — `feat: normalize Style/Concept entities with approval workflow and advanced search filters`
+    - chuẩn hóa `Style/Concept` entities.
+    - thêm approval workflow và filter search nâng cao.
+  - [Mobile] `7b90e6c` — `feat: complete discovery search feed with real data and lookbook styling`
+    - hoàn thiện discovery/search feed với dữ liệu thật.
+    - áp lookbook styling cho trải nghiệm tìm kiếm.
+  - [Backend] `244dbdf`, `b3f3980`, `e0a9433` — fix upload/profile/service packages.
+    - cover image swap, file extension upload, silent refresh profile.
+    - giữ portfolio photos khi update photographer profile.
+    - hoàn thiện mapping PostgreSQL cho `ServicePackageMediaRecord` và finalize service packages.
+- Notes:
+  - Đây là các mốc lịch sử trước hôm nay, ghi lại theo commit date thật thay vì dùng ngày hiện tại.
+  - Nếu cần audit sâu hơn, nên tách tiếp từng ngày 2026-06-06 / 2026-06-07 / 2026-06-08.
+- Risks/Next:
+  - Cần cập nhật thêm các file Vault theo ngày tương ứng để không dồn toàn bộ lịch sử vào một mục.
+
