@@ -53,7 +53,7 @@
 | Chat list | `chat/screens/AllChatScreen.tsx` | 🟡 |
 | Chat room | `chat/screens/ChatScreen.tsx` | 🟡 SignalR |
 | Bookings | `MyBookingsScreen.tsx` | 🟡 |
-| Booking detail | `BookingDetailScreen.tsx` | 🟡 |
+| Booking detail | `BookingDetailScreen.tsx` | ✅ Đồng bộ UI |
 | Checkout | `CheckoutScreen.tsx` | 🟡 |
 | Profile | `ProfileScreen.tsx` | ✅ Viewfinder Hero, Polaroid, Roll |
 | Edit profile | `EditProfileScreen.tsx` | ✅ Darkroom view, 3-frame, style pills |
@@ -74,8 +74,8 @@
 | Personal info | `PersonalInfoScreen.tsx` | ✅ API personal-info |
 | Upload portfolio | `UploadPortfolioScreen.tsx` | ✅ Masonry + multi upload |
 | Service management | `ServiceManagementScreen.tsx` | ✅ UI redesign |
-| PBookings | `PBookingsScreen.tsx` | 🟡 |
-| Booking calendar | `BookingCalendarScreen.tsx` | 🟡 |
+| PBookings | `PBookingsScreen.tsx` | ✅ Đã gộp lịch, UI redesign premium |
+| Booking calendar | `BookingCalendarScreen.tsx` | ❌ Đã xóa |
 | PChat / PAllChat | `PChatScreen`, `PAllChatScreen` | 🟡 |
 
 ---

@@ -153,6 +153,7 @@ builder.Services
     .AddQueryType<MatchingQuery>()
     .AddTypeExtension<ConversationExtensions>()
     .AddTypeExtension<ReviewExtensions>()
+    .AddTypeExtension<BookingExtensions>()
     .TryAddTypeInterceptor<IgnoreDomainEventsTypeInterceptor>()
     .AddAuthorization();
 

@@ -21,6 +21,7 @@ import PBookingCalendarScreen from '../../features/photographer/screens/PBooking
 import PersonalInfoScreen from '../../features/photographer/screens/PersonalInfoScreen';
 import CallScreen from '../../features/chat/screens/CallScreen';
 import CustomerProfileViewScreen from '../../features/photographer/screens/CustomerProfileViewScreen';
+import BookingDetailScreen from '../../features/customer/screens/BookingDetailScreen';
 
 const Tab   = createBottomTabNavigator<PhotographerTabParamList>();
 const Stack = createNativeStackNavigator<PhotographerStackParamList>();
@@ -73,6 +74,7 @@ export default function PhotographerTabs() {
       <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
       <Stack.Screen name="Call" component={CallScreen} />
       <Stack.Screen name="CustomerProfile" component={CustomerProfileViewScreen} />
+      <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
     </Stack.Navigator>
 
   );

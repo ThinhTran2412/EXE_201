@@ -542,3 +542,26 @@
 - Risks/Next:
   - Cần cập nhật thêm các file Vault theo ngày tương ứng để không dồn toàn bộ lịch sử vào một mục.
 
+## Session 2026-06-08 → 2026-06-10 — Web Landing Page Redesign & System Updates
+- Goal: Thiết kế lại toàn bộ trang Landing Page Web, cập nhật Logo nhận diện mới và bổ sung hệ thống thông báo (Notifications).
+- Changes:
+  - [Web] Đại tu `LandingPage.tsx` theo hướng Cinematic scroll-driven, loại bỏ page `WebExperience.tsx` thừa.
+  - [Web] Cập nhật bộ Logo PicKic (Original, Black, Cream, Orange) chất lượng cao.
+  - [Web] Bổ sung cấu hình type-safe cho `social-links.ts` và gắn vào UI web.
+  - [Mobile/Backend] Cập nhật các flow liên quan đến hệ thống Push Notifications (bao gồm `NotificationService`, `NotificationsScreen`, `SharedNotificationsScreen`).
+  - [Vault] Thêm 3 tài liệu quy hoạch thông báo: `_notification-plan.md`, `_notification-flow-overview.md`, `_notification-backend-checklist.md`.
+- Notes:
+  - Có khá nhiều script hỗ trợ AI từ `.cursor/skills/impeccable` được đưa vào để tự động hóa kiểm tra UI/UX web.
+
+## Session 2026-06-11 — Cập nhật Lịch & UI Màn hình Booking (Photographer)
+- Goal: Thiết kế lại trải nghiệm xem lịch hẹn và quản lý booking cho Photographer theo chuẩn premium, đồng bộ UI bên Customer, thêm hỗ trợ GraphQL cho Booking.
+- Changes:
+  - [Mobile] `PBookingsScreen.tsx`: Đại tu toàn bộ UI/UX (Màu vàng gold/Charcoal đậm), gộp Lịch trực tiếp vào màn hình này để không phải chuyển trang. Thêm các widget thời tiết, tỷ lệ lấp đầy, bộ lọc trạng thái và hiển thị giá nổi bật.
+  - [Mobile] `BookingCalendarScreen.tsx`: Đã xóa do tích hợp Lịch vào PBookingsScreen.
+  - [Mobile] `BookingDetailScreen.tsx`: Cập nhật chi tiết UI để đồng bộ với phía Photographer.
+  - [Mobile] `PhotographerTabs.tsx` & `types.ts`: Cập nhật cấu trúc điều hướng (xóa BookingCalendarScreen).
+  - [Mobile] `api.ts`: Mở rộng query `myBookingsAsPhotographer` để gọi thêm các fields mới (`customerName`, `customerAvatarUrl`, `servicePackageName`, `servicePackageImageUrl`).
+  - [API] `BookingExtensions.cs`: Thêm GraphQL Type Extension cho `BookingAggregate`, khai báo 4 resolvers mới dùng EF Core (`GetCustomerName`, `GetCustomerAvatarUrl`, `GetServicePackageName`, `GetServicePackageImageUrl`) giúp join và trả về thông tin chi tiết mà không làm nặng Booking table.
+  - [API] `Program.cs`: Đăng ký `.AddTypeExtension<BookingExtensions>()` vào GraphQL pipeline.
+- Risks/Next:
+  - Kiểm tra lại các query GraphQL mới trên UI để đảm bảo load dữ liệu đúng cho bộ lịch hẹn và booking card.

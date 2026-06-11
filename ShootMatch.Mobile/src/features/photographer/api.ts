@@ -38,6 +38,7 @@ export interface PhotographerProfile {
 export interface PBooking {
   id:             string;
   customerId:     string;
+  photographerId: string;
   matchId:        string;
   status:         string;
   agreedPrice:    number;
@@ -50,6 +51,10 @@ export interface PBooking {
   note?:          string;
   requirements?:  string;
   servicePackageId?: string | null;
+  customerName?:  string;
+  customerAvatarUrl?: string;
+  servicePackageName?: string;
+  servicePackageImageUrl?: string;
 }
 
 export async function getPhotographerProfile(): Promise<PhotographerProfile | null> {
@@ -155,7 +160,7 @@ function normalizeStatus(status: string): string {
 export async function getMyBookingsAsPhotographer(): Promise<PBooking[]> {
   const data = await gql<{ myBookingsAsPhotographer: PBooking[] }>(`
     query { myBookingsAsPhotographer {
-      id customerId matchId status agreedPrice commission scheduledAt createdAt phone location note requirements servicePackageId
+      id customerId photographerId matchId status agreedPrice commission scheduledAt createdAt phone location note requirements servicePackageId customerName customerAvatarUrl servicePackageName servicePackageImageUrl
     }}
   `);
   return (data.myBookingsAsPhotographer ?? []).map((b) => ({

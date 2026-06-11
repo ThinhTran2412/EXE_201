@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ScrollView, StyleSheet, Text, View, Pressable, Alert, TextInput, ActivityIndicator, Image, TouchableOpacity, Platform,
+  ScrollView, StyleSheet, Text, View, Pressable, Alert, TextInput, ActivityIndicator, Image, TouchableOpacity, Platform, Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { cancelBooking, submitReview, getPhotographer, getPhotographerServicePackages, Booking, Photographer } from '../api';
@@ -108,6 +108,7 @@ export default function BookingDetailScreen() {
   const [loading, setLoading] = useState(true);
 
   const [packageExpanded, setPackageExpanded] = useState(false);
+  const [infoExpanded, setInfoExpanded] = useState(false);
   const [rating,         setRating]         = useState(5);
   const [comment,        setComment]        = useState('');
   const [submittingRev,  setSubmittingRev]  = useState(false);
@@ -155,6 +156,16 @@ export default function BookingDetailScreen() {
     ]);
   }
 
+  const handleCallPress = () => {
+    if (booking.phone) {
+      Linking.openURL(`tel:${booking.phone}`).catch(() => {
+        Alert.alert('Lỗi', 'Không thể khởi chạy cuộc gọi trên thiết bị này.');
+      });
+    } else {
+      Alert.alert('Thông báo', 'Không có số điện thoại liên kết.');
+    }
+  };
+
   async function handleSubmitReview() {
     if (!comment.trim()) { Alert.alert('Thiếu nhận xét', 'Vui lòng để lại nhận xét.'); return; }
     setSubmittingRev(true);
@@ -189,9 +200,11 @@ export default function BookingDetailScreen() {
 
   const pName = photographer?.displayName ?? 'Nhiếp ảnh gia';
   const pAvatar = formatImageUrl(photographer?.avatarUrl) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
-  const pCover = (photographer?.portfolioPhotos && photographer.portfolioPhotos.length > 0)
-    ? formatImageUrl(photographer.portfolioPhotos[0])
-    : 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=800';
+  const pCover = photographer?.coverPhotoUrl
+    ? formatImageUrl(photographer.coverPhotoUrl)
+    : (photographer?.portfolioPhotos && photographer.portfolioPhotos.length > 0)
+      ? formatImageUrl(photographer.portfolioPhotos[0])
+      : 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=800';
 
   const date = new Date(booking.scheduledAt);
   const dayStr = date.getDate();
@@ -457,7 +470,7 @@ export default function BookingDetailScreen() {
           <ClayCard style={styles.card}>
             <View style={styles.timeSection}>
               <View style={styles.timeIconWrapper}>
-                <Ionicons name="calendar-outline" size={22} color={colors.accent} />
+                <Feather name="clock" size={22} color={colors.accent} />
               </View>
               <View style={styles.timeTextWrapper}>
                 <Text style={styles.timeDateText}>{dateLongStr}</Text>
@@ -482,10 +495,7 @@ export default function BookingDetailScreen() {
 
         {/* Card 2: Package details card */}
         <Animated.View entering={FadeInDown.duration(500).delay(160)}>
-          <ClayCard style={styles.card}>
-            <Text style={styles.cardTitle}>Gói dịch vụ đã đặt</Text>
-            {renderPackageCard()}
-          </ClayCard>
+          {renderPackageCard()}
         </Animated.View>
 
         {/* Card 3: Photoshoot Schedule Details */}
@@ -493,38 +503,105 @@ export default function BookingDetailScreen() {
           <ClayCard style={styles.card}>
             <Text style={styles.cardTitle}>Chi tiết cuộc hẹn</Text>
             
-            <View style={styles.detailsList}>
-              {[
-                { icon: 'pin-outline', label: 'Địa điểm chụp', value: booking.location || 'Chưa định cấu hình' },
-                { icon: 'call-outline', label: 'Số điện thoại', value: booking.phone || 'Chưa có' },
-                { icon: 'barcode-outline', label: 'Mã đặt lịch', value: `#${booking.id.toUpperCase()}` },
-                { icon: 'time-outline', label: 'Thời gian đặt', value: new Date(booking.createdAt).toLocaleString('vi-VN') },
-              ].map((row, idx) => (
-                <View key={idx} style={styles.detailsRow}>
-                  <View style={styles.detailsIconWrapper}>
-                    <Ionicons name={row.icon as any} size={15} color={colors.textMuted} />
-                  </View>
-                  <View style={styles.detailsTextWrapper}>
-                    <Text style={styles.detailsLabel}>{row.label}</Text>
-                    <Text style={styles.detailsValue}>{row.value}</Text>
-                  </View>
+            <View style={{ gap: spacing[3] }}>
+              {/* Highlighted Full-width Location Card */}
+              <View style={{ backgroundColor: '#FAF7F2', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(46,42,36,0.08)', gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="pin" size={16} color="#D4AF37" />
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textLight, textTransform: 'uppercase' }}>Địa điểm chụp</Text>
                 </View>
-              ))}
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.dark, lineHeight: 20 }}>
+                  {booking.location || 'Chưa định cấu hình'}
+                </Text>
+              </View>
+
+              {/* Highlighted Full-width Phone Card (Press to call) */}
+              <Pressable 
+                onPress={handleCallPress}
+                style={({ pressed }) => ({
+                  backgroundColor: '#FAF7F2',
+                  borderRadius: 16,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: 'rgba(46,42,36,0.08)',
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  opacity: pressed ? 0.8 : 1,
+                })}
+              >
+                <View style={{ gap: 6, flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="call" size={16} color="#3A6073" />
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textLight, textTransform: 'uppercase' }}>Số điện thoại liên hệ</Text>
+                  </View>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: colors.dark }}>
+                    {booking.phone || 'Chưa có số điện thoại'}
+                  </Text>
+                </View>
+
+                {booking.phone && (
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(58, 96, 115, 0.08)', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="call" size={16} color="#3A6073" />
+                  </View>
+                )}
+              </Pressable>
+
+              {booking.note ? (
+                <View style={[styles.noteBox, { marginTop: 4 }]}>
+                  <Text style={styles.noteBoxTitle}>Ghi chú khách hàng</Text>
+                  <Text style={styles.noteBoxText}>"{booking.note}"</Text>
+                </View>
+              ) : null}
+
+              {booking.requirements ? (
+                <View style={[styles.noteBox, { borderLeftColor: colors.info, marginTop: 4 }]}>
+                  <Text style={[styles.noteBoxTitle, { color: colors.info }]}>Yêu cầu trang phục/chuẩn bị</Text>
+                  <Text style={styles.noteBoxText}>"{booking.requirements}"</Text>
+                </View>
+              ) : null}
             </View>
 
-            {booking.note ? (
-              <View style={styles.noteBox}>
-                <Text style={styles.noteBoxTitle}>Ghi chú khách hàng</Text>
-                <Text style={styles.noteBoxText}>"{booking.note}"</Text>
-              </View>
-            ) : null}
+            {/* Collapsible toggle for Booking Code and Creation Time */}
+            <Pressable 
+              onPress={() => setInfoExpanded(!infoExpanded)} 
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingVertical: 12,
+                marginTop: 16,
+                borderTopWidth: 1,
+                borderTopColor: 'rgba(26,26,15,0.06)'
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted }}>Xem thêm thông tin</Text>
+              <Ionicons name={infoExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+            </Pressable>
 
-            {booking.requirements ? (
-              <View style={[styles.noteBox, { borderLeftColor: colors.info }]}>
-                <Text style={[styles.noteBoxTitle, { color: colors.info }]}>Yêu cầu trang phục/chuẩn bị</Text>
-                <Text style={styles.noteBoxText}>"{booking.requirements}"</Text>
-              </View>
-            ) : null}
+            {infoExpanded && (
+              <Animated.View entering={FadeInDown.duration(200)} style={{ gap: spacing[3], marginTop: spacing[2] }}>
+                <View style={styles.detailsRow}>
+                  <View style={styles.detailsIconWrapper}>
+                    <Ionicons name="barcode-outline" size={15} color={colors.textMuted} />
+                  </View>
+                  <View style={styles.detailsTextWrapper}>
+                    <Text style={styles.detailsLabel}>Mã đặt lịch</Text>
+                    <Text style={styles.detailsValue}>{`#${booking.id.toUpperCase()}`}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailsRow}>
+                  <View style={styles.detailsIconWrapper}>
+                    <Ionicons name="time-outline" size={15} color={colors.textMuted} />
+                  </View>
+                  <View style={styles.detailsTextWrapper}>
+                    <Text style={styles.detailsLabel}>Thời gian đặt</Text>
+                    <Text style={styles.detailsValue}>{new Date(booking.createdAt).toLocaleString('vi-VN')}</Text>
+                  </View>
+                </View>
+              </Animated.View>
+            )}
 
             {booking.cancellationReason && (
               <View style={styles.cancelReasonBox}>
@@ -827,27 +904,27 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Service package styling inside Card 2
   packageCard: {
-    borderRadius: 16,
+    borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.06)',
-    backgroundColor: '#fffcf7',
+    borderColor: 'rgba(26,26,15,0.09)',
+    backgroundColor: '#fffaf4',
   },
-  packageCover: { position: 'relative', height: 120 },
+  packageCover: { position: 'relative', height: 200 },
   packageCoverContent: {
     position: 'absolute',
-    bottom: 10,
-    left: 10,
-    right: 10,
-    gap: 4,
+    bottom: 14,
+    left: 14,
+    right: 14,
+    gap: 6,
   },
   packageCoverTitle: {
     color: '#fffaf4',
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '900',
     letterSpacing: 0.2,
+    lineHeight: 26,
     textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
@@ -855,54 +932,60 @@ const styles = StyleSheet.create({
   packagePricePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 5,
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(207,64,40,0.85)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,180,140,0.3)',
   },
-  packagePriceText: { color: '#fffaf4', fontSize: 10.5, fontWeight: '900' },
-  packagePriceSep: { color: 'rgba(255,247,225,0.5)', fontSize: 8 },
-  packagePriceDuration: { color: 'rgba(255,247,225,0.8)', fontSize: 10, fontWeight: '600' },
+  packagePriceText: { color: '#fffaf4', fontSize: 13, fontWeight: '900', letterSpacing: 0.2 },
+  packagePriceSep: { color: 'rgba(255,247,225,0.5)', fontSize: 11, marginHorizontal: 1 },
+  packagePriceDuration: { color: 'rgba(255,247,225,0.8)', fontSize: 12, fontWeight: '600' },
 
-  packageBody: { padding: 12, gap: 8 },
-  packageDesc: { color: 'rgba(26,26,15,0.7)', lineHeight: 18, fontSize: 12 },
+  packageBody: { padding: 16, gap: 12 },
+  packageDesc: { color: 'rgba(26,26,15,0.7)', lineHeight: 21, fontSize: 13.5 },
 
-  packageTagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  packageTagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   packageTag: {
-    backgroundColor: 'rgba(207,64,40,0.06)',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
+    backgroundColor: 'rgba(207,64,40,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(207,64,40,0.14)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  packageTagText: { color: colors.dark, fontSize: 10, fontWeight: '700' },
+  packageTagText: { color: colors.dark, fontSize: 11.5, fontWeight: '700' },
 
-  packageMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  packageMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   packageMetaChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
     backgroundColor: '#fff7e1',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.05)',
+    borderColor: 'rgba(26,26,15,0.08)',
   },
-  packageMetaChipText: { color: colors.dark, fontSize: 10.5, fontWeight: '600' },
+  packageMetaChipText: { color: colors.dark, fontSize: 11.5, fontWeight: '600' },
 
-  packageThumbStrip: { flexDirection: 'row', gap: 5, marginTop: 2 },
-  packageThumbItem: { width: 44, height: 44, borderRadius: 6 },
+  packageThumbStrip: { flexDirection: 'row', gap: 6 },
+  packageThumbItem: { width: 60, height: 60, borderRadius: 10 },
   packageThumbMore: {
-    width: 44,
-    height: 44,
-    borderRadius: 6,
+    width: 60,
+    height: 60,
+    borderRadius: 10,
     backgroundColor: 'rgba(26,26,15,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(26,26,15,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  packageThumbMoreText: { color: 'rgba(26,26,15,0.6)', fontSize: 11, fontWeight: '800' },
+  packageThumbMoreText: { color: 'rgba(26,26,15,0.6)', fontSize: 13, fontWeight: '800' },
 
   packageToggleIndicator: {
     flexDirection: 'row',

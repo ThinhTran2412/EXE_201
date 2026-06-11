@@ -65,6 +65,7 @@ export type PhotographerStackParamList = {
   BookingCalendar: undefined;
   PersonalInfo: undefined;
   CustomerProfile: { customerId: string; customerName?: string };
+  BookingDetail: { booking: any };
   Call: {
     conversationId: string;
     callSessionId?: string;
