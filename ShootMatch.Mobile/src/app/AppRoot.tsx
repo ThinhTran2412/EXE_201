@@ -8,6 +8,7 @@ import AuthNavigator from './navigation/AuthNavigator';
 import RoleNavigator from './navigation/RoleNavigator';
 import { colors } from './theme/colors';
 import * as ChatHub from '../features/chat/ChatHub';
+import { NotificationProvider } from '../shared/notifications/NotificationContext';
 
 export const navigationRef = React.createRef<any>();
 
@@ -85,10 +86,12 @@ export default function AppRoot() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <AuthProvider>
-          <NavigationContainer ref={navigationRef} theme={navTheme}>
-            <Router />
-            <CallListener />
-          </NavigationContainer>
+          <NotificationProvider>
+            <NavigationContainer ref={navigationRef} theme={navTheme}>
+              <Router />
+              <CallListener />
+            </NavigationContainer>
+          </NotificationProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

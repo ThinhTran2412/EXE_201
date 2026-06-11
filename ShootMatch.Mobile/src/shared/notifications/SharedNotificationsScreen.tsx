@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -11,29 +11,87 @@ import { useNotifications } from './NotificationContext';
 import NotificationsList from './NotificationsList';
 import { parseNotificationPayload } from './parsePayload';
 import type { AppNotification } from './types';
+import { getMyBookings, getMyConversations } from '../../features/customer/api';
+import { formatImageUrl } from '../utils/formatImageUrl';
 
 export default function SharedNotificationsScreen() {
   const navigation = useNavigation<any>();
   const { session } = useAuth();
   const { items, unreadCount, loading, markRead, markAllRead } = useNotifications();
 
+  const openConversation = useCallback(async (conversationId: string) => {
+    const conversations = await getMyConversations();
+    const conversation = conversations.find((c) => c.id?.toLowerCase() === conversationId.toLowerCase());
+
+    const participantName = session?.role === 'photographer'
+      ? (conversation?.customerDisplayName ?? 'Khách hàng')
+      : (conversation?.photographerDisplayName ?? 'Nhiếp ảnh gia');
+
+    const participantAvatarUrlRaw = session?.role === 'photographer'
+      ? conversation?.customerAvatarUrl
+      : conversation?.photographerAvatarUrl;
+    const participantAvatarUrl = formatImageUrl(participantAvatarUrlRaw);
+
+    navigation.navigate('Chat', {
+      conversationId,
+      name: participantName,
+      participantName,
+      participantAvatarUrl,
+      photographerId: conversation?.photographerId,
+    });
+  }, [navigation, session?.role]);
+
+  const openBookingById = useCallback(async (bookingId: string) => {
+    if (session?.role === 'photographer') {
+      navigation.navigate('PBookings');
+      return;
+    }
+
+    const bookings = await getMyBookings();
+    const booking = bookings.find((b) => b.id?.toLowerCase() === bookingId.toLowerCase());
+    if (!booking) {
+      Alert.alert('Không tìm thấy lịch hẹn', 'Vui lòng mở tab Lịch hẹn để xem chi tiết.');
+      navigation.navigate('Bookings');
+      return;
+    }
+
+    navigation.navigate('BookingDetail', { booking });
+  }, [navigation, session?.role]);
+
   const handlePress = useCallback(async (n: AppNotification) => {
     if (!n.read) await markRead(n.id);
     const payload = parseNotificationPayload(n.payloadJson);
-    if (n.actionType === 'open_conversation' && payload.conversationId) {
-      if (session?.role === 'photographer') {
-        navigation.navigate('Chat', {
-          conversationId: payload.conversationId,
-          name: 'Tin nhắn',
-        });
-      } else {
-        navigation.navigate('Chat', {
-          conversationId: payload.conversationId,
-          name: 'Tin nhắn',
-        });
-      }
+
+    switch (n.actionType) {
+      case 'open_conversation':
+        if (payload.conversationId) await openConversation(payload.conversationId);
+        return;
+      case 'open_booking':
+      case 'open_booking_detail':
+        if (payload.bookingId) await openBookingById(payload.bookingId);
+        return;
+      case 'open_match':
+        if (payload.conversationId) {
+          await openConversation(payload.conversationId);
+          return;
+        }
+        navigation.navigate('Chat');
+        return;
+      case 'open_call':
+        navigation.navigate('Chat');
+        return;
+      case 'open_review':
+        if (payload.bookingId) {
+          await openBookingById(payload.bookingId);
+          return;
+        }
+        navigation.navigate('Bookings');
+        return;
+      case 'open_system':
+      default:
+        return;
     }
-  }, [markRead, navigation, session?.role]);
+  }, [markRead, navigation, openBookingById, openConversation]);
 
   return (
     <SafeAreaView style={styles.safe}>

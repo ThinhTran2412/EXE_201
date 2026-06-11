@@ -21,7 +21,8 @@ namespace ShootMatch.Api.Controllers;
 [Authorize]
 public sealed class BookingsController(
     CreateBookingCommandHandler createHandler,
-    IBookingRepository bookingRepository) : ControllerBase
+    IBookingRepository bookingRepository,
+    ShootMatch.Application.Services.NotificationService notificationService) : ControllerBase
 {
     private const decimal DefaultCommissionRate = 0.10m;
 
@@ -83,6 +84,11 @@ public sealed class BookingsController(
 
             booking.Confirm();
             await bookingRepository.SaveAsync(booking, cancellationToken);
+            await notificationService.NotifyBookingConfirmedAsync(
+                booking.CustomerId,
+                booking.Id,
+                booking.ScheduledAt,
+                cancellationToken);
             return NoContent();
         }
         catch (DomainException ex) { return BadRequest(ex.Message); }
@@ -112,6 +118,10 @@ public sealed class BookingsController(
 
             booking.Complete();
             await bookingRepository.SaveAsync(booking, cancellationToken);
+            await notificationService.NotifyBookingCompletedAsync(
+                booking.CustomerId,
+                booking.Id,
+                cancellationToken);
             return NoContent();
         }
         catch (DomainException ex) { return BadRequest(ex.Message); }
@@ -149,6 +159,14 @@ public sealed class BookingsController(
 
             booking.Cancel(callerId, request.Reason);
             await bookingRepository.SaveAsync(booking, cancellationToken);
+
+            var recipientIsCustomer = callerId == booking.PhotographerId;
+            await notificationService.NotifyBookingCancelledAsync(
+                recipientIsCustomer ? booking.CustomerId : booking.PhotographerId,
+                recipientIsCustomer ? "customer" : "photographer",
+                booking.Id,
+                request.Reason,
+                cancellationToken);
             return NoContent();
         }
         catch (DomainException ex) { return BadRequest(ex.Message); }

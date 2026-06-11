@@ -1,5 +1,6 @@
 using System.Linq;
 using ShootMatch.Application.Abstractions;
+using ShootMatch.Application.Services;
 using ShootMatch.Domain.Entities;
 using ShootMatch.Domain.Exceptions;
 
@@ -13,7 +14,8 @@ namespace ShootMatch.Application.Commands;
 public sealed class SubmitReviewCommandHandler(
     IBookingRepository bookingRepository,
     IReviewRepository reviewRepository,
-    IPhotographerRepository photographerRepository)
+    IPhotographerRepository photographerRepository,
+    NotificationService notificationService)
 {
     public async Task<Guid> HandleAsync(
         SubmitReviewCommand command,
@@ -51,6 +53,10 @@ public sealed class SubmitReviewCommandHandler(
         };
 
         await reviewRepository.SaveAsync(review, cancellationToken);
+        await notificationService.NotifyReviewSubmittedAsync(
+            booking.PhotographerId,
+            booking.Id,
+            cancellationToken);
 
         // 6. Recalculate average rating for photographer
         var photographer = await photographerRepository.GetByIdAsync(booking.PhotographerId, cancellationToken);

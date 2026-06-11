@@ -33,7 +33,7 @@ public sealed class NotificationService(INotificationRepository repository)
         return notification;
     }
 
-    public async Task<AppNotification> NotifyNewMessageAsync(
+    public Task<AppNotification> NotifyNewMessageAsync(
         Conversation conversation,
         Message message,
         string senderDisplayName,
@@ -48,7 +48,7 @@ public sealed class NotificationService(INotificationRepository repository)
             ? "Đã gửi một ảnh"
             : (message.Content.Length > 120 ? message.Content[..120] + "…" : message.Content);
 
-        return await CreateAsync(
+        return CreateAsync(
             recipientId,
             recipientRole,
             "message",
@@ -56,6 +56,107 @@ public sealed class NotificationService(INotificationRepository repository)
             preview,
             "open_conversation",
             new { conversationId = conversation.Id, messageId = message.Id },
+            cancellationToken);
+    }
+
+    public Task<AppNotification> NotifyBookingCreatedAsync(
+        Guid photographerId,
+        Guid bookingId,
+        DateTime scheduledAt,
+        CancellationToken cancellationToken = default)
+        => CreateAsync(
+            photographerId,
+            "photographer",
+            "booking",
+            "Có booking mới",
+            $"Một booking mới đã được tạo cho lịch {scheduledAt:dd/MM/yyyy HH:mm}.",
+            "open_booking",
+            new { bookingId },
+            cancellationToken);
+
+    public Task<AppNotification> NotifyBookingConfirmedAsync(
+        Guid customerId,
+        Guid bookingId,
+        DateTime scheduledAt,
+        CancellationToken cancellationToken = default)
+        => CreateAsync(
+            customerId,
+            "customer",
+            "booking",
+            "Booking đã được xác nhận",
+            $"Photographer đã xác nhận lịch chụp {scheduledAt:dd/MM/yyyy HH:mm}.",
+            "open_booking_detail",
+            new { bookingId },
+            cancellationToken);
+
+    public Task<AppNotification> NotifyBookingCancelledAsync(
+        Guid recipientId,
+        string recipientRole,
+        Guid bookingId,
+        string reason,
+        CancellationToken cancellationToken = default)
+        => CreateAsync(
+            recipientId,
+            recipientRole,
+            "booking",
+            "Booking đã bị hủy",
+            reason,
+            "open_booking_detail",
+            new { bookingId },
+            cancellationToken);
+
+    public Task<AppNotification> NotifyBookingCompletedAsync(
+        Guid customerId,
+        Guid bookingId,
+        CancellationToken cancellationToken = default)
+        => CreateAsync(
+            customerId,
+            "customer",
+            "booking",
+            "Buổi chụp đã hoàn tất",
+            "Bạn có thể để lại đánh giá cho buổi chụp này.",
+            "open_review",
+            new { bookingId },
+            cancellationToken);
+
+    public Task<AppNotification> NotifyReviewSubmittedAsync(
+        Guid photographerId,
+        Guid bookingId,
+        CancellationToken cancellationToken = default)
+        => CreateAsync(
+            photographerId,
+            "photographer",
+            "review",
+            "Bạn có đánh giá mới",
+            "Customer vừa gửi một đánh giá cho booking này.",
+            "open_booking_detail",
+            new { bookingId },
+            cancellationToken);
+
+    public async Task NotifyMatchCreatedAsync(
+        Guid customerId,
+        Guid photographerId,
+        Guid matchId,
+        CancellationToken cancellationToken = default)
+    {
+        await CreateAsync(
+            customerId,
+            "customer",
+            "match",
+            "Bạn đã match!",
+            "Hãy bắt đầu trò chuyện với photographer.",
+            "open_conversation",
+            new { matchId },
+            cancellationToken);
+
+        await CreateAsync(
+            photographerId,
+            "photographer",
+            "match",
+            "Có một match mới",
+            "Bạn và customer đã match. Hãy bắt đầu cuộc trò chuyện.",
+            "open_conversation",
+            new { matchId },
             cancellationToken);
     }
 }

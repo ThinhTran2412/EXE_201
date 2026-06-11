@@ -1,4 +1,5 @@
 using ShootMatch.Application.Abstractions;
+using ShootMatch.Application.Services;
 using ShootMatch.Domain.Aggregates;
 using ShootMatch.Domain.Exceptions;
 
@@ -10,7 +11,8 @@ namespace ShootMatch.Application.Commands;
 /// </summary>
 public sealed class CreateBookingCommandHandler(
     IMatchRepository matchRepository,
-    IBookingRepository bookingRepository)
+    IBookingRepository bookingRepository,
+    NotificationService notificationService)
 {
     public async Task<Guid> HandleAsync(
         CreateBookingCommand command,
@@ -44,6 +46,11 @@ public sealed class CreateBookingCommandHandler(
         // 5. Persist both
         await matchRepository.SaveAsync(match, cancellationToken);
         await bookingRepository.SaveAsync(booking, cancellationToken);
+        await notificationService.NotifyBookingCreatedAsync(
+            booking.PhotographerId,
+            booking.Id,
+            booking.ScheduledAt,
+            cancellationToken);
 
         return booking.Id;
     }
