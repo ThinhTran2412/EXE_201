@@ -565,3 +565,21 @@
   - [API] `Program.cs`: Đăng ký `.AddTypeExtension<BookingExtensions>()` vào GraphQL pipeline.
 - Risks/Next:
   - Kiểm tra lại các query GraphQL mới trên UI để đảm bảo load dữ liệu đúng cho bộ lịch hẹn và booking card.
+
+## Session 2026-06-12 — Photographer Theme & Equipment Management
+- Goal: Tích hợp Dark/Light Theme cá nhân hóa dành riêng cho Photographer, đồng thời phát triển tính năng Quản lý thiết bị nhiếp ảnh (Equipment Management).
+- Changes:
+  - [Domain/Entities] Thêm `EquipmentCategory.cs`, `PhotographerEquipment.cs` và `PhotographerEquipmentRecord.cs` (có thêm thuộc tính `IsHidden`).
+  - [Infrastructure/Migrations] Thêm migration `20260612184723_AddPhotographerEquipment`.
+  - [API/Controllers] Cập nhật `PhotographerRequests.cs` và `PhotographersController.cs` để hỗ trợ CRUD thiết bị nhiếp ảnh.
+  - [Mobile] Thêm `PhotographerThemeContext.tsx` để quản lý Dark/Light Theme riêng biệt cho role Photographer (mặc định sáng).
+  - [Mobile] Cập nhật giao diện Dark Theme cho hàng loạt các màn hình của Photographer:
+    - `DashboardScreen.tsx` (Bảo lưu Hero background mặc định, sửa lỗi tệp màu nút, nút Đang nhận job/Đăng xuất rõ nét).
+    - `PProfileScreen.tsx` (Chỉnh lại màu nền quote không bị đỏ, icon sáng be, fix các badge địa chỉ, số sao, xác minh bị tệp màu).
+    - `PBookingsScreen.tsx` & `PBookingCalendarScreen.tsx` (Xử lý lỗi trắng bảng lịch tháng/ngày, chữ bị chìm trên ô lịch, đổi nút next tháng).
+    - `BookingDetailScreen.tsx` (Sửa lỗi màu text, thêm border viền trắng cho khối Photographer detail card trên nền đen, badge xác nhận đồng bộ, layout trong suốt không lỗi).
+    - `ServiceManagementScreen.tsx` (Chỉnh màu các nút Tác vụ, text tạo gói trắng trên trắng được đổi lại, fix chi tiết gói bị chìm màu).
+    - Khung chat (`PChatScreen.tsx`, `ChatScreen.tsx`) (Chỉnh sửa bubble color, header name, status để phân tách rõ không giống hình chữ nhật liền mạch).
+  - [Mobile] Thêm tính năng `ManageEquipmentScreen.tsx`: Cho phép thêm/sửa/xóa/ẩn thiết bị nhiếp ảnh gia với UI Modal cải tiến nghệ thuật, khắc phục triệt để lỗi màn hình bị mờ khi mở form.
+- Notes:
+  - Theme của Customer và Photographer được tách biệt độc lập để không ảnh hưởng lẫn nhau.

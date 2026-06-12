@@ -35,4 +35,5 @@ public sealed class PhotographerRecord
     public ICollection<PhotographerAvailabilityRecord> Availabilities { get; set; } = [];
     public ICollection<StyleRecord> Styles { get; set; } = [];
     public ICollection<ConceptRecord> Concepts { get; set; } = [];
+    public ICollection<PhotographerEquipmentRecord> Equipments { get; set; } = [];
 }

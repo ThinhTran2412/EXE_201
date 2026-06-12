@@ -63,6 +63,7 @@ export type PhotographerStackParamList = {
   Chat: { conversationId: string; name: string };
   ServiceManagement: undefined;
   BookingCalendar: undefined;
+  ManageEquipment: undefined;
   PersonalInfo: undefined;
   CustomerProfile: { customerId: string; customerName?: string };
   BookingDetail: { booking: any };
@@ -74,5 +75,6 @@ export type PhotographerStackParamList = {
     name: string;
     avatarUrl?: string;
   };
+  Notifications: undefined;
 };
 

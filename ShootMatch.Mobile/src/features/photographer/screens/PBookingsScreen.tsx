@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cancelBooking, completeBooking, confirmBooking, getMyBookingsAsPhotographer, PBooking } from '../api';
-import { colors } from '../../../app/theme/colors';
+import { usePhotographerTheme } from '../PhotographerThemeContext';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { spacing } from '../../../app/theme/spacing';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
@@ -71,6 +71,8 @@ function BookingCard({
   onCancel: () => void;
 }) {
   const navigation = useNavigation<any>();
+  const { colors, isDark } = usePhotographerTheme();
+  const styles = getStyles(colors);
   const cfg = STATUS_CFG[booking.status] ?? STATUS_CFG.Pending;
   const isPending = booking.status === 'Pending';
   const isConfirmed = booking.status === 'Confirmed';
@@ -113,13 +115,13 @@ function BookingCard({
           {booking.customerAvatarUrl ? (
             <Image source={{ uri: formatImageUrl(booking.customerAvatarUrl) }} style={styles.pAvatar} />
           ) : (
-            <Ionicons name="person-circle-outline" size={38} color="#7A7062" style={{ marginRight: -4 }} />
+            <Ionicons name="person-circle-outline" size={38} color={colors.textMuted} style={{ marginRight: -4 }} />
           )}
           <View style={styles.pInfo}>
             <Text style={styles.pRole}>KHÁCH HÀNG ĐẶT LỊCH (Bấm để xem hồ sơ)</Text>
             <Text style={styles.pName}>{booking.customerName || 'Khách hàng'}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={14} color="#7A7062" />
+          <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
         </Pressable>
 
         <Pressable onPress={goToDetails} style={styles.conceptContainer}>
@@ -128,11 +130,11 @@ function BookingCard({
           
           <View style={styles.tagRow}>
             <View style={styles.infoBadge}>
-              <Ionicons name="location-outline" size={12} color="#4E4637" />
+              <Ionicons name="location-outline" size={12} color={colors.text} />
               <Text style={styles.infoBadgeText} numberOfLines={1}>{booking.location || 'Chưa xác định'}</Text>
             </View>
             <View style={styles.infoBadge}>
-              <Ionicons name="call-outline" size={12} color="#4E4637" />
+              <Ionicons name="call-outline" size={12} color={colors.text} />
               <Text style={styles.infoBadgeText} numberOfLines={1}>{booking.phone || 'Không có sđt'}</Text>
             </View>
           </View>
@@ -141,7 +143,7 @@ function BookingCard({
         {(booking.note || booking.requirements) && (
           <View style={styles.tipsBox}>
             <View style={styles.tipsHeader}>
-              <Ionicons name="sparkles-outline" size={14} color="#D4AF37" />
+              <Ionicons name="sparkles-outline" size={14} color={colors.accent} />
               <Text style={styles.tipsTitle}>Ghi chú & yêu cầu của khách</Text>
             </View>
             <Text style={styles.tipsText}>{booking.note || booking.requirements}</Text>
@@ -170,14 +172,14 @@ function BookingCard({
               </>
             )}
             {isConfirmed && (
-              <Pressable style={[styles.detailBtn, { backgroundColor: '#2E2A24', flexDirection: 'row', gap: 6 }]} onPress={onComplete}>
-                <Ionicons name="camera-outline" size={14} color="#FAF7F2" />
+              <Pressable style={[styles.detailBtn, { flexDirection: 'row', gap: 6 }]} onPress={onComplete}>
+                <Ionicons name="camera-outline" size={14} color={colors.background} />
                 <Text style={styles.detailBtnText}>Bấm máy</Text>
               </Pressable>
             )}
             {booking.status === 'Completed' && (
               <View style={styles.completedRibbon}>
-                <Ionicons name="checkmark-done" size={14} color="#3D7055" />
+                <Ionicons name="checkmark-done" size={14} color={colors.success} />
                 <Text style={styles.completedRibbonText}>Hoàn tất</Text>
               </View>
             )}
@@ -188,17 +190,21 @@ function BookingCard({
   );
 }
 
+interface CalendarModalProps {
+  visible: boolean;
+  value: Date;
+  onClose: () => void;
+  onSelect: (date: Date) => void;
+}
+
 function CalendarModal({
   visible,
   value,
   onClose,
   onSelect,
-}: {
-  visible: boolean;
-  value: Date;
-  onClose: () => void;
-  onSelect: (date: Date) => void;
-}) {
+}: CalendarModalProps) {
+  const { colors } = usePhotographerTheme();
+  const styles = getStyles(colors);
   const [year, setYear] = useState(value.getFullYear());
   const [month, setMonth] = useState(value.getMonth());
   const [day, setDay] = useState(value.getDate());
@@ -252,11 +258,11 @@ function CalendarModal({
         <Pressable style={styles.modalCard} onPress={() => null}>
           <View style={styles.calendarTopBar}>
             <Pressable style={styles.calendarNavBtn} onPress={() => moveMonth(-1)}>
-              <Ionicons name="chevron-back" size={18} color="#2E2A24" />
+              <Ionicons name="chevron-back" size={18} color={colors.text} />
             </Pressable>
             <Text style={styles.calendarMonth}>{formatMonthYear(monthStart)}</Text>
             <Pressable style={styles.calendarNavBtn} onPress={() => moveMonth(1)}>
-              <Ionicons name="chevron-forward" size={18} color="#2E2A24" />
+              <Ionicons name="chevron-forward" size={18} color={colors.text} />
             </Pressable>
           </View>
 
@@ -308,6 +314,8 @@ function CalendarModal({
 }
 
 export default function PBookingsScreen() {
+  const { colors, isDark } = usePhotographerTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const [bookings, setBookings] = useState<PBooking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -383,7 +391,7 @@ export default function PBookingsScreen() {
             </Text>
           </View>
           <Pressable style={styles.headerIconBtn} onPress={() => setCalendarOpen(true)}>
-            <Ionicons name="aperture-outline" size={22} color="#D4AF37" />
+            <Ionicons name="aperture-outline" size={22} color={colors.accent} />
           </Pressable>
         </View>
 
@@ -391,7 +399,7 @@ export default function PBookingsScreen() {
           <View style={styles.mastheadItem}>
             <Text style={styles.mastheadLabel}>ĐÃ CHỐT</Text>
             <View style={styles.mastheadValueRow}>
-              <Text style={[styles.mastheadValue, { color: '#3A6073' }]}>{stats.confirmed}</Text>
+              <Text style={[styles.mastheadValue, { color: colors.info }]}>{stats.confirmed}</Text>
               <Text style={styles.mastheadUnit}>lịch</Text>
             </View>
           </View>
@@ -399,7 +407,7 @@ export default function PBookingsScreen() {
           <View style={styles.mastheadItem}>
             <Text style={styles.mastheadLabel}>CHỜ DUYỆT</Text>
             <View style={styles.mastheadValueRow}>
-              <Text style={[styles.mastheadValue, { color: '#B4781A' }]}>{stats.pending}</Text>
+              <Text style={[styles.mastheadValue, { color: colors.warning }]}>{stats.pending}</Text>
               <Text style={styles.mastheadUnit}>y/c</Text>
             </View>
           </View>
@@ -407,7 +415,7 @@ export default function PBookingsScreen() {
           <View style={styles.mastheadItem}>
             <Text style={styles.mastheadLabel}>HOÀN TẤT</Text>
             <View style={styles.mastheadValueRow}>
-              <Text style={[styles.mastheadValue, { color: '#3D7055' }]}>{stats.completed}</Text>
+              <Text style={[styles.mastheadValue, { color: colors.success }]}>{stats.completed}</Text>
               <Text style={styles.mastheadUnit}>buổi</Text>
             </View>
           </View>
@@ -424,27 +432,27 @@ export default function PBookingsScreen() {
               setRefreshing(true);
               load();
             }}
-            tintColor="#2E2A24"
+            tintColor={colors.text}
           />
         }
       >
         <View style={styles.dateSelectorRow}>
           <Pressable style={styles.dateArrow} onPress={() => setSelectedDate(addDays(selectedDate, -1))}>
-            <Ionicons name="chevron-back" size={16} color="#2E2A24" />
+            <Ionicons name="chevron-back" size={16} color={colors.text} />
           </Pressable>
           <Pressable style={styles.dateCenterBtn} onPress={() => setCalendarOpen(true)}>
-            <Ionicons name="time-outline" size={14} color="#7A7062" style={{ marginRight: 6 }} />
+            <Ionicons name="time-outline" size={14} color={colors.textMuted} style={{ marginRight: 6 }} />
             <Text style={styles.dateCenterText}>{dateLabel}</Text>
           </Pressable>
           <Pressable style={styles.dateArrow} onPress={() => setSelectedDate(addDays(selectedDate, 1))}>
-            <Ionicons name="chevron-forward" size={16} color="#2E2A24" />
+            <Ionicons name="chevron-forward" size={16} color={colors.text} />
           </Pressable>
         </View>
 
         {/* Weather & Occupancy Widget Row */}
         <View style={styles.occupancyWeatherRow}>
           <View style={styles.weatherCard}>
-            <Ionicons name="sunny" size={16} color="#D4AF37" />
+            <Ionicons name="sunny" size={16} color={colors.accent} />
             <View style={{ flex: 1 }}>
               <Text style={styles.widgetTitle}>DỰ BÁO KHÍ HẬU</Text>
               <Text style={styles.widgetValue}>Nắng ấm · 26°C · Đẹp trời</Text>
@@ -471,34 +479,34 @@ export default function PBookingsScreen() {
             contentContainerStyle={styles.filterContainer}
           >
             <Pressable
-              style={[styles.filterPill, statusFilter === 'All' && styles.filterPillActive]}
+              style={[styles.filterPill, statusFilter === 'All' && (isDark ? { backgroundColor: colors.surface, borderColor: '#ffffff' } : styles.filterPillActive)]}
               onPress={() => setStatusFilter('All')}
             >
-              <Text style={[styles.filterPillText, statusFilter === 'All' && styles.filterPillTextActive]}>
+              <Text style={[styles.filterPillText, statusFilter === 'All' && (isDark ? { color: '#ffffff' } : styles.filterPillTextActive)]}>
                 Tất cả ({selectedBookings.length})
               </Text>
             </Pressable>
             <Pressable
-              style={[styles.filterPill, statusFilter === 'Pending' && styles.filterPillActive]}
+              style={[styles.filterPill, statusFilter === 'Pending' && (isDark ? { backgroundColor: colors.surface, borderColor: '#ffffff' } : styles.filterPillActive)]}
               onPress={() => setStatusFilter('Pending')}
             >
-              <Text style={[styles.filterPillText, statusFilter === 'Pending' && styles.filterPillTextActive]}>
+              <Text style={[styles.filterPillText, statusFilter === 'Pending' && (isDark ? { color: '#ffffff' } : styles.filterPillTextActive)]}>
                 Chờ duyệt ({selectedBookings.filter(b => b.status === 'Pending').length})
               </Text>
             </Pressable>
             <Pressable
-              style={[styles.filterPill, statusFilter === 'Confirmed' && styles.filterPillActive]}
+              style={[styles.filterPill, statusFilter === 'Confirmed' && (isDark ? { backgroundColor: colors.surface, borderColor: '#ffffff' } : styles.filterPillActive)]}
               onPress={() => setStatusFilter('Confirmed')}
             >
-              <Text style={[styles.filterPillText, statusFilter === 'Confirmed' && styles.filterPillTextActive]}>
+              <Text style={[styles.filterPillText, statusFilter === 'Confirmed' && (isDark ? { color: '#ffffff' } : styles.filterPillTextActive)]}>
                 Đã chốt ({selectedBookings.filter(b => b.status === 'Confirmed').length})
               </Text>
             </Pressable>
             <Pressable
-              style={[styles.filterPill, statusFilter === 'Completed' && styles.filterPillActive]}
+              style={[styles.filterPill, statusFilter === 'Completed' && (isDark ? { backgroundColor: colors.surface, borderColor: '#ffffff' } : styles.filterPillActive)]}
               onPress={() => setStatusFilter('Completed')}
             >
-              <Text style={[styles.filterPillText, statusFilter === 'Completed' && styles.filterPillTextActive]}>
+              <Text style={[styles.filterPillText, statusFilter === 'Completed' && (isDark ? { color: '#ffffff' } : styles.filterPillTextActive)]}>
                 Đã xong ({selectedBookings.filter(b => b.status === 'Completed').length})
               </Text>
             </Pressable>
@@ -512,47 +520,48 @@ export default function PBookingsScreen() {
         </View>
 
         {loading ? (
-          <ActivityIndicator size="small" color="#2E2A24" style={styles.loader} />
+          <ActivityIndicator size="small" color={colors.text} style={styles.loader} />
         ) : (
           <View style={styles.list}>
              {filteredBookings.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Animated.View 
-                  entering={FadeInDown.duration(600).delay(100)}
-                  style={styles.polaroidFrame}
-                >
-                  <Image 
-                    source={{ uri: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=500' }} 
-                    style={styles.polaroidImage} 
-                  />
-                  <Text style={styles.polaroidCaption}>Lăng kính đang nghỉ ngơi...</Text>
-                </Animated.View>
-                <Text style={styles.emptyTitle}>Trống lịch bấm máy</Text>
-                <Text style={styles.emptyText}>Không tìm thấy lịch hẹn nào phù hợp với bộ lọc đã chọn.</Text>
-              </View>
-            ) : (
-              <>
-                {filteredBookings.map((b, i) => (
-                  <Animated.View key={b.id} entering={FadeInDown.duration(300).delay(i * 35)}>
-                    <BookingCard
-                      booking={b}
-                      onCancel={() => doAction(b, 'cancel')}
-                      onConfirm={() => doAction(b, 'confirm')}
-                      onComplete={() => doAction(b, 'complete')}
-                    />
-                  </Animated.View>
-                ))}
-                
-                {/* Photography Quote Box */}
-                <View style={styles.quoteCard}>
-                  <Ionicons name={"chatbubble-ellipses-outline" as any} size={20} color="rgba(212,175,55,0.25)" />
-                  <Text style={styles.quoteText}>
-                    "Mười vạn bức ảnh đầu tiên là mười vạn bức ảnh tệ nhất."
-                  </Text>
-                  <Text style={styles.quoteAuthor}>— Henri Cartier-Bresson</Text>
-                </View>
-              </>
-            )}
+               <View style={styles.emptyState}>
+                 <Animated.View 
+                   entering={FadeInDown.duration(600).delay(100)}
+                   style={styles.polaroidFrame}
+                 >
+                   <Image 
+                     source={{ uri: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=500' }} 
+                     style={styles.polaroidImage} 
+                   />
+                   <Text style={styles.polaroidCaption}>Lăng kính đang nghỉ ngơi...</Text>
+                 </Animated.View>
+                 <Text style={styles.emptyTitle}>Trống lịch bấm máy</Text>
+                 <Text style={styles.emptyText}>Không tìm thấy lịch hẹn nào phù hợp với bộ lọc đã chọn.</Text>
+               </View>
+             ) : (
+               <>
+                 {filteredBookings.map((b, i) => (
+                   <Animated.View key={b.id} entering={FadeInDown.duration(300).delay(i * 35)}>
+                     <BookingCard
+                       booking={b}
+                       onCancel={() => doAction(b, 'cancel')}
+                       onConfirm={() => doAction(b, 'confirm')}
+                       onComplete={() => doAction(b, 'complete')}
+                     />
+                   </Animated.View>
+                 ))}
+                 
+                 {/* Photography Quote Box */}
+                 <View style={styles.quoteCard}>
+                   <Text style={styles.quoteMarkLeft}>“</Text>
+                   <Text style={styles.quoteText}>
+                     Mười vạn bức ảnh đầu tiên là mười vạn bức ảnh tệ nhất.
+                   </Text>
+                   <Text style={styles.quoteAuthor}>— Henri Cartier-Bresson</Text>
+                   <Text style={styles.quoteMarkRight}>”</Text>
+                 </View>
+               </>
+             )}
           </View>
         )}
         <View style={{ height: spacing[8] }} />
@@ -561,17 +570,28 @@ export default function PBookingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F2ECE1' },
+function Legend({ color, label }: { color: string; label: string }) {
+  const { colors } = usePhotographerTheme();
+  const styles = getStyles(colors);
+  return (
+    <View style={styles.legendItem}>
+      <View style={[styles.legendDot, { backgroundColor: color }]} />
+      <Text style={styles.legendText}>{label}</Text>
+    </View>
+  );
+}
+
+const getStyles = (colors: any) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
 
   premiumHeader: {
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: 24,
-    backgroundColor: '#FAF7F2',
+    backgroundColor: colors.surface,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: '#2E2A24',
+    shadowColor: colors.dark,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 10,
@@ -586,13 +606,13 @@ const styles = StyleSheet.create({
   brandSubtitle: {
     fontSize: 10,
     letterSpacing: 2.5,
-    color: '#9C9180',
+    color: colors.textLight,
     fontWeight: '700',
   },
   brandTitle: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#2E2A24',
+    color: colors.text,
     marginTop: 2,
     letterSpacing: -0.4,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
@@ -600,13 +620,13 @@ const styles = StyleSheet.create({
   brandTitleItalic: {
     fontStyle: 'italic',
     fontWeight: '300',
-    color: '#D4AF37',
+    color: colors.accent,
   },
   headerIconBtn: {
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: '#F2ECE1',
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -615,12 +635,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F7F3EB',
+    backgroundColor: colors.surfaceStrong,
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: 'rgba(46,42,36,0.06)',
+    borderColor: colors.border,
   },
   mastheadItem: {
     flex: 1,
@@ -629,12 +649,12 @@ const styles = StyleSheet.create({
   mastheadDivider: {
     width: 1,
     height: 24,
-    backgroundColor: 'rgba(46,42,36,0.1)',
+    backgroundColor: colors.border,
   },
   mastheadLabel: {
     fontSize: 8,
     fontWeight: '700',
-    color: '#9C9180',
+    color: colors.textLight,
     letterSpacing: 1,
     marginBottom: 2,
   },
@@ -649,7 +669,7 @@ const styles = StyleSheet.create({
   },
   mastheadUnit: {
     fontSize: 10,
-    color: '#7A7062',
+    color: colors.textMuted,
     fontWeight: '600',
   },
 
@@ -659,10 +679,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 24,
-    backgroundColor: '#FAF7F2',
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 6,
-    shadowColor: '#2E2A24',
+    shadowColor: colors.dark,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -682,28 +702,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 40,
   },
-  dateCenterText: { color: '#2E2A24', fontSize: 14, fontWeight: '700' },
+  dateCenterText: { color: colors.text, fontSize: 14, fontWeight: '700' },
 
   sectionHeader: {
     marginTop: 24,
     marginBottom: 12,
     paddingHorizontal: 24,
   },
-  sectionTitle: { color: '#7A7062', fontSize: 12, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
+  sectionTitle: { color: colors.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
   loader: { paddingVertical: 40 },
   list: { paddingHorizontal: 24, gap: 14 },
 
   emptyState: { paddingVertical: 40, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { color: '#2E2A24', fontSize: 18, fontWeight: '700', marginTop: 16, marginBottom: 8 },
-  emptyText: { color: '#7A7062', fontSize: 13, textAlign: 'center', paddingHorizontal: 32, lineHeight: 18 },
+  emptyTitle: { color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 16, marginBottom: 8 },
+  emptyText: { color: colors.textMuted, fontSize: 13, textAlign: 'center', paddingHorizontal: 32, lineHeight: 18 },
   polaroidFrame: {
-    backgroundColor: '#fffcf2',
+    backgroundColor: colors.surfaceStrong,
     padding: 12,
     paddingBottom: 18,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.12)',
-    shadowColor: '#2E2A24',
+    borderColor: colors.borderStrong,
+    shadowColor: colors.dark,
     shadowOpacity: 0.1,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -718,18 +738,18 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     fontStyle: 'italic',
     fontSize: 12,
-    color: '#7A7062',
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 10,
   },
 
   bookingCard: {
-    backgroundColor: '#FAF7F2',
+    backgroundColor: colors.surface,
     borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.08)',
-    shadowColor: '#2E2A24',
+    borderColor: colors.border,
+    shadowColor: colors.dark,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.04,
     shadowRadius: 12,
@@ -739,7 +759,7 @@ const styles = StyleSheet.create({
     height: 150,
     width: '100%',
     position: 'relative',
-    backgroundColor: '#F2ECE1',
+    backgroundColor: colors.background,
   },
   cardCover: {
     width: '100%',
@@ -748,7 +768,7 @@ const styles = StyleSheet.create({
   },
   coverDarkOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(26,26,15,0.12)',
+    backgroundColor: colors.borderStrong,
   },
   dateTag: {
     position: 'absolute',
@@ -757,30 +777,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(255,247,225,0.92)',
+    backgroundColor: colors.glassStrong,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.08)',
+    borderColor: colors.border,
   },
   dateTagDay: {
     fontSize: 26,
     fontWeight: '300',
-    color: '#2E2A24',
+    color: colors.text,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     marginRight: 2,
   },
   dateTagMonth: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#2E2A24',
+    color: colors.text,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   dateTagTime: {
     fontSize: 10,
-    color: '#D4AF37',
+    color: colors.accent,
     fontWeight: '700',
     marginTop: 1,
   },
@@ -815,7 +835,7 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 19,
     borderWidth: 1.5,
-    borderColor: '#d9cfb3',
+    borderColor: colors.borderStrong,
   },
   pInfo: {
     flex: 1,
@@ -823,13 +843,13 @@ const styles = StyleSheet.create({
   pRole: {
     fontSize: 8,
     fontWeight: '700',
-    color: '#7A7062',
+    color: colors.textMuted,
     letterSpacing: 1,
   },
   pName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#2E2A24',
+    color: colors.text,
     marginTop: 1,
   },
   conceptContainer: {
@@ -838,22 +858,22 @@ const styles = StyleSheet.create({
   conceptLabel: {
     fontSize: 8,
     fontWeight: '700',
-    color: '#D4AF37',
+    color: colors.accent,
     letterSpacing: 1.2,
   },
   conceptTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#2E2A24',
+    color: colors.text,
   },
   tagRow: { flexDirection: 'row', gap: 6, marginTop: 4 },
-  infoBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F2ECE1', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  infoBadgeText: { color: '#4E4637', fontSize: 11, fontWeight: '500' },
+  infoBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.background, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  infoBadgeText: { color: colors.text, fontSize: 11, fontWeight: '500' },
   tipsBox: {
-    backgroundColor: '#eae1c8',
+    backgroundColor: colors.surfaceStrong,
     borderRadius: 12,
     borderLeftWidth: 3,
-    borderColor: '#D4AF37',
+    borderColor: colors.accent,
     padding: 10,
   },
   tipsHeader: {
@@ -865,11 +885,11 @@ const styles = StyleSheet.create({
   tipsTitle: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#2E2A24',
+    color: colors.text,
   },
   tipsText: {
     fontSize: 11,
-    color: '#7A7062',
+    color: colors.textMuted,
     lineHeight: 16,
   },
   footerRow: {
@@ -877,19 +897,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderColor: 'rgba(26,26,15,0.05)',
+    borderColor: colors.border,
     paddingTop: 16,
   },
   priceLabel: {
     fontSize: 8,
     fontWeight: '700',
-    color: '#7A7062',
+    color: colors.textMuted,
     letterSpacing: 0.8,
   },
   priceValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#D4AF37',
+    color: colors.accent,
     marginTop: 2,
   },
   actionButtons: {
@@ -900,36 +920,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: '#2E2A24',
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   detailBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FAF7F2',
+    color: colors.background,
   },
   cancelBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(207,64,40,0.3)',
+    borderColor: colors.accent,
   },
   cancelBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#D4AF37',
+    color: colors.accent,
   },
   detailOutlineBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(46,42,36,0.15)',
+    borderColor: colors.borderStrong,
   },
   detailOutlineBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#2E2A24',
+    color: colors.text,
   },
   completedRibbon: {
     flexDirection: 'row',
@@ -946,14 +968,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(46,42,36,0.3)', justifyContent: 'center', paddingHorizontal: 20 },
-  modalCard: { backgroundColor: '#FAF7F2', borderRadius: 24, padding: 20, gap: 16 },
+  modalBackdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', paddingHorizontal: 20 },
+  modalCard: { backgroundColor: colors.surface, borderRadius: 24, padding: 20, gap: 16 },
   calendarTopBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  calendarNavBtn: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F2ECE1' },
-  calendarMonth: { color: '#2E2A24', fontSize: 15, fontWeight: '700' },
+  calendarNavBtn: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
+  calendarMonth: { color: colors.text, fontSize: 15, fontWeight: '700' },
 
   weekRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 },
-  weekLabel: { width: CAL_CELL, textAlign: 'center', color: '#9C9180', fontSize: 11, fontWeight: '700' },
+  weekLabel: { width: CAL_CELL, textAlign: 'center', color: colors.textLight, fontSize: 11, fontWeight: '700' },
 
   calendarGridContainer: {
     flexDirection: 'column',
@@ -978,17 +1000,17 @@ const styles = StyleSheet.create({
     height: CAL_CELL,
     backgroundColor: 'transparent'
   },
-  calendarCellActive: { backgroundColor: '#2E2A24' },
-  calendarCellText: { color: '#2E2A24', fontSize: 13, fontWeight: '600' },
-  calendarCellTextActive: { color: '#FAF7F2', fontWeight: '700' },
+  calendarCellActive: { backgroundColor: colors.dark },
+  calendarCellText: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  calendarCellTextActive: { color: colors.surface, fontWeight: '700' },
   calendarCellToday: { color: '#3A6073', fontWeight: '700' },
   todayIndicatorDot: { width: 4, height: 4, borderRadius: 99, backgroundColor: '#3A6073', position: 'absolute', bottom: 4 },
 
   modalFooter: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  modalSecondaryBtn: { flex: 1, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F2ECE1' },
-  modalSecondaryText: { color: '#2E2A24', fontSize: 13, fontWeight: '700' },
-  modalPrimaryBtn: { flex: 1, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2E2A24' },
-  modalPrimaryText: { color: '#FAF7F2', fontSize: 13, fontWeight: '700' },
+  modalSecondaryBtn: { flex: 1, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
+  modalSecondaryText: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  modalPrimaryBtn: { flex: 1, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
+  modalPrimaryText: { color: colors.background, fontSize: 13, fontWeight: '700' },
 
   // ================= NEW DESIGN ADDITIONS =================
   occupancyWeatherRow: {
@@ -1002,31 +1024,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FAF7F2',
+    backgroundColor: colors.surface,
     padding: 10,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.06)',
+    borderColor: colors.border,
   },
   widgetTitle: {
     fontSize: 7.5,
     fontWeight: '700',
-    color: '#9C9180',
+    color: colors.textLight,
     letterSpacing: 0.8,
   },
   widgetValue: {
     fontSize: 11,
-    color: '#2E2A24',
+    color: colors.text,
     fontWeight: '600',
     marginTop: 1,
   },
   occupancyCard: {
     flex: 0.9,
-    backgroundColor: '#FAF7F2',
+    backgroundColor: colors.surface,
     padding: 10,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.06)',
+    borderColor: colors.border,
     justifyContent: 'center',
   },
   occupancyTextRow: {
@@ -1037,18 +1059,18 @@ const styles = StyleSheet.create({
   },
   occupancyPercent: {
     fontSize: 11,
-    color: '#D4AF37',
+    color: colors.accent,
     fontWeight: '700',
   },
   progressBarBg: {
     height: 4,
-    backgroundColor: '#F2ECE1',
+    backgroundColor: colors.background,
     borderRadius: 2,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#D4AF37',
+    backgroundColor: colors.accent,
     borderRadius: 2,
   },
 
@@ -1063,36 +1085,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: '#FAF7F2',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.06)',
+    borderColor: colors.border,
   },
   filterPillActive: {
-    backgroundColor: '#2E2A24',
-    borderColor: '#2E2A24',
+    backgroundColor: colors.dark,
+    borderColor: colors.dark,
   },
   filterPillText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#7A7062',
+    color: colors.textMuted,
   },
   filterPillTextActive: {
-    color: '#FAF7F2',
+    color: colors.surface,
   },
 
   quoteCard: {
-    backgroundColor: '#FAF7F2',
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 18,
     alignItems: 'center',
     gap: 6,
     borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.06)',
+    borderColor: colors.border,
     marginTop: 10,
     marginBottom: 24,
   },
   quoteText: {
-    color: '#7A7062',
+    color: colors.textMuted,
     fontSize: 12,
     fontStyle: 'italic',
     textAlign: 'center',
@@ -1100,10 +1122,15 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
   quoteAuthor: {
-    color: '#D4AF37',
+    color: colors.accent,
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
+  quoteMarkLeft: { position: 'absolute', top: 4, left: 12, fontSize: 36, fontWeight: 'bold', color: colors.accent, opacity: 0.25 },
+  quoteMarkRight: { position: 'absolute', bottom: -8, right: 12, fontSize: 36, fontWeight: 'bold', color: colors.accent, opacity: 0.25 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: colors.border },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { color: colors.text, fontSize: 12 },
 });

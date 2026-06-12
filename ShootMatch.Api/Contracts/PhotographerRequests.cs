@@ -45,3 +45,12 @@ public sealed record SetAvailabilityRequest(bool IsAvailable);
 public sealed record CancelBookingRequest(string Reason);
 
 public sealed record UploadPhotographerPhotoRequest(IFormFile File);
+
+public sealed record EquipmentDto(
+    Guid? Id,
+    int Category,
+    string Name,
+    string? Description,
+    bool IsPrimary);
+
+public sealed record UpdateEquipmentsRequest(List<EquipmentDto> Equipments);

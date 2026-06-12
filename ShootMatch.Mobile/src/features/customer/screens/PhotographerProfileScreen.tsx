@@ -68,12 +68,26 @@ const TIME_SLOTS: TimeSlot[] = [
   { start: '21:30', end: '22:00' },
 ];
 
-// ── Dummy Data ──
-const DUMMY_EQUIPMENT = [
-  { icon: 'camera-outline', name: 'Sony A7R V', desc: '61MP Full Frame Mirrorless' },
-  { icon: 'settings-outline', name: '35mm f/1.4 Summilux', desc: 'Leica Prime Lens' },
-  { icon: 'bulb-outline', name: 'Profoto B10 Plus', desc: '500Ws Studio Flash' },
-];
+// ── Consts ──
+const CATEGORY_LABELS: Record<number, string> = {
+  0: 'Máy ảnh',
+  1: 'Ống kính',
+  2: 'Đèn / Flash',
+  3: 'Flycam',
+  4: 'Gimbal',
+  5: 'Thu âm',
+  6: 'Khác',
+};
+
+const CATEGORY_ICONS: Record<number, any> = {
+  0: 'camera-outline',
+  1: 'aperture-outline',
+  2: 'flashlight-outline',
+  3: 'airplane-outline',
+  4: 'videocam-outline',
+  5: 'mic-outline',
+  6: 'cube-outline',
+};
 
 const DUMMY_REVIEWS = [
   { name: 'Trân Ngọc', date: '15/01/2026', rating: 5, text: 'Chụp ảnh cực kỳ chuyên nghiệp và tận tâm. Ảnh ra đẹp hơn mong đợi nhiều lần!' },
@@ -461,20 +475,31 @@ export default function PhotographerProfileScreen() {
         )}
 
         {/* ── EQUIPMENT ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thiết Bị</Text>
-          <View style={{ gap: 8 }}>
-            {DUMMY_EQUIPMENT.map((eq, i) => (
-              <View key={i} style={styles.equipItem}>
-                <Ionicons name={eq.icon as any} size={20} color="rgba(26,26,15,0.5)" />
-                <View>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.accent }}>{eq.name}</Text>
-                  <Text style={{ fontSize: 11, opacity: 0.5, color: THEME.accent }}>{eq.desc}</Text>
+        {p.equipments && p.equipments.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Thiết Bị</Text>
+            <View style={{ gap: 8 }}>
+              {p.equipments.map((eq, i) => (
+                <View key={eq.id || i} style={styles.equipItem}>
+                  <Ionicons name={CATEGORY_ICONS[eq.category] || 'cube-outline'} size={20} color="rgba(26,26,15,0.5)" />
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.accent }}>{eq.name}</Text>
+                      {eq.isPrimary && (
+                        <View style={{ backgroundColor: 'rgba(239,68,68,0.1)', paddingHorizontal: 4, borderRadius: 4 }}>
+                          <Text style={{ fontSize: 9, color: THEME.danger, fontWeight: 'bold' }}>Chính</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={{ fontSize: 11, opacity: 0.5, color: THEME.accent }}>
+                      {CATEGORY_LABELS[eq.category] || 'Khác'}{eq.description ? ` · ${eq.description}` : ''}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* ── SERVICES & PRICING ── */}
         {servicePackages.length > 0 && (

@@ -15,19 +15,9 @@ import {
   cancelBooking 
 } from '../api';
 import { useAuth } from '../../auth/AuthContext';
+import { usePhotographerTheme } from '../PhotographerThemeContext';
 
 const { width } = Dimensions.get('window');
-
-const THEME = {
-  cream: '#fff7e1',
-  dark: '#0a0a06',
-  dark2: '#141410',
-  dark3: '#1e1e18',
-  orange: '#ff4200',
-  purple: '#3617cf',
-  glass: 'rgba(255,247,225,0.04)',
-  border: 'rgba(255,247,225,0.08)',
-};
 
 const formatPhotoUrl = (url?: string) => {
   if (!url) return '';
@@ -42,6 +32,9 @@ const formatPhotoUrl = (url?: string) => {
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = usePhotographerTheme();
+  const styles = getStyles(colors, isDark);
+
   const { logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -88,7 +81,7 @@ export default function DashboardScreen() {
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={THEME.orange} />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -98,7 +91,6 @@ export default function DashboardScreen() {
 
   const isAvailable = profile?.isAvailable ?? true;
 
-  // Thống kê
   const currentMonth = new Date().getMonth();
   const currentMonthBookings = bookings.filter(b => new Date(b.scheduledAt).getMonth() === currentMonth);
   const currentMonthEarnings = currentMonthBookings
@@ -110,19 +102,19 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
       
       <ScrollView 
         contentContainerStyle={styles.scroll} 
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={THEME.orange} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />}
       >
         {/* ── HERO ── */}
-        <View style={[styles.hero, { paddingTop: insets.top }]}>
+        <View style={styles.hero}>
           <ImageBackground 
             source={{ uri: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?q=80&w=1000&auto=format&fit=crop' }} 
-            style={styles.heroBg}
-            imageStyle={{ opacity: 0.4 }}
+            style={[styles.heroBg, { paddingTop: insets.top }]}
+            imageStyle={{ opacity: 0.55 }}
           >
             {/* Top Bar */}
             <View style={styles.topbar}>
@@ -137,11 +129,11 @@ export default function DashboardScreen() {
               </Pressable>
               
               <View style={styles.topActions}>
-                <Pressable style={styles.iconBtn} onPress={() => {}}>
-                  <Ionicons name="notifications-outline" size={18} color={THEME.cream} />
+                <Pressable style={styles.iconBtnNotif} onPress={() => navigation.navigate('Notifications')}>
+                  <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
                   <View style={styles.notifDot} />
                 </Pressable>
-                <Pressable style={[styles.iconBtn, { borderColor: 'rgba(239,68,68,0.25)' }]} onPress={logout}>
+                <Pressable style={styles.iconBtnLogout} onPress={logout}>
                   <Ionicons name="power-outline" size={18} color="#f87171" />
                 </Pressable>
               </View>
@@ -162,11 +154,11 @@ export default function DashboardScreen() {
               
               <Animated.View entering={FadeInUp.delay(500)} style={styles.heroCtas}>
                 <Pressable style={styles.ctaPrimary} onPress={() => navigation.navigate('Portfolio')}>
-                  <Ionicons name="images" size={16} color={THEME.cream} />
+                  <Ionicons name="images" size={16} color="#FFFBF0" />
                   <Text style={styles.ctaPrimaryText}>PORTFOLIO</Text>
                 </Pressable>
                 <Pressable style={styles.ctaSecondary} onPress={() => navigation.navigate('BookingCalendar')}>
-                  <Ionicons name="calendar" size={16} color={THEME.cream} />
+                  <Ionicons name="calendar" size={16} color="#FFFFFF" />
                   <Text style={styles.ctaSecondaryText}>LỊCH</Text>
                 </Pressable>
               </Animated.View>
@@ -175,7 +167,7 @@ export default function DashboardScreen() {
             {/* Hero Stats Row */}
             <Animated.View entering={FadeInUp.delay(600)} style={styles.heroStatsRow}>
               <View style={styles.hstat}>
-                <Text style={[styles.hstatNum, { color: THEME.orange }]}>N/A</Text>
+                <Text style={[styles.hstatNum, { color: colors.accent }]}>N/A</Text>
                 <Text style={styles.hstatLabel}>Hôm Nay</Text>
               </View>
               <View style={styles.hstatDivider} />
@@ -203,8 +195,8 @@ export default function DashboardScreen() {
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsScroll}>
               <View style={[styles.statCard, styles.hiOrange]}>
-                <Ionicons name="cash" size={20} color="rgba(255,66,0,0.7)" style={{ marginBottom: 8 }} />
-                <Text style={[styles.scVal, { color: THEME.orange }]}>{formattedEarnings}</Text>
+                <Ionicons name="cash" size={20} color={colors.accent} style={{ marginBottom: 8 }} />
+                <Text style={[styles.scVal, { color: colors.accent }]}>{formattedEarnings}</Text>
                 <Text style={styles.scLbl}>Doanh Thu T{currentMonth + 1}</Text>
                 <View style={[styles.scTrend, styles.trendUp]}><Text style={styles.trendUpText}>N/A</Text></View>
               </View>
@@ -215,7 +207,7 @@ export default function DashboardScreen() {
                 <View style={[styles.scTrend, styles.trendUp]}><Text style={styles.trendUpText}>N/A</Text></View>
               </View>
               <View style={styles.statCard}>
-                <Ionicons name="eye" size={20} color="rgba(255,247,225,0.22)" style={{ marginBottom: 8 }} />
+                <Ionicons name="eye" size={20} color={colors.textLight} style={{ marginBottom: 8 }} />
                 <Text style={styles.scVal}>N/A</Text>
                 <Text style={styles.scLbl}>Profile Views</Text>
                 <View style={[styles.scTrend, styles.trendUp]}><Text style={styles.trendUpText}>N/A</Text></View>
@@ -242,7 +234,7 @@ export default function DashboardScreen() {
                     <Text style={styles.reqTitle}>Khách hàng #{b.customerId.slice(0, 5)}</Text>
                     <View style={styles.reqMeta}>
                       <View style={styles.reqMetaItem}>
-                        <Ionicons name="time-outline" size={12} color="rgba(255,247,225,0.4)" />
+                        <Ionicons name="time-outline" size={12} color={colors.textMuted} />
                         <Text style={styles.reqMetaText}>{new Date(b.scheduledAt).toLocaleDateString('vi-VN')} · {new Date(b.scheduledAt).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})}</Text>
                       </View>
                     </View>
@@ -325,9 +317,9 @@ export default function DashboardScreen() {
                 )}
               </View>
             ) : (
-              <View style={{ padding: 30, alignItems: 'center', backgroundColor: THEME.glass, borderRadius: 12, borderWidth: 1, borderColor: THEME.border, borderStyle: 'dashed' }}>
-                <Ionicons name="images-outline" size={32} color="rgba(255,247,225,0.2)" style={{ marginBottom: 10 }} />
-                <Text style={{ color: 'rgba(255,247,225,0.4)', fontSize: 12 }}>Chưa có ảnh trong portfolio</Text>
+              <View style={{ padding: 30, alignItems: 'center', backgroundColor: colors.surfaceStrong, borderRadius: 12, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' }}>
+                <Ionicons name="images-outline" size={32} color={colors.textLight} style={{ marginBottom: 10 }} />
+                <Text style={{ color: colors.textMuted, fontSize: 12 }}>Chưa có ảnh trong portfolio</Text>
               </View>
             )}
           </Animated.View>
@@ -338,25 +330,25 @@ export default function DashboardScreen() {
             <View style={styles.actionsGrid}>
               <Pressable style={styles.actionTile} onPress={() => navigation.navigate('Portfolio')}>
                 <View style={[styles.atIcon, { backgroundColor: 'rgba(255,66,0,0.12)' }]}>
-                  <Ionicons name="image" size={20} color={THEME.orange} />
+                  <Ionicons name="image" size={20} color={colors.accent} />
                 </View>
                 <Text style={styles.atLabel}>Tải Lên{'\n'}Portfolio</Text>
               </Pressable>
               <Pressable style={styles.actionTile} onPress={() => navigation.navigate('PProfile')}>
-                <View style={[styles.atIcon, { backgroundColor: 'rgba(130,110,255,0.12)' }]}>
-                  <Ionicons name="create" size={20} color="#826eff" />
+                <View style={[styles.atIcon, { backgroundColor: isDark ? 'rgba(130,110,255,0.12)' : 'rgba(91,63,203,0.1)' }]}>
+                  <Ionicons name="create" size={20} color={isDark ? "#826eff" : "#5b3fcb"} />
                 </View>
                 <Text style={styles.atLabel}>Sửa{'\n'}Profile</Text>
               </Pressable>
               <Pressable style={styles.actionTile} onPress={() => navigation.navigate('PBookings')}>
-                <View style={[styles.atIcon, { backgroundColor: 'rgba(34,197,94,0.12)' }]}>
-                  <Ionicons name="calendar" size={20} color="#4ade80" />
+                <View style={[styles.atIcon, { backgroundColor: isDark ? 'rgba(34,197,94,0.12)' : 'rgba(27,138,90,0.1)' }]}>
+                  <Ionicons name="calendar" size={20} color={isDark ? "#4ade80" : "#1b8a5a"} />
                 </View>
                 <Text style={styles.atLabel}>Lịch{'\n'}Booking</Text>
               </Pressable>
-              <Pressable style={styles.actionTile} onPress={() => navigation.navigate('PChats')}>
-                <View style={[styles.atIcon, { backgroundColor: 'rgba(251,191,36,0.12)' }]}>
-                  <Ionicons name="chatbubble" size={20} color="#fbbf24" />
+              <Pressable style={styles.actionTile} onPress={() => navigation.navigate('PChat')}>
+                <View style={[styles.atIcon, { backgroundColor: isDark ? 'rgba(251,191,36,0.12)' : 'rgba(212,136,6,0.1)' }]}>
+                  <Ionicons name="chatbubble" size={20} color={isDark ? "#fbbf24" : "#d48806"} />
                 </View>
                 <Text style={styles.atLabel}>Tin{'\n'}Nhắn</Text>
               </Pressable>
@@ -386,122 +378,123 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: THEME.dark },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: THEME.dark },
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   scroll: { flexGrow: 1 },
   
-  hero: { minHeight: 480, backgroundColor: THEME.dark },
-  heroBg: { flex: 1, resizeMode: 'cover', justifyContent: 'space-between', paddingBottom: 24 },
+  hero: { minHeight: 480, backgroundColor: '#000' },
+  heroBg: { flex: 1, resizeMode: 'cover', justifyContent: 'space-between', paddingBottom: 24, backgroundColor: '#000' },
   
   topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 10 },
-  availPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(34,197,94,0.15)', borderWidth: 1, borderColor: 'rgba(34,197,94,0.3)', borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12 },
-  availPillOff: { backgroundColor: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.25)' },
+  availPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.6)', borderWidth: 1, borderColor: '#4ade80', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 14 },
+  availPillOff: { backgroundColor: 'rgba(0,0,0,0.6)', borderColor: '#f87171' },
   availDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ade80' },
   availDotOff: { backgroundColor: '#f87171' },
   availText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: '#4ade80' },
   availTextOff: { color: '#f87171' },
   
   topActions: { flexDirection: 'row', gap: 8 },
-  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,247,225,0.1)', borderWidth: 1, borderColor: 'rgba(255,247,225,0.12)', justifyContent: 'center', alignItems: 'center' },
-  notifDot: { position: 'absolute', top: 6, right: 6, width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.orange },
+  iconBtnNotif: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.6)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', justifyContent: 'center', alignItems: 'center' },
+  iconBtnLogout: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.6)', borderWidth: 1, borderColor: 'rgba(248,113,113,0.5)', justifyContent: 'center', alignItems: 'center' },
+  notifDot: { position: 'absolute', top: 8, right: 8, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent },
 
   heroMain: { alignItems: 'center', paddingHorizontal: 20, marginTop: 40 },
-  heroEyebrow: { fontSize: 9, fontWeight: '700', letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,247,225,0.4)', marginBottom: 14 },
-  heroName: { fontSize: 42, color: THEME.cream, fontWeight: '900', letterSpacing: 1, textAlign: 'center' },
-  heroStudio: { fontSize: 16, color: THEME.orange, fontWeight: '800', letterSpacing: 1, marginTop: 4, marginBottom: 16 },
-  heroDesc: { fontSize: 11, color: 'rgba(255,247,225,0.6)', textAlign: 'center', lineHeight: 18, maxWidth: 260, marginBottom: 24 },
+  heroEyebrow: { fontSize: 9, fontWeight: '700', letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)', marginBottom: 14 },
+  heroName: { fontSize: 42, color: '#FFFFFF', fontWeight: '900', letterSpacing: 1, textAlign: 'center' },
+  heroStudio: { fontSize: 16, color: colors.accent, fontWeight: '800', letterSpacing: 1, marginTop: 4, marginBottom: 16 },
+  heroDesc: { fontSize: 11, color: 'rgba(255,255,255,0.7)', textAlign: 'center', lineHeight: 18, maxWidth: 260, marginBottom: 24 },
   
   heroCtas: { flexDirection: 'row', gap: 10, justifyContent: 'center' },
-  ctaPrimary: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: THEME.orange, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 30, shadowColor: THEME.orange, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
-  ctaPrimaryText: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: THEME.cream },
-  ctaSecondary: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,247,225,0.08)', borderWidth: 1, borderColor: 'rgba(255,247,225,0.14)', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 30 },
-  ctaSecondaryText: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: THEME.cream },
+  ctaPrimary: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.accent, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 30, shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
+  ctaPrimaryText: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: '#FFFBF0' },
+  ctaSecondary: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 30 },
+  ctaSecondaryText: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: '#FFFFFF' },
 
-  heroStatsRow: { flexDirection: 'row', marginHorizontal: 20, backgroundColor: 'rgba(255,247,225,0.07)', borderRadius: 16, marginTop: 40 },
+  heroStatsRow: { flexDirection: 'row', marginHorizontal: 20, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, marginTop: 40, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
   hstat: { flex: 1, paddingVertical: 14, alignItems: 'center' },
-  hstatDivider: { width: 1, backgroundColor: 'rgba(255,247,225,0.05)' },
-  hstatNum: { fontSize: 20, fontWeight: '900', color: THEME.cream },
-  hstatLabel: { fontSize: 8, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: 'rgba(255,247,225,0.3)', marginTop: 4 },
+  hstatDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.15)' },
+  hstatNum: { fontSize: 20, fontWeight: '900', color: '#FFFFFF' },
+  hstatLabel: { fontSize: 8, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginTop: 4 },
 
-  mainContent: { backgroundColor: THEME.dark, paddingBottom: 40 },
+  mainContent: { backgroundColor: colors.background, paddingBottom: 40 },
   section: { paddingHorizontal: 20, paddingTop: 24 },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  sectionTitle: { fontSize: 18, fontWeight: '900', color: THEME.cream, letterSpacing: 0.5 },
-  seeAll: { fontSize: 9, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: 'rgba(255,247,225,0.3)' },
+  sectionTitle: { fontSize: 18, fontWeight: '900', color: colors.text, letterSpacing: 0.5 },
+  seeAll: { fontSize: 9, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: colors.textMuted },
 
   statsScroll: { paddingRight: 20, gap: 10 },
-  statCard: { width: 130, backgroundColor: THEME.glass, borderWidth: 1, borderColor: THEME.border, borderRadius: 16, padding: 16 },
-  hiOrange: { borderColor: 'rgba(255,66,0,0.4)', backgroundColor: 'rgba(255,66,0,0.08)' },
-  hiPurple: { borderColor: 'rgba(54,23,207,0.4)', backgroundColor: 'rgba(54,23,207,0.08)' },
-  scVal: { fontSize: 22, fontWeight: '900', color: THEME.cream, marginBottom: 4 },
-  scLbl: { fontSize: 9, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: 'rgba(255,247,225,0.3)' },
+  statCard: { width: 130, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 16 },
+  hiOrange: { borderColor: 'rgba(255,66,0,0.4)', backgroundColor: 'rgba(255,66,0,0.05)' },
+  hiPurple: { borderColor: 'rgba(54,23,207,0.4)', backgroundColor: 'rgba(54,23,207,0.05)' },
+  scVal: { fontSize: 22, fontWeight: '900', color: colors.text, marginBottom: 4 },
+  scLbl: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase', color: colors.textMuted },
   scTrend: { position: 'absolute', top: 12, right: 12, paddingVertical: 2, paddingHorizontal: 6, borderRadius: 6 },
   trendUp: { backgroundColor: 'rgba(34,197,94,0.15)' },
   trendUpText: { fontSize: 9, fontWeight: '700', color: '#4ade80' },
   
   pendingBadgeCount: { backgroundColor: 'rgba(255,66,0,0.12)', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 20 },
-  pendingBadgeCountText: { fontSize: 9, fontWeight: '700', color: THEME.orange, textTransform: 'uppercase' },
+  pendingBadgeCountText: { fontSize: 9, fontWeight: '700', color: colors.accent, textTransform: 'uppercase' },
   
-  reqCard: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: THEME.border },
+  reqCard: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
   reqImg: { width: '100%', height: 160, opacity: 0.7 },
-  reqBadge: { position: 'absolute', top: 14, left: 14, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: THEME.orange, borderRadius: 20, paddingVertical: 5, paddingHorizontal: 12 },
-  dotNew: { width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.cream },
-  reqBadgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase', color: THEME.cream },
-  reqBody: { backgroundColor: '#1a1a12', padding: 18 },
-  reqTitle: { fontSize: 16, fontWeight: '800', color: THEME.cream, marginBottom: 6 },
+  reqBadge: { position: 'absolute', top: 14, left: 14, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.accent, borderRadius: 20, paddingVertical: 5, paddingHorizontal: 12 },
+  dotNew: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFFBF0' },
+  reqBadgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase', color: '#FFFBF0' },
+  reqBody: { backgroundColor: colors.surfaceStrong, padding: 18 },
+  reqTitle: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: 6 },
   reqMeta: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   reqMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  reqMetaText: { fontSize: 11, color: 'rgba(255,247,225,0.5)' },
+  reqMetaText: { fontSize: 11, color: colors.textMuted },
   reqPriceRow: { flexDirection: 'row', alignItems: 'baseline' },
-  reqPrice: { fontSize: 24, fontWeight: '900', color: THEME.orange },
-  reqDur: { fontSize: 12, color: 'rgba(255,247,225,0.4)', marginLeft: 4 },
+  reqPrice: { fontSize: 24, fontWeight: '900', color: colors.accent },
+  reqDur: { fontSize: 12, color: colors.textLight, marginLeft: 4 },
   reqBtns: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  btnAccept: { flex: 1, backgroundColor: THEME.cream, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
-  btnAcceptText: { fontSize: 11, fontWeight: '800', color: THEME.dark, letterSpacing: 1, textTransform: 'uppercase' },
-  btnRefuse: { flex: 1, backgroundColor: 'rgba(255,247,225,0.06)', borderWidth: 1, borderColor: THEME.border, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
-  btnRefuseText: { fontSize: 11, fontWeight: '700', color: 'rgba(255,247,225,0.4)', letterSpacing: 1, textTransform: 'uppercase' },
+  btnAccept: { flex: 1, backgroundColor: colors.text, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+  btnAcceptText: { fontSize: 11, fontWeight: '800', color: colors.background, letterSpacing: 1, textTransform: 'uppercase' },
+  btnRefuse: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+  btnRefuseText: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, textTransform: 'uppercase' },
 
   schedList: { gap: 8 },
-  schedCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, backgroundColor: THEME.glass, borderWidth: 1, borderColor: THEME.border, borderRadius: 14 },
-  schedCardActive: { borderColor: 'rgba(34,197,94,0.32)', backgroundColor: 'rgba(34,197,94,0.06)' },
-  schedBadge: { backgroundColor: 'rgba(255,247,225,0.07)', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, alignItems: 'center', minWidth: 60 },
-  schedBadgeActive: { backgroundColor: 'rgba(34,197,94,0.15)' },
-  schedTime: { fontSize: 14, fontWeight: '900', color: THEME.cream },
-  schedTimeActive: { color: '#4ade80' },
-  schedAmpm: { fontSize: 8, fontWeight: '700', letterSpacing: 0.5, color: 'rgba(255,247,225,0.4)', textTransform: 'uppercase' },
-  schedAmpmActive: { color: 'rgba(34,197,94,0.8)' },
+  schedCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14 },
+  schedCardActive: { borderColor: isDark ? 'rgba(34,197,94,0.32)' : 'rgba(27,138,90,0.25)', backgroundColor: isDark ? 'rgba(34,197,94,0.06)' : 'rgba(27,138,90,0.05)' },
+  schedBadge: { backgroundColor: colors.surfaceStrong, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, alignItems: 'center', minWidth: 60 },
+  schedBadgeActive: { backgroundColor: isDark ? 'rgba(34,197,94,0.15)' : 'rgba(27,138,90,0.12)' },
+  schedTime: { fontSize: 14, fontWeight: '900', color: colors.text },
+  schedTimeActive: { color: isDark ? '#4ade80' : '#1b8a5a' },
+  schedAmpm: { fontSize: 8, fontWeight: '700', letterSpacing: 0.5, color: colors.textMuted, textTransform: 'uppercase' },
+  schedAmpmActive: { color: isDark ? 'rgba(34,197,94,0.8)' : '#1b8a5a' },
   schedInfo: { flex: 1 },
-  schedName: { fontSize: 13, fontWeight: '700', color: THEME.cream, marginBottom: 2 },
-  schedSub: { fontSize: 10, color: 'rgba(255,247,225,0.4)' },
+  schedName: { fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 2 },
+  schedSub: { fontSize: 10, color: colors.textMuted },
   schedRight: { alignItems: 'flex-end' },
-  schedPrice: { fontSize: 12, fontWeight: '800', color: THEME.cream },
-  schedStatusText: { fontSize: 9, fontWeight: '700', color: '#4ade80', letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 4 },
-  emptySched: { padding: 20, alignItems: 'center', backgroundColor: THEME.glass, borderRadius: 14, borderWidth: 1, borderColor: THEME.border, borderStyle: 'dashed' },
-  emptySchedText: { fontSize: 12, color: 'rgba(255,247,225,0.4)' },
+  schedPrice: { fontSize: 12, fontWeight: '800', color: colors.text },
+  schedStatusText: { fontSize: 9, fontWeight: '700', color: isDark ? '#4ade80' : '#1b8a5a', letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 4 },
+  emptySched: { padding: 20, alignItems: 'center', backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' },
+  emptySchedText: { fontSize: 12, color: colors.textMuted },
 
   mosaic: { flexDirection: 'row', gap: 8 },
   mosaicCol1: { flex: 1 },
   mosaicCol2: { flex: 1 },
   mosaicCol3: { flex: 1 },
-  mosaicItem: { width: '100%', backgroundColor: THEME.glass, borderRadius: 12, overflow: 'hidden' },
-  portBadge: { position: 'absolute', bottom: 8, right: 8, backgroundColor: 'rgba(10,10,6,0.8)', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 12, borderWidth: 1, borderColor: THEME.border },
-  portBadgeText: { fontSize: 9, fontWeight: '700', color: 'rgba(255,247,225,0.7)' },
-  mosaicAdd: { width: '100%', height: 96, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,247,225,0.15)', borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
-  mosaicAddText: { fontSize: 9, fontWeight: '700', color: 'rgba(255,247,225,0.3)', marginTop: 4, letterSpacing: 1 },
+  mosaicItem: { width: '100%', backgroundColor: colors.surface, borderRadius: 12, overflow: 'hidden' },
+  portBadge: { position: 'absolute', bottom: 8, right: 8, backgroundColor: colors.surfaceStrong, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+  portBadgeText: { fontSize: 9, fontWeight: '700', color: colors.textMuted },
+  mosaicAdd: { width: '100%', height: 96, borderRadius: 12, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
+  mosaicAddText: { fontSize: 9, fontWeight: '700', color: colors.textLight, marginTop: 4, letterSpacing: 1 },
 
   actionsGrid: { flexDirection: 'row', gap: 8 },
-  actionTile: { flex: 1, backgroundColor: THEME.glass, borderWidth: 1, borderColor: THEME.border, borderRadius: 16, paddingVertical: 14, alignItems: 'center' },
+  actionTile: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingVertical: 14, alignItems: 'center' },
   atIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  atLabel: { fontSize: 8, fontWeight: '700', color: 'rgba(255,247,225,0.5)', textAlign: 'center', letterSpacing: 0.5, textTransform: 'uppercase' },
+  atLabel: { fontSize: 9, fontWeight: '800', color: colors.textMuted, textAlign: 'center', letterSpacing: 0.5, textTransform: 'uppercase' },
 
-  earnBanner: { backgroundColor: '#140a30', borderRadius: 22, padding: 22, borderWidth: 1, borderColor: 'rgba(130,110,255,0.18)', overflow: 'hidden' },
-  earnMonth: { fontSize: 9, fontWeight: '700', color: 'rgba(255,247,225,0.4)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  earnAmt: { fontSize: 36, fontWeight: '900', color: THEME.cream },
-  earnCur: { fontSize: 16, color: 'rgba(255,247,225,0.5)' },
-  earnNote: { fontSize: 11, color: 'rgba(255,247,225,0.4)', marginTop: 4, marginBottom: 16 },
-  earnTrack: { height: 6, backgroundColor: 'rgba(255,247,225,0.07)', borderRadius: 3, marginBottom: 8 },
-  earnFill: { height: '100%', backgroundColor: '#826eff', borderRadius: 3 },
+  earnBanner: { backgroundColor: colors.surfaceStrong, borderRadius: 22, padding: 22, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  earnMonth: { fontSize: 9, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
+  earnAmt: { fontSize: 36, fontWeight: '900', color: colors.text },
+  earnCur: { fontSize: 16, color: colors.textMuted },
+  earnNote: { fontSize: 11, color: colors.textMuted, marginTop: 4, marginBottom: 16 },
+  earnTrack: { height: 6, backgroundColor: colors.border, borderRadius: 3, marginBottom: 8 },
+  earnFill: { height: '100%', backgroundColor: isDark ? '#826eff' : '#5b3fcb', borderRadius: 3 },
   earnLabels: { flexDirection: 'row', justifyContent: 'space-between' },
-  earnLabelText: { fontSize: 8, fontWeight: '700', color: 'rgba(255,247,225,0.3)', textTransform: 'uppercase', letterSpacing: 0.5 },
+  earnLabelText: { fontSize: 8, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
 });

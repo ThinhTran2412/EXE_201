@@ -9,6 +9,25 @@ export interface PhotographerAvailabilitySlot {
   slotType: 'Blocked' | 'Available';
 }
 
+export enum EquipmentCategory {
+  Camera = 0,
+  Lens = 1,
+  Lighting = 2,
+  Drone = 3,
+  Gimbal = 4,
+  Audio = 5,
+  Other = 6
+}
+
+export interface PhotographerEquipment {
+  id: string;
+  photographerId: string;
+  category: EquipmentCategory;
+  name: string;
+  description?: string;
+  isPrimary: boolean;
+}
+
 export interface PhotographerProfile {
   id:                 string;
   displayName:        string;
@@ -33,6 +52,7 @@ export interface PhotographerProfile {
   verificationStatus: string;
   portfolioPhotos:    string[];
   acceptsInstantBooking: boolean;
+  equipments: PhotographerEquipment[];
 }
 
 export interface PBooking {
@@ -65,6 +85,13 @@ export async function getPhotographerProfile(): Promise<PhotographerProfile | nu
       verificationDocumentFrontUrl verificationDocumentBackUrl verificationPortraitUrl
       bio quote avatarUrl coverPhotoUrl instagramUrl
       minBudget maxBudget rating isPremium isAvailable verificationStatus portfolioPhotos acceptsInstantBooking
+      equipments {
+        id
+        category
+        name
+        description
+        isPrimary
+      }
     }}
   `);
   return data.photographerProfile;
@@ -72,6 +99,10 @@ export async function getPhotographerProfile(): Promise<PhotographerProfile | nu
 
 export async function updateProfile(payload: Partial<PhotographerProfile>) {
   await apiClient.put('/api/photographers/profile', payload);
+}
+
+export async function updateEquipments(equipments: Omit<PhotographerEquipment, 'photographerId'>[]) {
+  await apiClient.put('/api/photographers/equipments', { equipments });
 }
 
 export async function updatePersonalInfo(payload: {

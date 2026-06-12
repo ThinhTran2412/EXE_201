@@ -4,8 +4,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, StyleSheet } from 'react-native';
 import { PhotographerTabParamList, PhotographerStackParamList } from './types';
-import { colors } from '../theme/colors';
 import { fontSizes } from '../theme/typography';
+import { PhotographerThemeProvider, usePhotographerTheme } from '../../features/photographer/PhotographerThemeContext';
 
 // Tab screens
 import DashboardScreen       from '../../features/photographer/screens/DashboardScreen';
@@ -19,13 +19,14 @@ import PChatScreen from '../../features/photographer/screens/PChatScreen';
 import ServiceManagementScreen from '../../features/photographer/screens/ServiceManagementScreen';
 import PBookingCalendarScreen from '../../features/photographer/screens/PBookingCalendarScreen';
 import PersonalInfoScreen from '../../features/photographer/screens/PersonalInfoScreen';
+import ManageEquipmentScreen from '../../features/photographer/screens/ManageEquipmentScreen';
 import CallScreen from '../../features/chat/screens/CallScreen';
 import CustomerProfileViewScreen from '../../features/photographer/screens/CustomerProfileViewScreen';
 import BookingDetailScreen from '../../features/customer/screens/BookingDetailScreen';
+import PNotificationsScreen from '../../features/photographer/screens/PNotificationsScreen';
 
 const Tab   = createBottomTabNavigator<PhotographerTabParamList>();
 const Stack = createNativeStackNavigator<PhotographerStackParamList>();
-
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 const CFG: Record<keyof PhotographerTabParamList, { label: string; icon: IconName; iconActive: IconName }> = {
@@ -37,15 +38,16 @@ const CFG: Record<keyof PhotographerTabParamList, { label: string; icon: IconNam
 };
 
 function PhotographerTabNavigator() {
+  const { colors } = usePhotographerTheme();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => {
         const cfg = CFG[route.name as keyof PhotographerTabParamList];
         return {
           headerShown: false,
-          tabBarStyle: styles.tabBar,
-          tabBarActiveTintColor:   colors.background,
-          tabBarInactiveTintColor: 'rgba(255,247,225,0.45)',
+          tabBarStyle: [styles.tabBar, { backgroundColor: colors.tabBar, borderTopWidth: 1, borderTopColor: colors.border }],
+          tabBarActiveTintColor:   colors.tabActive,
+          tabBarInactiveTintColor: colors.tabInactive,
           tabBarLabelStyle: styles.label,
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons name={focused ? cfg.iconActive : cfg.icon} size={size} color={color} />
@@ -63,31 +65,38 @@ function PhotographerTabNavigator() {
   );
 }
 
-// Root stack wraps tabs + push screens
-export default function PhotographerTabs() {
+function PhotographerStackNavigation() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="PhotographerRoot" component={PhotographerTabNavigator} />
       <Stack.Screen name="Chat" component={PChatScreen} />
       <Stack.Screen name="ServiceManagement" component={ServiceManagementScreen} />
       <Stack.Screen name="BookingCalendar" component={PBookingCalendarScreen} />
+      <Stack.Screen name="ManageEquipment" component={ManageEquipmentScreen} />
       <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
       <Stack.Screen name="Call" component={CallScreen} />
       <Stack.Screen name="CustomerProfile" component={CustomerProfileViewScreen} />
       <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
+      <Stack.Screen name="Notifications" component={PNotificationsScreen} />
     </Stack.Navigator>
+  );
+}
 
+// Root stack wraps tabs + push screens with PhotographerThemeProvider
+export default function PhotographerTabs() {
+  return (
+    <PhotographerThemeProvider>
+      <PhotographerStackNavigation />
+    </PhotographerThemeProvider>
   );
 }
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: colors.dark,
     borderTopWidth: 0,
     elevation: 20,
-    shadowColor: colors.dark,
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.1,
     shadowRadius: 16,
     height: Platform.OS === 'ios' ? 88 : 64,
     paddingBottom: Platform.OS === 'ios' ? 24 : 8,

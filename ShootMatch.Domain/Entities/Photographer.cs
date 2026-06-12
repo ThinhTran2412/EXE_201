@@ -31,4 +31,5 @@ public sealed class Photographer
     public DateTime? DeletedAt { get; init; }
     public IReadOnlyList<float[]> PortfolioEmbeddings { get; init; } = [];
     public List<string> PortfolioPhotos { get; init; } = [];
+    public List<PhotographerEquipment> Equipments { get; init; } = [];
 }

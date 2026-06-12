@@ -13,6 +13,7 @@ import { ClayButton } from '../../../shared/components/ClayButton';
 import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { colors } from '../../../app/theme/colors';
+import { usePhotographerTheme } from '../../photographer/PhotographerThemeContext';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { radius, spacing } from '../../../app/theme/spacing';
 
@@ -23,6 +24,15 @@ const STATUS_CFG: Record<string, { label: string; color: string; bgColor: string
   Completed:  { label: 'Hoàn thành',  color: '#15803d', bgColor: '#f0fdf4', icon: 'checkmark-done-circle' },
   Cancelled:  { label: 'Đã hủy',      color: '#cf4028', bgColor: '#fef2f2', icon: 'close-circle' },
   Disputed:   { label: 'Tranh chấp',  color: '#e07b39', bgColor: '#fff7ed', icon: 'warning' },
+};
+
+const STATUS_CFG_DARK: Record<string, { label: string; color: string; bgColor: string; icon: string }> = {
+  Pending:    { label: 'Chờ xác nhận', color: '#ffd666', bgColor: 'rgba(255, 214, 102, 0.15)', icon: 'time' },
+  Processing: { label: 'Đang xử lý',    color: '#ffd666', bgColor: 'rgba(255, 214, 102, 0.15)', icon: 'sync' },
+  Confirmed:  { label: 'Đã xác nhận', color: '#63b3ed', bgColor: 'rgba(99, 179, 237, 0.15)', icon: 'checkmark-circle' },
+  Completed:  { label: 'Hoàn thành',  color: '#81e6d9', bgColor: 'rgba(129, 230, 217, 0.15)', icon: 'checkmark-done-circle' },
+  Cancelled:  { label: 'Đã hủy',      color: '#feb2b2', bgColor: 'rgba(254, 178, 178, 0.15)', icon: 'close-circle' },
+  Disputed:   { label: 'Tranh chấp',  color: '#fbd38d', bgColor: 'rgba(251, 211, 141, 0.15)', icon: 'warning' },
 };
 
 function splitTags(value: string) {
@@ -82,6 +92,7 @@ function getArtisticConcept(bookingId: string) {
 }
 
 function StarRow({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const { isDark, colors: pColors } = usePhotographerTheme();
   return (
     <View style={styles.starRow}>
       {[1, 2, 3, 4, 5].map((s) => (
@@ -89,7 +100,7 @@ function StarRow({ value, onChange }: { value: number; onChange: (v: number) => 
           <Ionicons
             name={s <= value ? 'star' : 'star-outline'}
             size={32}
-            color={s <= value ? '#f4c430' : colors.textLight}
+            color={s <= value ? '#f4c430' : (isDark ? pColors.textLight : colors.textLight)}
           />
         </Pressable>
       ))}
@@ -98,6 +109,7 @@ function StarRow({ value, onChange }: { value: number; onChange: (v: number) => 
 }
 
 export default function BookingDetailScreen() {
+  const { isDark, colors: pColors } = usePhotographerTheme();
   const navigation = useNavigation<any>();
   const route      = useRoute<any>();
   const insets     = useSafeAreaInsets();
@@ -133,7 +145,7 @@ export default function BookingDetailScreen() {
     loadData();
   }, [booking.photographerId]);
 
-  const cfg = STATUS_CFG[booking.status] ?? STATUS_CFG.Pending;
+  const cfg = (isDark ? STATUS_CFG_DARK[booking.status] : STATUS_CFG[booking.status]) ?? (isDark ? STATUS_CFG_DARK.Pending : STATUS_CFG.Pending);
   const canCancel = booking.status === 'Pending' || booking.status === 'Confirmed';
   const canReview = booking.status === 'Completed' && !reviewDone;
 
@@ -221,20 +233,20 @@ export default function BookingDetailScreen() {
     if (!matchedPkg) {
       // Fallback Concept Card
       return (
-        <View style={styles.conceptCard}>
+        <View style={[styles.conceptCard, isDark && { backgroundColor: pColors.surface, borderColor: pColors.borderStrong }]}>
           <View style={styles.conceptHeader}>
-            <Ionicons name="sparkles-outline" size={16} color={colors.accent} />
-            <Text style={styles.conceptTitleLabel}>CONCEPT CHỤP ẢNH</Text>
+            <Ionicons name="sparkles-outline" size={16} color={isDark ? pColors.accent : colors.accent} />
+            <Text style={[styles.conceptTitleLabel, isDark && { color: pColors.accent }]}>CONCEPT CHỤP ẢNH</Text>
           </View>
-          <Text style={styles.conceptTitle}>{concept.title}</Text>
-          <Text style={styles.conceptMood}>{concept.mood}</Text>
+          <Text style={[styles.conceptTitle, isDark && { color: pColors.text }]}>{concept.title}</Text>
+          <Text style={[styles.conceptMood, isDark && { color: pColors.textMuted }]}>{concept.mood}</Text>
           
-          <View style={styles.tipsBox}>
+          <View style={[styles.tipsBox, isDark && { backgroundColor: pColors.surfaceStrong, borderColor: pColors.accent }]}>
             <View style={styles.tipsHeader}>
-              <Ionicons name="bulb-outline" size={14} color={colors.accent} />
-              <Text style={styles.tipsTitle}>Gợi ý chuẩn bị cho bạn</Text>
+              <Ionicons name="bulb-outline" size={14} color={isDark ? pColors.accent : colors.accent} />
+              <Text style={[styles.tipsTitle, isDark && { color: pColors.text }]}>Gợi ý chuẩn bị cho bạn</Text>
             </View>
-            <Text style={styles.tipsText}>{concept.tips}</Text>
+            <Text style={[styles.tipsText, isDark && { color: pColors.textMuted }]}>{concept.tips}</Text>
           </View>
         </View>
       );
@@ -244,7 +256,7 @@ export default function BookingDetailScreen() {
     const hasMedia = matchedPkg.media && matchedPkg.media.length > 0;
     
     return (
-      <View style={styles.packageCard}>
+      <View style={[styles.packageCard, isDark && { backgroundColor: pColors.surface, borderColor: pColors.borderStrong }]}>
         <TouchableOpacity onPress={() => setPackageExpanded(!packageExpanded)} activeOpacity={0.9}>
           {/* Cover Image inside card */}
           <View style={styles.packageCover}>
@@ -277,20 +289,20 @@ export default function BookingDetailScreen() {
               <View style={styles.packageTagRow}>
                 {tags.map((tag, idx) => (
                   <View key={idx} style={styles.packageTag}>
-                    <Text style={styles.packageTagText}>#{tag}</Text>
+                    <Text style={[styles.packageTagText, isDark && { color: pColors.accent }]}>#{tag}</Text>
                   </View>
                 ))}
               </View>
             )}
 
             <View style={styles.packageMetaRow}>
-              <View style={styles.packageMetaChip}>
-                <Ionicons name="time-outline" size={12} color={colors.dark} />
-                <Text style={styles.packageMetaChipText}>{matchedPkg.durationHours} giờ chụp</Text>
+              <View style={[styles.packageMetaChip, isDark && { backgroundColor: pColors.surfaceStrong, borderColor: pColors.border }]}>
+                <Ionicons name="time-outline" size={12} color={isDark ? pColors.text : colors.dark} />
+                <Text style={[styles.packageMetaChipText, isDark && { color: pColors.text }]}>{matchedPkg.durationHours} giờ chụp</Text>
               </View>
-              <View style={styles.packageMetaChip}>
-                <Ionicons name="images-outline" size={12} color={colors.dark} />
-                <Text style={styles.packageMetaChipText}>{matchedPkg.media?.length || 0} ảnh mẫu</Text>
+              <View style={[styles.packageMetaChip, isDark && { backgroundColor: pColors.surfaceStrong, borderColor: pColors.border }]}>
+                <Ionicons name="images-outline" size={12} color={isDark ? pColors.text : colors.dark} />
+                <Text style={[styles.packageMetaChipText, isDark && { color: pColors.text }]}>{matchedPkg.media?.length || 0} ảnh mẫu</Text>
               </View>
             </View>
 
@@ -298,7 +310,7 @@ export default function BookingDetailScreen() {
             {!packageExpanded && (
               <>
                 {!!packageMood && (
-                  <Text style={styles.packageDesc} numberOfLines={2}>
+                  <Text style={[styles.packageDesc, isDark && { color: pColors.textMuted }]} numberOfLines={2}>
                     {packageMood}
                   </Text>
                 )}
@@ -314,8 +326,8 @@ export default function BookingDetailScreen() {
                       />
                     ))}
                     {matchedPkg.media.length > 5 && (
-                      <View style={styles.packageThumbMore}>
-                        <Text style={styles.packageThumbMoreText}>+{matchedPkg.media.length - 5}</Text>
+                      <View style={[styles.packageThumbMore, isDark && { backgroundColor: pColors.surfaceStrong, borderColor: pColors.border }]}>
+                        <Text style={[styles.packageThumbMoreText, isDark && { color: pColors.textMuted }]}>+{matchedPkg.media.length - 5}</Text>
                       </View>
                     )}
                   </View>
@@ -328,27 +340,27 @@ export default function BookingDetailScreen() {
               <Animated.View entering={FadeInDown.duration(350)} style={styles.packageExpandedContent}>
                 {/* Description */}
                 {!!packageMood && (
-                  <View style={styles.packageSection}>
+                  <View style={[styles.packageSection, isDark && { borderTopColor: pColors.border }]}>
                     <View style={styles.packageSectionHeader}>
-                      <Ionicons name="document-text-outline" size={13} color={colors.dark} />
-                      <Text style={styles.packageSectionTitle}>Mô tả chi tiết</Text>
+                      <Ionicons name="document-text-outline" size={13} color={isDark ? pColors.text : colors.dark} />
+                      <Text style={[styles.packageSectionTitle, isDark && { color: pColors.text }]}>Mô tả chi tiết</Text>
                     </View>
-                    <Text style={styles.packageSectionBody}>{packageMood}</Text>
+                    <Text style={[styles.packageSectionBody, isDark && { color: pColors.textMuted }]}>{packageMood}</Text>
                   </View>
                 )}
 
                 {/* Features */}
                 {featureLines.length > 0 && (
-                  <View style={styles.packageSection}>
+                  <View style={[styles.packageSection, isDark && { borderTopColor: pColors.border }]}>
                     <View style={styles.packageSectionHeader}>
-                      <Ionicons name="sparkles-outline" size={13} color={colors.success} />
-                      <Text style={[styles.packageSectionTitle, { color: colors.success }]}>Đặc điểm nổi bật</Text>
+                      <Ionicons name="sparkles-outline" size={13} color={isDark ? pColors.success : colors.success} />
+                      <Text style={[styles.packageSectionTitle, { color: isDark ? pColors.success : colors.success }]}>Đặc điểm nổi bật</Text>
                     </View>
                     <View style={styles.packageFeatureList}>
                       {featureLines.map((line, idx) => (
                         <View key={idx} style={styles.packageFeatureItem}>
-                          <Ionicons name="checkmark-circle" size={14} color={colors.success} style={{ marginTop: 2 }} />
-                          <Text style={styles.packageFeatureText}>{line}</Text>
+                          <Ionicons name="checkmark-circle" size={14} color={isDark ? pColors.success : colors.success} style={{ marginTop: 2 }} />
+                          <Text style={[styles.packageFeatureText, isDark && { color: pColors.text }]}>{line}</Text>
                         </View>
                       ))}
                     </View>
@@ -357,16 +369,16 @@ export default function BookingDetailScreen() {
 
                 {/* Requirements */}
                 {requirementLines.length > 0 && (
-                  <View style={styles.packageSection}>
+                  <View style={[styles.packageSection, isDark && { borderTopColor: pColors.border }]}>
                     <View style={styles.packageSectionHeader}>
-                      <Ionicons name="clipboard-outline" size={13} color={colors.info} />
-                      <Text style={[styles.packageSectionTitle, { color: colors.info }]}>Yêu cầu buổi chụp</Text>
+                      <Ionicons name="clipboard-outline" size={13} color={isDark ? pColors.info : colors.info} />
+                      <Text style={[styles.packageSectionTitle, { color: isDark ? pColors.info : colors.info }]}>Yêu cầu buổi chụp</Text>
                     </View>
                     <View style={styles.packageFeatureList}>
                       {requirementLines.map((line, idx) => (
                         <View key={idx} style={styles.packageFeatureItem}>
-                          <Ionicons name="ellipse" size={5} color={colors.info} style={{ marginTop: 6 }} />
-                          <Text style={[styles.packageFeatureText, { color: colors.textMuted }]}>{line}</Text>
+                          <Ionicons name="ellipse" size={5} color={isDark ? pColors.info : colors.info} style={{ marginTop: 6 }} />
+                          <Text style={[styles.packageFeatureText, { color: isDark ? pColors.textMuted : colors.textMuted }]}>{line}</Text>
                         </View>
                       ))}
                     </View>
@@ -375,10 +387,10 @@ export default function BookingDetailScreen() {
 
                 {/* Sample Photos Grid */}
                 {matchedPkg.media && matchedPkg.media.length > 0 && (
-                  <View style={styles.packageSection}>
+                  <View style={[styles.packageSection, isDark && { borderTopColor: pColors.border }]}>
                     <View style={styles.packageSectionHeader}>
-                      <Ionicons name="images-outline" size={13} color={colors.dark} />
-                      <Text style={styles.packageSectionTitle}>Ảnh mẫu thực tế ({matchedPkg.media.length})</Text>
+                      <Ionicons name="images-outline" size={13} color={isDark ? pColors.text : colors.dark} />
+                      <Text style={[styles.packageSectionTitle, isDark && { color: pColors.text }]}>Ảnh mẫu thực tế ({matchedPkg.media.length})</Text>
                     </View>
                     <View style={styles.packagePhotoGrid}>
                       {matchedPkg.media.map((media: any, mi: number) => (
@@ -397,9 +409,9 @@ export default function BookingDetailScreen() {
             )}
 
             {/* Toggle Arrow Indicator */}
-            <View style={styles.packageToggleIndicator}>
-              <Ionicons name={packageExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(26,26,15,0.4)" />
-              <Text style={styles.packageToggleText}>
+            <View style={[styles.packageToggleIndicator, isDark && { borderTopColor: pColors.border }]}>
+              <Ionicons name={packageExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={isDark ? pColors.textMuted : "rgba(26,26,15,0.4)"} />
+              <Text style={[styles.packageToggleText, isDark && { color: pColors.textMuted }]}>
                 {packageExpanded ? 'Thu gọn chi tiết' : 'Xem chi tiết gói dịch vụ'}
               </Text>
             </View>
@@ -411,15 +423,15 @@ export default function BookingDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, isDark && { backgroundColor: pColors.background }]}>
         <ActivityIndicator size="large" color={colors.accent} />
-        <Text style={styles.loadingText}>Đang tải chi tiết đặt lịch...</Text>
+        <Text style={[styles.loadingText, isDark && { color: pColors.textMuted }]}>Đang tải chi tiết đặt lịch...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && { backgroundColor: pColors.background }]}>
       {/* Editorial Header Banner */}
       <View style={styles.coverSection}>
         <Image
@@ -444,7 +456,17 @@ export default function BookingDetailScreen() {
           <View style={styles.photographerHeaderRow}>
             <Image source={{ uri: pAvatar }} style={styles.headerAvatar} />
             <View style={styles.headerTextContainer}>
-              <Text style={styles.headerRole}>NHIẾP ẢNH GIA</Text>
+              <View style={[
+                styles.roleBadge,
+                isDark 
+                  ? { backgroundColor: '#ffffff', borderColor: '#ffffff' }
+                  : { backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,0.4)' }
+              ]}>
+                <Text style={[
+                  styles.headerRole,
+                  isDark ? { color: '#000000' } : { color: '#ffffff' }
+                ]}>NHIẾP ẢNH GIA</Text>
+              </View>
               <Text style={styles.headerName}>{pName}</Text>
               <Text style={styles.headerRegion}>
                 <Ionicons name="pin-outline" size={11} color="rgba(255,255,255,0.7)" /> {photographer?.region}
@@ -467,18 +489,18 @@ export default function BookingDetailScreen() {
       >
         {/* Card 1: Time & Status Hero */}
         <Animated.View entering={FadeInDown.duration(500).delay(100)}>
-          <ClayCard style={styles.card}>
+          <ClayCard style={[styles.card, isDark && { backgroundColor: pColors.surface, borderColor: pColors.borderStrong }]}>
             <View style={styles.timeSection}>
-              <View style={styles.timeIconWrapper}>
-                <Feather name="clock" size={22} color={colors.accent} />
+              <View style={[styles.timeIconWrapper, isDark && { backgroundColor: 'rgba(207,64,40,0.15)' }]}>
+                <Feather name="clock" size={22} color={isDark ? pColors.accent : colors.accent} />
               </View>
               <View style={styles.timeTextWrapper}>
-                <Text style={styles.timeDateText}>{dateLongStr}</Text>
-                <Text style={styles.timeHourText}>{timeStr} • Khung giờ chụp</Text>
+                <Text style={[styles.timeDateText, isDark && { color: pColors.text }]}>{dateLongStr}</Text>
+                <Text style={[styles.timeHourText, isDark && { color: pColors.textMuted }]}>{timeStr} • Khung giờ chụp</Text>
               </View>
             </View>
 
-            <View style={styles.cardDivider} />
+            <View style={[styles.cardDivider, isDark && { backgroundColor: pColors.border }]} />
 
             <View style={styles.statusPriceRow}>
               <View style={[styles.statusBadge, { backgroundColor: cfg.bgColor }]}>
@@ -486,8 +508,8 @@ export default function BookingDetailScreen() {
                 <Text style={[styles.statusLabelText, { color: cfg.color }]}>{cfg.label}</Text>
               </View>
               <View style={styles.priceContainer}>
-                <Text style={styles.priceLabel}>CHI PHÍ THỎA THUẬN</Text>
-                <Text style={styles.priceValue}>{booking.agreedPrice?.toLocaleString('vi-VN')} đ</Text>
+                <Text style={[styles.priceLabel, isDark && { color: pColors.textLight }]}>CHI PHÍ THỎA THUẬN</Text>
+                <Text style={[styles.priceValue, isDark && { color: pColors.accent }]}>{booking.agreedPrice?.toLocaleString('vi-VN')} đ</Text>
               </View>
             </View>
           </ClayCard>
@@ -500,17 +522,20 @@ export default function BookingDetailScreen() {
 
         {/* Card 3: Photoshoot Schedule Details */}
         <Animated.View entering={FadeInDown.duration(500).delay(220)}>
-          <ClayCard style={styles.card}>
-            <Text style={styles.cardTitle}>Chi tiết cuộc hẹn</Text>
+          <ClayCard style={[styles.card, isDark && { backgroundColor: pColors.surface, borderColor: pColors.borderStrong }]}>
+            <Text style={[styles.cardTitle, isDark && { color: pColors.text }]}>Chi tiết cuộc hẹn</Text>
             
             <View style={{ gap: spacing[3] }}>
               {/* Highlighted Full-width Location Card */}
-              <View style={{ backgroundColor: '#FAF7F2', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(46,42,36,0.08)', gap: 6 }}>
+              <View style={[
+                { backgroundColor: '#FAF7F2', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(46,42,36,0.08)', gap: 6 },
+                isDark && { backgroundColor: pColors.surfaceStrong, borderColor: pColors.borderStrong }
+              ]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="pin" size={16} color="#D4AF37" />
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textLight, textTransform: 'uppercase' }}>Địa điểm chụp</Text>
+                  <Ionicons name="pin" size={16} color={isDark ? pColors.accent : "#D4AF37"} />
+                  <Text style={[{ fontSize: 10, fontWeight: '700', color: colors.textLight, textTransform: 'uppercase' }, isDark && { color: pColors.textLight }]}>Địa điểm chụp</Text>
                 </View>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.dark, lineHeight: 20 }}>
+                <Text style={[{ fontSize: 14, fontWeight: '600', color: colors.dark, lineHeight: 20 }, isDark && { color: pColors.text }]}>
                   {booking.location || 'Chưa định cấu hình'}
                 </Text>
               </View>
@@ -518,46 +543,49 @@ export default function BookingDetailScreen() {
               {/* Highlighted Full-width Phone Card (Press to call) */}
               <Pressable 
                 onPress={handleCallPress}
-                style={({ pressed }) => ({
-                  backgroundColor: '#FAF7F2',
-                  borderRadius: 16,
-                  padding: 14,
-                  borderWidth: 1,
-                  borderColor: 'rgba(46,42,36,0.08)',
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  opacity: pressed ? 0.8 : 1,
-                })}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: '#FAF7F2',
+                    borderRadius: 16,
+                    padding: 14,
+                    borderWidth: 1,
+                    borderColor: 'rgba(46,42,36,0.08)',
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                  isDark && { backgroundColor: pColors.surfaceStrong, borderColor: pColors.borderStrong }
+                ]}
               >
                 <View style={{ gap: 6, flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="call" size={16} color="#3A6073" />
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textLight, textTransform: 'uppercase' }}>Số điện thoại liên hệ</Text>
+                    <Ionicons name="call" size={16} color={isDark ? pColors.info : "#3A6073"} />
+                    <Text style={[{ fontSize: 10, fontWeight: '700', color: colors.textLight, textTransform: 'uppercase' }, isDark && { color: pColors.textLight }]}>Số điện thoại liên hệ</Text>
                   </View>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: colors.dark }}>
+                  <Text style={[{ fontSize: 14, fontWeight: '600', color: colors.dark }, isDark && { color: pColors.text }]}>
                     {booking.phone || 'Chưa có số điện thoại'}
                   </Text>
                 </View>
 
                 {booking.phone && (
-                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(58, 96, 115, 0.08)', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="call" size={16} color="#3A6073" />
+                  <View style={[{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(58, 96, 115, 0.08)', alignItems: 'center', justifyContent: 'center' }, isDark && { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+                    <Ionicons name="call" size={16} color={isDark ? pColors.info : "#3A6073"} />
                   </View>
                 )}
               </Pressable>
 
               {booking.note ? (
-                <View style={[styles.noteBox, { marginTop: 4 }]}>
-                  <Text style={styles.noteBoxTitle}>Ghi chú khách hàng</Text>
-                  <Text style={styles.noteBoxText}>"{booking.note}"</Text>
+                <View style={[styles.noteBox, { marginTop: 4 }, isDark && { backgroundColor: pColors.surfaceStrong, borderLeftColor: pColors.accent }]}>
+                  <Text style={[styles.noteBoxTitle, isDark && { color: pColors.accent }]}>Ghi chú khách hàng</Text>
+                  <Text style={[styles.noteBoxText, isDark && { color: pColors.textMuted }]}>"{booking.note}"</Text>
                 </View>
               ) : null}
 
               {booking.requirements ? (
-                <View style={[styles.noteBox, { borderLeftColor: colors.info, marginTop: 4 }]}>
-                  <Text style={[styles.noteBoxTitle, { color: colors.info }]}>Yêu cầu trang phục/chuẩn bị</Text>
-                  <Text style={styles.noteBoxText}>"{booking.requirements}"</Text>
+                <View style={[styles.noteBox, { borderLeftColor: colors.info, marginTop: 4 }, isDark && { backgroundColor: pColors.surfaceStrong, borderLeftColor: pColors.info }]}>
+                  <Text style={[styles.noteBoxTitle, { color: colors.info }, isDark && { color: pColors.info }]}>Yêu cầu trang phục/chuẩn bị</Text>
+                  <Text style={[styles.noteBoxText, isDark && { color: pColors.textMuted }]}>"{booking.requirements}"</Text>
                 </View>
               ) : null}
             </View>
@@ -572,41 +600,41 @@ export default function BookingDetailScreen() {
                 paddingVertical: 12,
                 marginTop: 16,
                 borderTopWidth: 1,
-                borderTopColor: 'rgba(26,26,15,0.06)'
+                borderTopColor: isDark ? pColors.border : 'rgba(26,26,15,0.06)'
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted }}>Xem thêm thông tin</Text>
-              <Ionicons name={infoExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+              <Text style={[{ fontSize: 13, fontWeight: '700', color: colors.textMuted }, isDark && { color: pColors.textMuted }]}>Xem thêm thông tin</Text>
+              <Ionicons name={infoExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={isDark ? pColors.textMuted : colors.textMuted} />
             </Pressable>
 
             {infoExpanded && (
               <Animated.View entering={FadeInDown.duration(200)} style={{ gap: spacing[3], marginTop: spacing[2] }}>
                 <View style={styles.detailsRow}>
-                  <View style={styles.detailsIconWrapper}>
-                    <Ionicons name="barcode-outline" size={15} color={colors.textMuted} />
+                  <View style={[styles.detailsIconWrapper, isDark && { backgroundColor: pColors.surfaceStrong, borderColor: pColors.border }]}>
+                    <Ionicons name="barcode-outline" size={15} color={isDark ? pColors.textMuted : colors.textMuted} />
                   </View>
                   <View style={styles.detailsTextWrapper}>
-                    <Text style={styles.detailsLabel}>Mã đặt lịch</Text>
-                    <Text style={styles.detailsValue}>{`#${booking.id.toUpperCase()}`}</Text>
+                    <Text style={[styles.detailsLabel, isDark && { color: pColors.textLight }]}>Mã đặt lịch</Text>
+                    <Text style={[styles.detailsValue, isDark && { color: pColors.text }]}>{`#${booking.id.toUpperCase()}`}</Text>
                   </View>
                 </View>
 
                 <View style={styles.detailsRow}>
-                  <View style={styles.detailsIconWrapper}>
-                    <Ionicons name="time-outline" size={15} color={colors.textMuted} />
+                  <View style={[styles.detailsIconWrapper, isDark && { backgroundColor: pColors.surfaceStrong, borderColor: pColors.border }]}>
+                    <Ionicons name="time-outline" size={15} color={isDark ? pColors.textMuted : colors.textMuted} />
                   </View>
                   <View style={styles.detailsTextWrapper}>
-                    <Text style={styles.detailsLabel}>Thời gian đặt</Text>
-                    <Text style={styles.detailsValue}>{new Date(booking.createdAt).toLocaleString('vi-VN')}</Text>
+                    <Text style={[styles.detailsLabel, isDark && { color: pColors.textLight }]}>Thời gian đặt</Text>
+                    <Text style={[styles.detailsValue, isDark && { color: pColors.text }]}>{new Date(booking.createdAt).toLocaleString('vi-VN')}</Text>
                   </View>
                 </View>
               </Animated.View>
             )}
 
             {booking.cancellationReason && (
-              <View style={styles.cancelReasonBox}>
-                <Ionicons name="warning-outline" size={16} color={colors.accent} />
-                <Text style={styles.cancelReasonText}>Lý do hủy: {booking.cancellationReason}</Text>
+              <View style={[styles.cancelReasonBox, isDark && { backgroundColor: 'rgba(207,64,40,0.15)' }]}>
+                <Ionicons name="warning-outline" size={16} color={isDark ? pColors.accent : colors.accent} />
+                <Text style={[styles.cancelReasonText, isDark && { color: pColors.accent }]}>Lý do hủy: {booking.cancellationReason}</Text>
               </View>
             )}
           </ClayCard>
@@ -614,8 +642,8 @@ export default function BookingDetailScreen() {
 
         {/* Card 4: Timeline flow */}
         <Animated.View entering={FadeInDown.duration(500).delay(280)}>
-          <ClayCard style={styles.card}>
-            <Text style={styles.cardTitle}>Trạng thái tiến trình</Text>
+          <ClayCard style={[styles.card, isDark && { backgroundColor: pColors.surface, borderColor: pColors.borderStrong }]}>
+            <Text style={[styles.cardTitle, isDark && { color: pColors.text }]}>Trạng thái tiến trình</Text>
             {(() => {
               const getStepStatus = (index: number) => {
                 const status = booking.status;
@@ -644,7 +672,10 @@ export default function BookingDetailScreen() {
                         style={[
                           styles.progressLabel,
                           step.active && styles.progressLabelActive,
-                          step.done && !step.active && styles.progressLabelDone
+                          step.done && !step.active && styles.progressLabelDone,
+                          isDark && { color: pColors.textLight },
+                          isDark && step.active && { color: pColors.accent },
+                          isDark && step.done && !step.active && { color: pColors.text }
                         ]}
                       >
                         {step.label}
@@ -660,7 +691,9 @@ export default function BookingDetailScreen() {
                         style={[
                           styles.progressBarSegment,
                           step.done && styles.progressBarSegmentDone,
-                          step.active && styles.progressBarSegmentActive
+                          step.active && styles.progressBarSegmentActive,
+                          isDark && { backgroundColor: pColors.surfaceStrong },
+                          isDark && (step.done || step.active) && { backgroundColor: pColors.accent }
                         ]}
                       />
                     ))}
@@ -674,16 +707,23 @@ export default function BookingDetailScreen() {
         {/* Review Section */}
         {canReview && (
           <Animated.View entering={FadeInDown.duration(500).delay(340)}>
-            <ClayCard style={styles.card}>
-              <Text style={styles.cardTitle}>⭐ Đánh giá buổi chụp</Text>
-              <Text style={styles.reviewSub}>Chia sẻ trải nghiệm của bạn để nâng cao dịch vụ</Text>
+            <ClayCard style={[styles.card, isDark && { backgroundColor: pColors.surface, borderColor: pColors.borderStrong }]}>
+              <Text style={[styles.cardTitle, isDark && { color: pColors.text }]}>⭐ Đánh giá buổi chụp</Text>
+              <Text style={[styles.reviewSub, isDark && { color: pColors.textMuted }]}>Chia sẻ trải nghiệm của bạn để nâng cao dịch vụ</Text>
               <StarRow value={rating} onChange={setRating} />
               <TextInput
-                style={styles.reviewInput}
+                style={[
+                  styles.reviewInput,
+                  isDark && {
+                    backgroundColor: pColors.surfaceStrong,
+                    color: pColors.text,
+                    borderColor: pColors.borderStrong,
+                  }
+                ]}
                 value={comment}
                 onChangeText={setComment}
                 placeholder="Nhận xét chi tiết của bạn về sản phẩm/phong cách nhiếp ảnh gia..."
-                placeholderTextColor={colors.textLight}
+                placeholderTextColor={isDark ? pColors.textLight : colors.textLight}
                 multiline
                 numberOfLines={4}
               />
@@ -694,6 +734,8 @@ export default function BookingDetailScreen() {
                   loading={submittingRev}
                   variant="primary"
                   size="md"
+                  style={isDark ? { backgroundColor: pColors.accent, shadowColor: pColors.accent } : undefined}
+                  textStyle={isDark ? { color: '#ffffff' } : undefined}
                 />
               </View>
             </ClayCard>
@@ -701,10 +743,10 @@ export default function BookingDetailScreen() {
         )}
 
         {reviewDone && (
-          <ClayCard style={[styles.card, { backgroundColor: colors.success + '08', borderColor: colors.success + '20' }]}>
+          <ClayCard style={[styles.card, { backgroundColor: colors.success + '08', borderColor: colors.success + '20' }, isDark && { backgroundColor: pColors.surface, borderColor: pColors.borderStrong }]}>
             <View style={styles.reviewDoneRow}>
-              <Ionicons name="checkmark-circle" size={24} color={colors.success} />
-              <Text style={styles.reviewDoneText}>Cảm ơn bạn đã gửi đánh giá buổi chụp! 🙏</Text>
+              <Ionicons name="checkmark-circle" size={24} color={isDark ? pColors.success : colors.success} />
+              <Text style={[styles.reviewDoneText, isDark && { color: pColors.success }]}>Cảm ơn bạn đã gửi đánh giá buổi chụp! 🙏</Text>
             </View>
           </ClayCard>
         )}
@@ -718,6 +760,8 @@ export default function BookingDetailScreen() {
               loading={cancelling}
               variant="ghost"
               size="md"
+              style={isDark ? { borderColor: pColors.borderStrong } : undefined}
+              textStyle={isDark ? { color: pColors.text } : undefined}
             />
           </Animated.View>
         )}
@@ -737,6 +781,14 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: fontSizes.sm, color: colors.textMuted },
 
   // Editorial Header Banner Style
+  roleBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    marginBottom: 4,
+  },
   coverSection: {
     height: 230,
     width: '100%',

@@ -69,7 +69,7 @@ function CallListener() {
           }
         });
       } catch (err) {
-        console.warn('Failed to start global chat hub connection:', err);
+        console.log('Failed to start global chat hub connection:', err);
       }
     })();
 

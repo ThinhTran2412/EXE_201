@@ -10,6 +10,7 @@ import { getConversationMessages, Message } from '../api';
 import * as ChatHub from '../ChatHub';
 import { useAuth } from '../../auth/AuthContext';
 import { colors } from '../../../app/theme/colors';
+import { usePhotographerTheme } from '../../photographer/PhotographerThemeContext';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { radius, spacing } from '../../../app/theme/spacing';
 import { isImageMessage, getMessageImageUri } from '../utils/messageDisplay';
@@ -69,6 +70,7 @@ function Bubble({
 }
 
 export default function ChatScreen() {
+  const { isDark, colors: pColors } = usePhotographerTheme();
   const navigation  = useNavigation<any>();
   const route       = useRoute<any>();
   const { session } = useAuth();
@@ -206,8 +208,8 @@ export default function ChatScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safe, isDark && { backgroundColor: pColors.background }]} edges={['top', 'bottom']}>
+      <View style={[styles.header, isDark && { backgroundColor: pColors.surface, borderBottomColor: pColors.border }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={28} color="#0084FF" />
         </Pressable>
@@ -217,8 +219,8 @@ export default function ChatScreen() {
             style={styles.headerAvatar}
           />
           <View style={styles.headerInfo}>
-            <Text style={styles.headerName} numberOfLines={1}>{headerTitle}</Text>
-            <Text style={styles.headerSub}>Đang hoạt động</Text>
+            <Text style={[styles.headerName, isDark && { color: pColors.text }]} numberOfLines={1}>{headerTitle}</Text>
+            <Text style={[styles.headerSub, isDark && { color: pColors.textMuted }]}>Đang hoạt động</Text>
           </View>
         </Pressable>
         <Pressable onPress={handleCallPress} style={styles.headerAction}>
@@ -248,7 +250,7 @@ export default function ChatScreen() {
             />
         }
 
-        <View style={styles.inputBar}>
+        <View style={[styles.inputBar, isDark && { backgroundColor: pColors.surface, borderTopColor: pColors.border }]}>
           <Pressable style={styles.attachBtn} onPress={pickAndSend} disabled={uploading || sending}>
             {uploading ? (
               <ActivityIndicator size="small" color="#0084FF" />
@@ -257,7 +259,7 @@ export default function ChatScreen() {
             )}
           </Pressable>
           <TextInput
-            style={styles.input}
+            style={[styles.input, isDark && { backgroundColor: pColors.surfaceStrong, color: pColors.text }]}
             value={text}
             onChangeText={setText}
             placeholder="Nhắn tin..."

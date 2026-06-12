@@ -42,6 +42,7 @@ export interface Photographer {
   isAvailable:        boolean;
   verificationStatus: string;
   portfolioPhotos?:   string[];
+  equipments?:        any[];
 }
 
 export interface Match {
@@ -390,6 +391,9 @@ export async function getPhotographer(id: string): Promise<Photographer | null> 
       photographer(id: $id) {
         id displayName region bio quote avatarUrl coverPhotoUrl instagramUrl portfolioPhotos
         minBudget maxBudget rating isPremium isAvailable verificationStatus
+        equipments {
+          id category name description isPrimary
+        }
       }
     }
   `, { id });

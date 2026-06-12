@@ -68,8 +68,8 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
     public async Task<IReadOnlyList<Photographer>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var records = await db.Photographers
-            .Include(x => x.PortfolioEmbeddings)
             .Include(x => x.PortfolioPhotos)
+            .Include(x => x.Equipments)
             .AsNoTracking()
             .AsSplitQuery()
             .Where(x => x.DeletedAt == null)
@@ -80,8 +80,8 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
     public async Task<Photographer?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var r = await db.Photographers
-            .Include(x => x.PortfolioEmbeddings)
             .Include(x => x.PortfolioPhotos)
+            .Include(x => x.Equipments)
             .AsNoTracking()
             .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, cancellationToken);
@@ -113,7 +113,7 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
     public async Task UpsertAsync(Photographer photographer, CancellationToken cancellationToken = default)
     {
         var existing = await db.Photographers
-            .Include(x => x.PortfolioEmbeddings)
+            .Include(x => x.Equipments)
             .FirstOrDefaultAsync(x => x.Id == photographer.Id, cancellationToken);
 
         if (existing is null)
@@ -148,6 +148,18 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
             existing.VerificationPortraitUrl      = photographer.VerificationPortraitUrl ?? existing.VerificationPortraitUrl;
             existing.UpdatedAt            = DateTime.UtcNow;
             existing.DeletedAt            = photographer.DeletedAt;
+
+            // Sync Equipments
+            db.PhotographerEquipments.RemoveRange(existing.Equipments);
+            existing.Equipments = photographer.Equipments.Select(e => new PhotographerEquipmentRecord
+            {
+                Id = e.Id,
+                PhotographerId = photographer.Id,
+                Category = e.Category,
+                Name = e.Name,
+                Description = e.Description,
+                IsPrimary = e.IsPrimary
+            }).ToList();
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -190,7 +202,16 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
         PortfolioPhotos = r.PortfolioPhotos
             .OrderBy(x => x.DisplayOrder)
             .Select(x => x.ImageUrl)
-            .ToList()
+            .ToList(),
+        Equipments = r.Equipments.Select(e => new PhotographerEquipment
+        {
+            Id = e.Id,
+            PhotographerId = e.PhotographerId,
+            Category = e.Category,
+            Name = e.Name,
+            Description = e.Description,
+            IsPrimary = e.IsPrimary
+        }).ToList()
     };
 
     private static PhotographerRecord ToRecord(Photographer p) => new()
@@ -221,6 +242,15 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
         GoogleId             = p.GoogleId,
         CreatedAt            = p.CreatedAt,
         UpdatedAt            = p.UpdatedAt,
-        DeletedAt            = p.DeletedAt
+        DeletedAt            = p.DeletedAt,
+        Equipments           = p.Equipments.Select(e => new PhotographerEquipmentRecord
+        {
+            Id = e.Id,
+            PhotographerId = e.PhotographerId,
+            Category = e.Category,
+            Name = e.Name,
+            Description = e.Description,
+            IsPrimary = e.IsPrimary
+        }).ToList()
     };
 }

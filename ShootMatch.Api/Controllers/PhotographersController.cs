@@ -127,7 +127,9 @@ public sealed class PhotographersController(
                 GoogleId              = existing.GoogleId,
                 CreatedAt             = existing.CreatedAt,
                 UpdatedAt             = DateTime.UtcNow,
-                PortfolioEmbeddings   = existing.PortfolioEmbeddings
+                PortfolioEmbeddings   = existing.PortfolioEmbeddings,
+                PortfolioPhotos       = existing.PortfolioPhotos,
+                Equipments            = existing.Equipments
             };
 
             await photographerRepository.UpsertAsync(updated, cancellationToken);
@@ -194,7 +196,65 @@ public sealed class PhotographersController(
             UpdatedAt                     = DateTime.UtcNow,
             DeletedAt                     = existing.DeletedAt,
             PortfolioEmbeddings           = existing.PortfolioEmbeddings,
-            PortfolioPhotos               = existing.PortfolioPhotos
+            PortfolioPhotos               = existing.PortfolioPhotos,
+            Equipments                    = existing.Equipments
+        };
+
+        await photographerRepository.UpsertAsync(updated, cancellationToken);
+        return Ok(updated);
+    }
+
+    [HttpPut("equipments")]
+    [ProducesResponseType(typeof(Photographer), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateEquipments(
+        [FromBody] UpdateEquipmentsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var existing = await photographerRepository.GetByIdAsync(id, cancellationToken);
+        if (existing is null) return NotFound();
+
+        var updated = new Photographer
+        {
+            Id                            = existing.Id,
+            Phone                         = existing.Phone,
+            Email                         = existing.Email,
+            DisplayName                   = existing.DisplayName,
+            Bio                           = existing.Bio,
+            Quote                         = existing.Quote,
+            NationalId                    = existing.NationalId,
+            Region                        = existing.Region,
+            PersonalAddress               = existing.PersonalAddress,
+            VerificationDocumentFrontUrl  = existing.VerificationDocumentFrontUrl,
+            VerificationDocumentBackUrl   = existing.VerificationDocumentBackUrl,
+            VerificationPortraitUrl       = existing.VerificationPortraitUrl,
+            AvatarUrl                     = existing.AvatarUrl,
+            CoverPhotoUrl                 = existing.CoverPhotoUrl,
+            InstagramUrl                  = existing.InstagramUrl,
+            MinBudget                     = existing.MinBudget,
+            MaxBudget                     = existing.MaxBudget,
+            AcceptsInstantBooking         = existing.AcceptsInstantBooking,
+            Rating                        = existing.Rating,
+            IsPremium                     = existing.IsPremium,
+            IsAvailable                   = existing.IsAvailable,
+            VerificationStatus            = existing.VerificationStatus,
+            PasswordHash                  = existing.PasswordHash,
+            GoogleId                      = existing.GoogleId,
+            CreatedAt                     = existing.CreatedAt,
+            UpdatedAt                     = DateTime.UtcNow,
+            DeletedAt                     = existing.DeletedAt,
+            PortfolioEmbeddings           = existing.PortfolioEmbeddings,
+            PortfolioPhotos               = existing.PortfolioPhotos,
+            Equipments                    = request.Equipments.Select(e => new PhotographerEquipment
+            {
+                Id = e.Id ?? Guid.NewGuid(),
+                PhotographerId = id,
+                Category = (EquipmentCategory)e.Category,
+                Name = e.Name?.Trim() ?? string.Empty,
+                Description = e.Description?.Trim(),
+                IsPrimary = e.IsPrimary
+            }).ToList()
         };
 
         await photographerRepository.UpsertAsync(updated, cancellationToken);
@@ -246,7 +306,8 @@ public sealed class PhotographersController(
             UpdatedAt                     = DateTime.UtcNow,
             DeletedAt                     = existing.DeletedAt,
             PortfolioEmbeddings           = existing.PortfolioEmbeddings,
-            PortfolioPhotos               = existing.PortfolioPhotos
+            PortfolioPhotos               = existing.PortfolioPhotos,
+            Equipments                    = existing.Equipments
         };
 
         await photographerRepository.UpsertAsync(updated, cancellationToken);

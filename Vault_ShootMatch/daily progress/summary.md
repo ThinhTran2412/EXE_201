@@ -3,7 +3,14 @@
 Tài liệu tích lũy các hạng mục đã triển khai trong ShootMatch.
 
 **Vault index:** [INDEX.md](../INDEX.md)  
-**Cập nhật lần cuối:** 2026-06-10
+**Cập nhật lần cuối:** 2026-06-12
+
+---
+
+## 2026-06-12
+
+- **Photographer Dark/Light Theme:** Hoàn thiện cá nhân hóa giao diện chuyển đổi Sáng/Tối dành riêng cho Photographer, khắc phục lỗi tệp màu, chữ chìm trên nền đen tại các màn Dashboard, Profile, Lịch làm việc, Chi tiết lịch hẹn, Chat.
+- **Quản lý thiết bị (Equipment Management):** Thêm Entity `PhotographerEquipment`, Migration DB, REST API CRUD, và phát triển màn hình `ManageEquipmentScreen.tsx` cực kỳ xịn xò (fix lỗi popup thêm thiết bị bị mờ).
 
 ---
 
@@ -41,7 +48,7 @@ Tài liệu tích lũy các hạng mục đã triển khai trong ShootMatch.
 - Customer Profile: Viewfinder Hero, Polaroid Asymmetric Highlights, Filmstrip Roll Preview, contact sheet, style tags.
 - Customer Edit Profile: Viewfinder Header, 3-frame collage editor, minimal identity form, custom roll preview manager (multi-select upload, sequential progress), interactive style pills with description card.
 - Photographer Portfolio Screen: Masonry 2-column gallery, Fullscreen viewer with swipe navigation and synchronized thumbnail strip.
-- Photographer: Dashboard (Mosaic portfolio), Bookings (Calendar + Specific day list), Chat, Portfolio masonry upload, PProfile, PersonalInfo (CCCD, address), ServiceManagement (editorial catalogue).
+- Photographer: Dashboard (Mosaic portfolio), Bookings (Calendar + Specific day list), Chat, Portfolio masonry upload, PProfile, PersonalInfo (CCCD, address), ServiceManagement (editorial catalogue), ManageEquipment (Quản lý thiết bị nhiếp ảnh), hỗ trợ chức năng switch Dark/Light Theme toàn cục cho Role này.
 - Design tokens: cream `#fff7e1`, dark `#1a1a0f`, orange `#ff4200`.
 - Local assets `picture/` cho demo khi API chưa có dữ liệu.
 
@@ -58,7 +65,7 @@ Tài liệu tích lũy các hạng mục đã triển khai trong ShootMatch.
 - **Bổ sung API Upload Ảnh Khách hàng:** 6 REST endpoints upload ảnh chuyên biệt hỗ trợ merge profile an toàn.
 - **Nâng cấp UI Discover & Photographer Profile:** Thêm ProgressBar, Verified Badge, Schedule Grid (lịch rảnh bận trực quan theo ngày) cho Photographer Profile, và heart favorite button.
 - **Bổ sung Photographer Portfolio Screen:** Trang xem ảnh Masonry 2 cột thác nước + Lightbox trượt mượt mà có thumbnail chân trang.
-- **Chi tiết:** [14-05-2026.md](./14-05-2026.md), [15-05-2026.md](./15-05-2026.md), [20-05-2026.md](./20-05-2026.md)
+- **Chi tiết:** [14-05-2026.md](./14-05-2026.md), [15-05-2026.md](./15-05-2026.md), [20-05-2026.md](./20-05-2026.md), [12-06-2026.md](./12-06-2026.md)
 
 ---
 

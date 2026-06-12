@@ -11,21 +11,10 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getPhotographerProfile, uploadPortfolioPhoto, deletePortfolioPhoto } from '../api';
+import { usePhotographerTheme } from '../PhotographerThemeContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const THEME = {
-  cream: '#fff7e1',
-  dark: '#0a0a06',
-  dark2: '#141410',
-  dark3: '#1e1e18',
-  orange: '#ff4200',
-  purple: '#3617cf',
-  glass: 'rgba(255,247,225,0.04)',
-  border: 'rgba(255,247,225,0.08)',
-};
-
-// Helper để sửa lỗi link localhost khi chạy trên thiết bị thật
 const formatPhotoUrl = (url?: string) => {
   if (!url) return '';
   const apiUrl = process.env.EXPO_PUBLIC_API_URL || '';
@@ -40,6 +29,9 @@ type PhotoData = { url: string; width: number; height: number; aspectRatio: numb
 
 export default function UploadPortfolioScreen() {
   const navigation = useNavigation<any>();
+  const { colors, isDark } = usePhotographerTheme();
+  const styles = getStyles(colors);
+
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [photoData, setPhotoData] = useState<PhotoData[]>([]);
@@ -77,7 +69,7 @@ export default function UploadPortfolioScreen() {
         setPhotoData(data);
       }
     } catch (err) {
-      console.error('Load profile error:', err);
+      console.log('Load profile error:', err);
     } finally {
       setLoading(false);
     }
@@ -92,8 +84,8 @@ export default function UploadPortfolioScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsMultipleSelection: true, // Cho phép chọn nhiều ảnh cùng lúc
-      allowsEditing: false, // BỎ CẮT ẢNH: Giữ nguyên tỷ lệ gốc
+      allowsMultipleSelection: true,
+      allowsEditing: false, 
       quality: 0.8,
       base64: false,
     });
@@ -112,13 +104,11 @@ export default function UploadPortfolioScreen() {
         let height = asset.height;
         let resizeAction: ImageManipulator.Action[] = [];
 
-        // Nếu ảnh quá lớn (4K, 8K), thu nhỏ về chuẩn Full HD (1920px) để chống tràn RAM (OOM)
         if (width > 1920 || height > 1920) {
           const ratio = Math.min(1920 / width, 1920 / height);
           resizeAction = [{ resize: { width: Math.round(width * ratio) } }];
         }
 
-        // Đi qua ImageManipulator để nén nhẹ và đồng bộ hóa thành JPEG (an toàn tuyệt đối cho Android)
         const manipResult = await ImageManipulator.manipulateAsync(
           asset.uri,
           resizeAction,
@@ -166,7 +156,7 @@ export default function UploadPortfolioScreen() {
                 if (newData.length === 0) setViewerIndex(null);
                 return newData;
               });
-              setSelectedUrls([]); // Thoát chế độ chọn
+              setSelectedUrls([]);
             } catch (err) {
               Alert.alert('Lỗi', 'Có lỗi xảy ra khi xóa một số ảnh.');
             } finally {
@@ -178,7 +168,6 @@ export default function UploadPortfolioScreen() {
     );
   }
 
-  // Hàm xoá 1 ảnh dùng trong Viewer
   async function handleDeleteSingle(url: string) {
     Alert.alert(
       'Xóa ảnh',
@@ -217,9 +206,6 @@ export default function UploadPortfolioScreen() {
 
   const isSelecting = selectedUrls.length > 0;
 
-  // --- Tính toán Absolute Masonry ---
-  // Sử dụng Absolute Positioning giúp React KHÔNG unmount ảnh khi chúng bị đổi cột (do thêm ảnh mới lên đầu)
-  // Điều này khắc phục triệt để lỗi chớp đen, xám ảnh, và hủy kết nối tải ảnh.
   let h1 = 0; let h2 = 0;
   const positions = photoData.map((p, idx) => {
     const itemHeight = colWidth / p.aspectRatio;
@@ -229,7 +215,7 @@ export default function UploadPortfolioScreen() {
     if (h1 <= h2) {
       top = h1;
       left = 0;
-      h1 += itemHeight + 16; // 16 là gap
+      h1 += itemHeight + 16;
     } else {
       top = h2;
       left = colWidth + 16;
@@ -241,10 +227,8 @@ export default function UploadPortfolioScreen() {
   
   const containerHeight = Math.max(h1, h2);
 
-  // --- Hàm cuộn Thumbnail ---
   const scrollToThumbnail = (index: number) => {
     if (!thumbnailsRef.current) return;
-    // padding 20 + index * (width 50 + gap 12) + nửa width 25 = 45 + index * 62
     const center = 45 + index * 62;
     const scrollX = center - SCREEN_WIDTH / 2;
     thumbnailsRef.current.scrollTo({ x: Math.max(0, scrollX), animated: true });
@@ -253,7 +237,7 @@ export default function UploadPortfolioScreen() {
   if (loading && photoData.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={THEME.orange} />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -279,7 +263,7 @@ export default function UploadPortfolioScreen() {
                 <Text style={styles.sub}>{photoData.length} hình ảnh hiển thị trên Profile</Text>
               </View>
               <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
-                <Ionicons name="close" size={24} color={THEME.cream} />
+                <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
           )}
@@ -293,12 +277,12 @@ export default function UploadPortfolioScreen() {
               {[...photoData].reverse().slice(0, 12).map((item, idx) => (
                 <Pressable
                   key={`quick-${item.originalIndex ?? idx}-${idx}`}
-                  style={{ width: 108, height: 148, borderRadius: 14, overflow: 'hidden', backgroundColor: THEME.dark2 }}
+                  style={styles.quickPhotoWrap}
                   onPress={() => setViewerIndex(item.originalIndex ?? 0)}
                 >
                   <Image
                     source={{ uri: formatPhotoUrl(item.url) }}
-                    style={{ width: '100%', height: '100%' }}
+                    style={styles.fullImage}
                     resizeMode="cover"
                     resizeMethod="resize"
                   />
@@ -339,7 +323,7 @@ export default function UploadPortfolioScreen() {
                       <Image 
                         source={{ uri: formatPhotoUrl(item.url) }} 
                         style={[
-                          { width: '100%', height: '100%', borderRadius: 12, backgroundColor: THEME.dark2 },
+                          styles.masonryImage,
                           isSelected && { opacity: 0.8 }
                         ]} 
                         resizeMethod="resize"
@@ -348,7 +332,7 @@ export default function UploadPortfolioScreen() {
                       {/* Checkmark overlay */}
                       {isSelecting && (
                         <View style={[styles.selectOverlay, isSelected && styles.selectOverlayActive]}>
-                          {isSelected && <Ionicons name="checkmark" size={18} color={THEME.cream} />}
+                          {isSelected && <Ionicons name="checkmark" size={18} color="#FFFBF0" />}
                         </View>
                       )}
                     </Pressable>
@@ -358,7 +342,7 @@ export default function UploadPortfolioScreen() {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Ionicons name="camera-outline" size={64} color={THEME.border} />
+              <Ionicons name="camera-outline" size={64} color={colors.border} />
               <Text style={styles.emptyText}>Bộ sưu tập trống trải</Text>
               <Text style={styles.emptySubText}>Hãy thêm vài tác phẩm để khách hàng trầm trồ</Text>
             </View>
@@ -372,8 +356,8 @@ export default function UploadPortfolioScreen() {
       {!isSelecting && (
         <Animated.View entering={FadeInUp.delay(400).duration(600)} style={styles.fabContainer}>
           <Pressable onPress={handlePickImage} disabled={uploading} style={({pressed}) => [styles.fabBtn, pressed && { transform: [{scale: 0.96}] }]}>
-            <LinearGradient colors={[THEME.orange, '#e63b00']} style={styles.fabGradient} start={{x: 0, y: 0}} end={{x: 1, y: 0}}>
-              {uploading ? <ActivityIndicator color={THEME.cream} style={{ marginRight: 8 }} /> : <Ionicons name="add" size={24} color={THEME.cream} style={{ marginRight: 6 }} />}
+            <LinearGradient colors={[colors.accent, '#e63b00']} style={styles.fabGradient} start={{x: 0, y: 0}} end={{x: 1, y: 0}}>
+              {uploading ? <ActivityIndicator color="#FFFBF0" style={{ marginRight: 8 }} /> : <Ionicons name="add" size={24} color="#FFFBF0" style={{ marginRight: 6 }} />}
               <Text style={styles.fabText}>{uploading ? 'ĐANG TẢI LÊN...' : 'THÊM TÁC PHẨM'}</Text>
             </LinearGradient>
           </Pressable>
@@ -387,7 +371,7 @@ export default function UploadPortfolioScreen() {
           {/* Header */}
           <View style={[styles.viewerHeader, { top: insets.top || 20 }]}>
             <Pressable style={styles.viewerClose} onPress={() => setViewerIndex(null)}>
-              <Ionicons name="close" size={28} color={THEME.cream} />
+              <Ionicons name="close" size={28} color="#FFFBF0" />
             </Pressable>
             {viewerIndex !== null && photoData[viewerIndex] && (
               <Pressable style={styles.viewerDelete} onPress={() => handleDeleteSingle(photoData[viewerIndex].url)}>
@@ -406,7 +390,7 @@ export default function UploadPortfolioScreen() {
             initialScrollIndex={viewerIndex !== null && viewerIndex < photoData.length ? viewerIndex : 0}
             getItemLayout={(data, index) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * index, index })}
             onMomentumScrollEnd={(e) => {
-              if (viewerIndex === null) return; // Chặn FlatList tự động kích hoạt khi Modal đang đóng
+              if (viewerIndex === null) return;
               
               const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
               setViewerIndex(idx);
@@ -452,23 +436,24 @@ export default function UploadPortfolioScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: THEME.dark },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: THEME.dark },
+const getStyles = (colors: any) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   scroll: { paddingHorizontal: 16, paddingTop: 16, gap: 24 },
   
   header: { marginBottom: 8 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  title: { fontSize: 36, fontWeight: '800', color: THEME.cream, letterSpacing: -1 },
-  sub: { fontSize: 14, color: 'rgba(255,247,225,0.5)', marginTop: 4 },
-  backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: THEME.glass, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: THEME.border },
-  sectionLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 2, textTransform: 'uppercase', color: 'rgba(255,247,225,0.45)' },
-  sectionHint: { fontSize: 12, color: 'rgba(255,247,225,0.32)', marginTop: 4, marginBottom: 2 },
+  title: { fontSize: 36, fontWeight: '800', color: colors.text, letterSpacing: -1 },
+  sub: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
+  backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  sectionLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 2, textTransform: 'uppercase', color: colors.textLight },
+  sectionHint: { fontSize: 12, color: colors.textMuted, marginTop: 4, marginBottom: 2 },
   
   galleryContainer: { flex: 1 },
-  masonryContainer: { flexDirection: 'row', justifyContent: 'space-between' },
-  masonryCol: { gap: 16 },
-  
+  masonryImage: { width: '100%', height: '100%', borderRadius: 12, backgroundColor: colors.surfaceStrong },
+  quickPhotoWrap: { width: 108, height: 148, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.surfaceStrong },
+  fullImage: { width: '100%', height: '100%' },
+
   // Selection Styles
   selectOverlay: {
     position: 'absolute',
@@ -481,16 +466,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   selectOverlayActive: {
-    backgroundColor: THEME.orange,
-    borderColor: THEME.orange,
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   cancelBtn: { paddingVertical: 8, paddingRight: 16 },
-  cancelText: { color: THEME.cream, fontSize: 16, fontWeight: '600' },
+  cancelText: { color: colors.text, fontSize: 16, fontWeight: '600' },
   bulkDeleteBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,68,68,0.15)', justifyContent: 'center', alignItems: 'center' },
 
   emptyState: { height: 300, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  emptyText: { color: THEME.cream, fontSize: 18, fontWeight: '600' },
-  emptySubText: { color: 'rgba(255,247,225,0.4)', fontSize: 14 },
+  emptyText: { color: colors.text, fontSize: 18, fontWeight: '600' },
+  emptySubText: { color: colors.textMuted, fontSize: 14 },
 
   fabContainer: {
     position: 'absolute',
@@ -500,13 +485,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.2,
     shadowRadius: 20,
     elevation: 10,
   },
   fabBtn: { overflow: 'hidden', borderRadius: 30 },
   fabGradient: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 28, paddingVertical: 16 },
-  fabText: { color: THEME.cream, fontSize: 16, fontWeight: '700', letterSpacing: 1 },
+  fabText: { color: '#FFFBF0', fontSize: 16, fontWeight: '700', letterSpacing: 1 },
 
   // --- VIEWER STYLES ---
   viewerBackground: {
@@ -552,7 +537,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   thumbnailActive: {
-    borderColor: THEME.orange,
+    borderColor: colors.accent,
     opacity: 1,
     transform: [{ scale: 1.1 }],
   },

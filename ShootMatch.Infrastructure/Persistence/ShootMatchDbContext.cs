@@ -27,6 +27,7 @@ public sealed class ShootMatchDbContext(
     public DbSet<ReviewRecord> Reviews => Set<ReviewRecord>();
     public DbSet<VerificationRequestRecord> VerificationRequests => Set<VerificationRequestRecord>();
     public DbSet<PhotographerAvailabilityRecord> PhotographerAvailabilities => Set<PhotographerAvailabilityRecord>();
+    public DbSet<PhotographerEquipmentRecord> PhotographerEquipments => Set<PhotographerEquipmentRecord>();
     public DbSet<OtpRecordEntry> OtpRecords => Set<OtpRecordEntry>();
     public DbSet<AppNotificationRecord> AppNotifications => Set<AppNotificationRecord>();
     public DbSet<StyleRecord> Styles => Set<StyleRecord>();
@@ -86,6 +87,18 @@ public sealed class ShootMatchDbContext(
             entity.HasMany(x => x.PortfolioEmbeddings).WithOne(x => x.Photographer).HasForeignKey(x => x.PhotographerId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(x => x.PortfolioPhotos).WithOne(x => x.Photographer).HasForeignKey(x => x.PhotographerId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(x => x.ServicePackages).WithOne(x => x.Photographer).HasForeignKey(x => x.PhotographerId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── PhotographerEquipment ───────────────────────────────────────────
+        modelBuilder.Entity<PhotographerEquipmentRecord>(entity =>
+        {
+            entity.ToTable("photographer_equipments");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Category).HasConversion<int>();
+            entity.Property(x => x.Name).HasMaxLength(200);
+            entity.Property(x => x.Description).HasMaxLength(1000);
+            entity.HasIndex(x => x.PhotographerId);
+            entity.HasOne(x => x.Photographer).WithMany(x => x.Equipments).HasForeignKey(x => x.PhotographerId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // ── PortfolioEmbedding ───────────────────────────────────────────────

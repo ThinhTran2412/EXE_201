@@ -16,13 +16,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../../../app/theme/colors';
 import { REGION_OPTIONS, formatRegion } from '../../../shared/constants/regions';
 import { getPhotographerProfile, updatePersonalInfo, uploadProfileImage } from '../api';
+import { usePhotographerTheme } from '../PhotographerThemeContext';
 
 export default function PersonalInfoScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = usePhotographerTheme();
+  const styles = getStyles(colors);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [locked, setLocked] = useState(true);
@@ -94,24 +97,27 @@ export default function PersonalInfoScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Thông tin cá nhân</Text>
+        <Pressable style={styles.backBtn} onPress={() => setLocked(v => !v)}>
+          <Ionicons name={locked ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.text} />
+        </Pressable>
+      </View>
+
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Animated.View entering={FadeInDown.duration(500)} style={styles.hero}>
-            <View style={[styles.topActions, { top: Math.max(insets.top, 16) }]}>
-              <Pressable style={styles.iconBtn} onPress={() => navigation.goBack()}>
-                <Ionicons name="chevron-back" size={22} color="#FFFBF0" />
-              </Pressable>
-              <Pressable style={styles.iconBtn} onPress={() => setLocked(v => !v)}>
-                <Ionicons name={locked ? 'eye-off-outline' : 'eye-outline'} size={20} color="#FFFBF0" />
-              </Pressable>
-            </View>
             <View style={styles.heroBadge}>
-              <Ionicons name="shield-checkmark-outline" size={13} color="#F7E7D2" />
+              <Ionicons name="shield-checkmark-outline" size={13} color={colors.accent} />
               <Text style={styles.heroBadgeText}>Xác thực và liên hệ</Text>
             </View>
-            <Text style={styles.title}>Thông tin cá nhân</Text>
-            <Text style={styles.sub}>Trang riêng để quản lý dữ liệu nhận diện, liên hệ, địa chỉ và ảnh xác thực.</Text>
+            <Text style={styles.title}>Hồ sơ Photographer</Text>
+            <Text style={styles.sub}>Quản lý dữ liệu nhận diện, liên hệ, địa chỉ và ảnh xác thực chính thức.</Text>
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(120).duration(500)} style={styles.card}>
@@ -129,11 +135,11 @@ export default function PersonalInfoScreen() {
                 onPress={() => !locked && setRegionPickerOpen(true)}
                 disabled={locked}
               >
-                <View style={styles.inputIcon}><Ionicons name="map-outline" size={14} color="#F7E7D2" /></View>
+                <View style={styles.inputIcon}><Ionicons name="map-outline" size={14} color={colors.accent} /></View>
                 <Text style={[styles.regionValue, !form.region && styles.regionPlaceholder]}>
                   {form.region ? formatRegion(form.region) : 'Chọn tỉnh / thành phố'}
                 </Text>
-                {!locked && <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.35)" />}
+                {!locked && <Ionicons name="chevron-down" size={16} color={isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)"} />}
               </Pressable>
             </View>
             <Field label="Địa chỉ cụ thể" value={form.personalAddress} placeholder="Số nhà, đường, phường/xã..." onChangeText={(personalAddress: string) => setForm(prev => ({ ...prev, personalAddress }))} icon="location-outline" multiline locked={locked} />
@@ -150,12 +156,12 @@ export default function PersonalInfoScreen() {
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(220).duration(500)} style={styles.noteCard}>
-            <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
+            <Ionicons name="information-circle-outline" size={18} color={colors.accent} />
             <Text style={styles.noteText}>Mục này dùng để lưu dữ liệu cá nhân và xác thực, tách riêng khỏi phần dịch vụ và giá.</Text>
           </Animated.View>
 
           <Pressable style={styles.saveBtn} onPress={handleSave} disabled={saving}>
-            <LinearGradient colors={[colors.primary, '#E67E22']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveBtnGradient}>
+            <LinearGradient colors={[colors.accent, '#E67E22']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveBtnGradient}>
               <Text style={styles.saveBtnText}>{saving ? 'Đang lưu...' : 'Lưu thông tin cá nhân'}</Text>
             </LinearGradient>
           </Pressable>
@@ -167,19 +173,21 @@ export default function PersonalInfoScreen() {
           <Pressable style={styles.regionBackdrop} onPress={() => setRegionPickerOpen(false)} />
           <View style={styles.regionSheet}>
             <Text style={styles.regionSheetTitle}>Chọn tỉnh / thành phố</Text>
-            {REGION_OPTIONS.map(({ code, label }) => (
-              <Pressable
-                key={code}
-                style={[styles.regionOption, form.region === code && styles.regionOptionActive]}
-                onPress={() => {
-                  setForm(prev => ({ ...prev, region: code }));
-                  setRegionPickerOpen(false);
-                }}
-              >
-                <Text style={[styles.regionOptionText, form.region === code && styles.regionOptionTextActive]}>{label}</Text>
-                {form.region === code && <Ionicons name="checkmark" size={18} color={colors.primary} />}
-              </Pressable>
-            ))}
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {REGION_OPTIONS.map(({ code, label }) => (
+                <Pressable
+                  key={code}
+                  style={[styles.regionOption, form.region === code && styles.regionOptionActive]}
+                  onPress={() => {
+                    setForm(prev => ({ ...prev, region: code }));
+                    setRegionPickerOpen(false);
+                  }}
+                >
+                  <Text style={[styles.regionOptionText, form.region === code && styles.regionOptionTextActive]}>{label}</Text>
+                  {form.region === code && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
         </View>
       )}
@@ -188,17 +196,19 @@ export default function PersonalInfoScreen() {
 }
 
 function Field({ label, value, placeholder, onChangeText, icon, locked, ...props }: any) {
+  const { colors, isDark } = usePhotographerTheme();
+  const styles = getStyles(colors);
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.inputWrap}>
-        <View style={styles.inputIcon}><Ionicons name={icon} size={14} color="#F7E7D2" /></View>
+        <View style={styles.inputIcon}><Ionicons name={icon} size={14} color={colors.accent} /></View>
         <TextInput
           style={[styles.input, props.multiline && styles.textArea]}
           value={value}
           editable={!locked}
           placeholder={placeholder}
-          placeholderTextColor="rgba(255,255,255,0.35)"
+          placeholderTextColor={isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)"}
           onChangeText={onChangeText}
           {...props}
         />
@@ -208,59 +218,62 @@ function Field({ label, value, placeholder, onChangeText, icon, locked, ...props
 }
 
 function UploadRow({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
+  const { colors } = usePhotographerTheme();
+  const styles = getStyles(colors);
   return (
     <Pressable style={styles.uploadRow} onPress={onPress}>
-      <View style={styles.uploadIcon}><Ionicons name="image-outline" size={14} color="#F7E7D2" /></View>
+      <View style={styles.uploadIcon}><Ionicons name="image-outline" size={14} color={colors.accent} /></View>
       <View style={styles.uploadBody}>
         <Text style={styles.uploadLabel}>{label}</Text>
         <Text style={styles.uploadValue}>{value ? 'Đã tải ảnh' : 'Chưa có ảnh'}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.28)" />
+      <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0d0b14' },
+const getStyles = (colors: any) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   content: { padding: 20, gap: 14, paddingBottom: 28 },
-  hero: { backgroundColor: '#141121', borderRadius: 26, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
-  topActions: { position: 'absolute', left: 16, right: 16, zIndex: 10, flexDirection: 'row', justifyContent: 'space-between' },
-  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
-  heroBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(243,192,139,0.14)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, marginTop: 30 },
-  heroBadgeText: { color: '#F7E7D2', fontSize: 12, fontWeight: '700' },
-  title: { color: '#FFFBF0', fontSize: 24, fontWeight: '900', marginTop: 12 },
-  sub: { color: 'rgba(255,251,240,0.62)', marginTop: 8, lineHeight: 20, fontSize: 13 },
-  card: { backgroundColor: '#1b1726', borderRadius: 22, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', gap: 12 },
+  hero: { backgroundColor: colors.surfaceStrong, borderRadius: 26, padding: 20, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  backBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surfaceStrong, borderWidth: 1, borderColor: colors.border },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
+  heroBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(230,126,34,0.12)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
+  heroBadgeText: { color: colors.text, fontSize: 12, fontWeight: '700' },
+  title: { color: colors.text, fontSize: 24, fontWeight: '900', marginTop: 12 },
+  sub: { color: colors.textMuted, marginTop: 8, lineHeight: 20, fontSize: 13 },
+  card: { backgroundColor: colors.surface, borderRadius: 22, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 12 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { color: '#FFFBF0', fontSize: 16, fontWeight: '800' },
-  sectionSubSmall: { color: 'rgba(255,251,240,0.5)', fontSize: 11, fontWeight: '700' },
-  lockState: { color: 'rgba(255,251,240,0.55)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
+  sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
+  sectionSubSmall: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+  lockState: { color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
   fieldGroup: { gap: 6 },
-  label: { color: 'rgba(255,251,240,0.72)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
-  inputWrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#141121', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  label: { color: colors.text, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+  inputWrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: colors.surfaceStrong, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, borderWidth: 1, borderColor: colors.border },
   inputIcon: { width: 24, height: 24, borderRadius: 8, backgroundColor: 'rgba(243,192,139,0.12)', justifyContent: 'center', alignItems: 'center', marginTop: 1 },
-  input: { flex: 1, color: '#FFFBF0', fontSize: 13, minHeight: 22, padding: 0 },
+  input: { flex: 1, color: colors.text, fontSize: 13, minHeight: 22, padding: 0 },
   textArea: { minHeight: 70, textAlignVertical: 'top' },
-  uploadRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#141121', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  uploadRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surfaceStrong, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: colors.border },
   uploadIcon: { width: 24, height: 24, borderRadius: 8, backgroundColor: 'rgba(243,192,139,0.12)', justifyContent: 'center', alignItems: 'center' },
   uploadBody: { flex: 1 },
-  uploadLabel: { color: '#FFFBF0', fontSize: 13, fontWeight: '700' },
-  uploadValue: { color: 'rgba(255,251,240,0.55)', fontSize: 11, marginTop: 2 },
+  uploadLabel: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  uploadValue: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   noteCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(230,126,34,0.08)', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(230,126,34,0.14)' },
-  noteText: { flex: 1, color: 'rgba(255,251,240,0.72)', lineHeight: 18, fontSize: 12 },
+  noteText: { flex: 1, color: colors.text, lineHeight: 18, fontSize: 12 },
   saveBtn: { borderRadius: 16, overflow: 'hidden', marginTop: 4 },
   saveBtnGradient: { paddingVertical: 14, alignItems: 'center' },
   saveBtnText: { color: '#fff', fontWeight: '900', fontSize: 13 },
   inputLocked: { opacity: 0.85 },
-  regionValue: { flex: 1, color: '#FFFBF0', fontSize: 13, fontWeight: '600' },
-  regionPlaceholder: { color: 'rgba(255,255,255,0.35)', fontWeight: '400' },
+  regionValue: { flex: 1, color: colors.text, fontSize: 13, fontWeight: '600' },
+  regionPlaceholder: { color: colors.textLight, fontWeight: '400' },
   regionOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end', zIndex: 20 },
-  regionBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
-  regionSheet: { backgroundColor: '#1b1726', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 16, paddingBottom: 28, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', maxHeight: '55%' },
-  regionSheetTitle: { color: '#FFFBF0', fontSize: 16, fontWeight: '800', marginBottom: 12 },
+  regionBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.overlay },
+  regionSheet: { backgroundColor: colors.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 16, paddingBottom: 28, borderWidth: 1, borderColor: colors.border, maxHeight: '55%' },
+  regionSheetTitle: { color: colors.text, fontSize: 16, fontWeight: '800', marginBottom: 12 },
   regionOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12 },
   regionOptionActive: { backgroundColor: 'rgba(230,126,34,0.12)' },
-  regionOptionText: { color: 'rgba(255,251,240,0.85)', fontSize: 14, fontWeight: '600' },
-  regionOptionTextActive: { color: colors.primary },
+  regionOptionText: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  regionOptionTextActive: { color: colors.accent },
 });
