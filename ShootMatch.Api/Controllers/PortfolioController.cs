@@ -132,6 +132,47 @@ public sealed class PortfolioController(
         return null;
     }
 
+    /// <summary>Update the tags (styles & concepts) for a specific portfolio photo.</summary>
+    [HttpPut("photos/{id:guid}/tags")]
+    public async Task<IActionResult> UpdateTags(
+        Guid id,
+        [FromBody] UpdatePhotoTagsRequest req,
+        CancellationToken ct)
+    {
+        var photographerId = GetPhotographerIdOrThrow();
+
+        var photo = await db.PortfolioPhotos
+            .Include(x => x.Styles)
+            .Include(x => x.Concepts)
+            .FirstOrDefaultAsync(x => x.Id == id && x.PhotographerId == photographerId, ct);
+
+        if (photo is null)
+            return NotFound(new { error = "Portfolio photo not found or does not belong to you." });
+
+        var newStyles = await db.Styles
+            .Where(x => req.StyleIds.Contains(x.Id))
+            .ToListAsync(ct);
+
+        var newConcepts = await db.Concepts
+            .Where(x => req.ConceptIds.Contains(x.Id))
+            .ToListAsync(ct);
+
+        photo.Styles.Clear();
+        foreach (var s in newStyles)
+        {
+            photo.Styles.Add(s);
+        }
+
+        photo.Concepts.Clear();
+        foreach (var c in newConcepts)
+        {
+            photo.Concepts.Add(c);
+        }
+
+        await db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
     private Guid GetPhotographerIdOrThrow()
     {
         var claim = User.FindFirst("photographer_id")?.Value
@@ -146,3 +187,4 @@ public sealed class PortfolioController(
 }
 
 public record DeletePhotoRequest(string PhotoUrl);
+public record UpdatePhotoTagsRequest(List<Guid> StyleIds, List<Guid> ConceptIds);

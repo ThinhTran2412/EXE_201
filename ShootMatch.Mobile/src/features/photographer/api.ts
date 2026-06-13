@@ -345,3 +345,100 @@ export async function proposeConcept(name: string, description: string, keywords
   return data;
 }
 
+export interface Style {
+  id: string;
+  name: string;
+  description: string;
+  keywords: string;
+  status: string;
+}
+
+export interface Concept {
+  id: string;
+  name: string;
+  description: string;
+  keywords: string;
+  status: string;
+}
+
+export interface DetailedPortfolioPhoto {
+  id: string;
+  photographerId: string;
+  imageUrl: string;
+  thumbnailUrl: string;
+  displayOrder: number;
+  isIndexed: boolean;
+  dominantColors: string;
+  createdAt: string;
+  styles: Style[];
+  concepts: Concept[];
+}
+
+export async function getMyDetailedPortfolioPhotos(): Promise<DetailedPortfolioPhoto[]> {
+  const data = await gql<{ myPortfolioPhotos: DetailedPortfolioPhoto[] }>(`
+    query {
+      myPortfolioPhotos {
+        id
+        photographerId
+        imageUrl
+        thumbnailUrl
+        displayOrder
+        isIndexed
+        dominantColors
+        createdAt
+        styles {
+          id
+          name
+          description
+          keywords
+          status
+        }
+        concepts {
+          id
+          name
+          description
+          keywords
+          status
+        }
+      }
+    }
+  `);
+  return data.myPortfolioPhotos ?? [];
+}
+
+export async function getActiveStylesAndConcepts(): Promise<{ styles: Style[]; concepts: Concept[] }> {
+  const data = await gql<{ styles: Style[]; concepts: Concept[] }>(`
+    query {
+      styles(status: "Approved") {
+        id
+        name
+        description
+        keywords
+        status
+      }
+      concepts(status: "Approved") {
+        id
+        name
+        description
+        keywords
+        status
+      }
+    }
+  `);
+  return {
+    styles: data.styles ?? [],
+    concepts: data.concepts ?? [],
+  };
+}
+
+export async function updatePortfolioPhotoTags(
+  photoId: string,
+  styleIds: string[],
+  conceptIds: string[]
+): Promise<void> {
+  await apiClient.put(`/api/photographers/portfolio/photos/${photoId}/tags`, {
+    styleIds,
+    conceptIds,
+  });
+}
+

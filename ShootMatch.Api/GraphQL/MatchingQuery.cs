@@ -348,6 +348,61 @@ public sealed class MatchingQuery
         return await photographerRepository.GetByIdAsync(photographerId, cancellationToken);
     }
 
+    /// <summary>Returns the authenticated photographer's detailed portfolio photos (including Styles and Concepts).</summary>
+    [Authorize(Roles = new[] { "photographer" })]
+    public async Task<IReadOnlyList<DetailedPortfolioPhoto>> MyPortfolioPhotos(
+        [Service] IHttpContextAccessor httpContextAccessor,
+        [Service] ShootMatch.Infrastructure.Persistence.ShootMatchDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var claim = httpContextAccessor.HttpContext?.User.FindFirst("photographer_id")?.Value;
+        if (!Guid.TryParse(claim, out var photographerId)) return [];
+
+        var records = await dbContext.PortfolioPhotos
+            .Include(x => x.Styles)
+            .Include(x => x.Concepts)
+            .AsNoTracking()
+            .Where(x => x.PhotographerId == photographerId)
+            .OrderBy(x => x.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        return records.Select(p => new DetailedPortfolioPhoto
+        {
+            Id = p.Id,
+            PhotographerId = p.PhotographerId,
+            ImageUrl = p.ImageUrl,
+            ThumbnailUrl = p.ThumbnailUrl,
+            DisplayOrder = p.DisplayOrder,
+            IsIndexed = p.IsIndexed,
+            DominantColors = p.DominantColors,
+            CreatedAt = p.CreatedAt,
+            Styles = p.Styles.Select(s => new Style
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Description = s.Description,
+                Keywords = s.Keywords,
+                Status = s.Status,
+                CreatedById = s.CreatedById,
+                ApprovedById = s.ApprovedById,
+                CreatedAt = s.CreatedAt,
+                UpdatedAt = s.UpdatedAt
+            }).ToList(),
+            Concepts = p.Concepts.Select(c => new Concept
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Description = c.Description,
+                Keywords = c.Keywords,
+                Status = c.Status,
+                CreatedById = c.CreatedById,
+                ApprovedById = c.ApprovedById,
+                CreatedAt = c.CreatedAt,
+                UpdatedAt = c.UpdatedAt
+            }).ToList()
+        }).ToList();
+    }
+
     // ── Matches ───────────────────────────────────────────────────────────────
 
     /// <summary>Returns all matches for the authenticated customer.</summary>
