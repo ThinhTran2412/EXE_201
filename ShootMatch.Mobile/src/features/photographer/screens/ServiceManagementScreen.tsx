@@ -10,6 +10,9 @@ import {
   Alert,
   Image,
   ImageBackground,
+  Platform,
+  useWindowDimensions,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
@@ -120,6 +123,14 @@ export default function ServiceManagementScreen() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<ServiceForm>(DEFAULT_FORM);
   const [tagInput, setTagInput] = useState('');
+  const { width: windowWidth } = useWindowDimensions();
+  const W = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [scrollWidth, setScrollWidth] = useState<number>(0);
+
+  const cardInnerWidth = scrollWidth || W;
+  const photoSize = Math.floor((cardInnerWidth - 64 - 18) / 4) - 1.5;
 
   useEffect(() => {
     let mounted = true;
@@ -308,7 +319,13 @@ export default function ServiceManagementScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        onLayout={(e) => {
+          setScrollWidth(e.nativeEvent.layout.width);
+        }}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         <Animated.View entering={FadeInUp.duration(700)} style={styles.hero}>
           <View style={styles.heroGlow} />
           <View style={styles.heroTopRow}>
@@ -471,18 +488,33 @@ export default function ServiceManagementScreen() {
                       {item.media.length > 1 && (
                         <View style={styles.thumbStrip}>
                           {item.media.slice(1, 5).map((media: ServicePackageMedia, mi: number) => (
-                            <PortfolioImageCell
+                            <Pressable
                               key={media.id ?? mi}
-                              uri={media.imageUrl}
-                              borderRadius={10}
-                              style={styles.thumbStripItem}
-                              resizeMode="cover"
-                            />
+                              onPress={() => {
+                                const urls = item.media.map(m => m.imageUrl);
+                                setLightboxImages(urls);
+                                setLightboxIndex(mi + 1);
+                              }}
+                            >
+                              <PortfolioImageCell
+                                uri={media.imageUrl}
+                                borderRadius={10}
+                                style={styles.thumbStripItem}
+                                resizeMode="cover"
+                              />
+                            </Pressable>
                           ))}
                           {item.media.length > 5 && (
-                            <View style={styles.thumbStripMore}>
+                            <Pressable
+                              style={styles.thumbStripMore}
+                              onPress={() => {
+                                const urls = item.media.map(m => m.imageUrl);
+                                setLightboxImages(urls);
+                                setLightboxIndex(5);
+                              }}
+                            >
                               <Text style={styles.thumbStripMoreText}>+{item.media.length - 5}</Text>
-                            </View>
+                            </Pressable>
                           )}
                         </View>
                       )}
@@ -511,12 +543,14 @@ export default function ServiceManagementScreen() {
                             <Text style={[styles.detailSectionTitle, { color: colors.success }]}>Features</Text>
                           </View>
                           <View style={styles.featureList}>
-                            {featureLines.map((line, li) => (
-                              <View key={li} style={styles.featureItem}>
-                                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-                                <Text style={styles.featureItemText}>{line}</Text>
-                              </View>
-                            ))}
+                            {featureLines.map((line, li) => {
+                              const cleanLine = line.replace(/^[-\*•✓]\s*/, '');
+                              return (
+                                <View key={li} style={styles.featureItem}>
+                                  <Text style={styles.featureItemText}>✓ {cleanLine}</Text>
+                                </View>
+                              );
+                            })}
                           </View>
                         </View>
                       )}
@@ -529,12 +563,14 @@ export default function ServiceManagementScreen() {
                             <Text style={[styles.detailSectionTitle, { color: colors.info }]}>Yêu cầu buổi chụp</Text>
                           </View>
                           <View style={styles.featureList}>
-                            {requirementLines.map((line, li) => (
-                              <View key={li} style={styles.featureItem}>
-                                <Ionicons name="ellipse" size={6} color={colors.info} style={{ marginTop: 5 }} />
-                                <Text style={[styles.featureItemText, { color: colors.textMuted }]}>{line}</Text>
-                              </View>
-                            ))}
+                            {requirementLines.map((line, li) => {
+                              const cleanLine = line.replace(/^[-\*•]\s*/, '');
+                              return (
+                                <View key={li} style={styles.featureItem}>
+                                  <Text style={[styles.featureItemText, { color: colors.textMuted }]}>• {cleanLine}</Text>
+                                </View>
+                              );
+                            })}
                           </View>
                         </View>
                       )}
@@ -548,13 +584,22 @@ export default function ServiceManagementScreen() {
                           </View>
                           <View style={styles.expandedPhotoGrid}>
                             {item.media.map((media: ServicePackageMedia, mi: number) => (
-                              <PortfolioImageCell
+                              <Pressable
                                 key={media.id ?? mi}
-                                uri={media.imageUrl}
-                                borderRadius={10}
-                                style={styles.expandedPhotoItem}
-                                resizeMode="cover"
-                              />
+                                style={[styles.expandedPhotoItem, { width: photoSize, height: photoSize }]}
+                                onPress={() => {
+                                  const urls = item.media.map(m => m.imageUrl);
+                                  setLightboxImages(urls);
+                                  setLightboxIndex(mi);
+                                }}
+                              >
+                                <PortfolioImageCell
+                                  uri={media.imageUrl}
+                                  borderRadius={10}
+                                  style={{ width: '100%', height: '100%' }}
+                                  resizeMode="cover"
+                                />
+                              </Pressable>
                             ))}
                           </View>
                         </View>
@@ -802,6 +847,58 @@ export default function ServiceManagementScreen() {
           </SafeAreaView>
         </View>
       </Modal>
+      {/* ── LIGHTBOX ── */}
+      <Modal
+        visible={lightboxIndex !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLightboxIndex(null)}
+      >
+        <View style={styles.viewerBackground}>
+          <View style={[styles.viewerHeader, { top: insets.top || 20 }]}>
+            <Pressable style={styles.viewerClose} onPress={() => setLightboxIndex(null)}>
+              <Ionicons name="close" size={28} color="#FFFBF0" />
+            </Pressable>
+          </View>
+
+          {lightboxIndex !== null && (
+            <FlatList
+              data={lightboxImages}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              initialScrollIndex={lightboxIndex}
+              getItemLayout={(_: any, index: number) => ({
+                length: W,
+                offset: W * index,
+                index,
+              })}
+              onMomentumScrollEnd={(e: any) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / W);
+                setLightboxIndex(idx);
+              }}
+              renderItem={({ item: imgUri }: { item: string }) => (
+                <View
+                  style={{
+                    width: W,
+                    flex: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <PortfolioImageCell
+                    uri={imgUri}
+                    style={{ width: W, height: '88%' }}
+                    borderRadius={0}
+                    resizeMode="contain"
+                  />
+                </View>
+              )}
+              keyExtractor={(img: string, index: number) => `${img}-${index}`}
+            />
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -987,7 +1084,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(255, 247, 225, 0.15)',
+    borderColor: 'rgba(255, 247, 225, 0.45)',
   },
   metaChipText: { color: colors.text, fontSize: 11.5, fontWeight: '600' },
 
@@ -1221,5 +1318,25 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '700',
+  },
+  viewerBackground: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)' },
+  viewerHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    zIndex: 10,
+  },
+  viewerClose: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

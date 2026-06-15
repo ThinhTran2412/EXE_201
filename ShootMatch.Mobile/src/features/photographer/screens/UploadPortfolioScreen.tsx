@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ScrollView, StyleSheet, Text, View, Pressable, Alert, ActivityIndicator, Image,
-  Dimensions, Modal, FlatList, TextInput, PanResponder
+  Dimensions, Modal, FlatList, TextInput, PanResponder, Platform, useWindowDimensions
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInUp, FadeInDown } from 'react-native-reanimated';
@@ -30,9 +30,15 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const formatPhotoUrl = (url?: string) => {
   if (!url) return '';
   const apiUrl = process.env.EXPO_PUBLIC_API_URL || '';
-  const ipMatch = apiUrl.match(/http:\/\/((\d+\.){3}\d+)/);
-  if (ipMatch && (url.includes('localhost') || url.includes('127.0.0.1'))) {
-    return url.replace(/localhost|127\.0\.0\.1/, ipMatch[1]);
+  
+  // Rewrite old trycloudflare.com tunnels or localhost to current API URL
+  if (url.includes('trycloudflare.com') || url.includes('localhost') || url.includes('127.0.0.1')) {
+    try {
+      const parsed = new URL(url);
+      return `${apiUrl}${parsed.pathname}${parsed.search}`;
+    } catch (e) {
+      return url;
+    }
   }
   return url;
 };
@@ -106,7 +112,10 @@ export default function UploadPortfolioScreen() {
   }).current;
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
 
-  const colWidth = (SCREEN_WIDTH - 32 - 16) / 2; // padding 16*2, gap 16
+  const { width: windowWidth } = useWindowDimensions();
+  const W = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
+  const numColumns = Platform.OS === 'web' ? 4 : (W >= 768 ? 3 : 2);
+  const colWidth = (W - 32 - 16 * (numColumns - 1)) / numColumns;
 
   useEffect(() => {
     loadData();
@@ -529,31 +538,32 @@ export default function UploadPortfolioScreen() {
 
   const isSelecting = selectedUrls.length > 0;
 
-  let h1 = 0; let h2 = 0;
+  const colHeights = Array(numColumns).fill(0);
   const positions = photoData.map((p, idx) => {
     const itemHeight = colWidth / p.aspectRatio;
-    let top = 0;
-    let left = 0;
     
-    if (h1 <= h2) {
-      top = h1;
-      left = 0;
-      h1 += itemHeight + 16;
-    } else {
-      top = h2;
-      left = colWidth + 16;
-      h2 += itemHeight + 16;
+    let minColIdx = 0;
+    let minColHeight = colHeights[0];
+    for (let i = 1; i < numColumns; i++) {
+      if (colHeights[i] < minColHeight) {
+        minColHeight = colHeights[i];
+        minColIdx = i;
+      }
     }
+    
+    const top = colHeights[minColIdx];
+    const left = minColIdx * (colWidth + 16);
+    colHeights[minColIdx] += itemHeight + 16;
     
     return { ...p, originalIndex: idx, top, left, height: itemHeight };
   });
   
-  const containerHeight = Math.max(h1, h2);
+  const containerHeight = Math.max(...colHeights);
 
   const scrollToThumbnail = (index: number) => {
     if (!thumbnailsRef.current) return;
     const center = 45 + index * 62;
-    const scrollX = center - SCREEN_WIDTH / 2;
+    const scrollX = center - W / 2;
     thumbnailsRef.current.scrollTo({ x: Math.max(0, scrollX), animated: true });
   };
 
@@ -664,10 +674,11 @@ export default function UploadPortfolioScreen() {
                 return (
                   <Animated.View 
                     key={`m-${item.originalIndex ?? index}`} 
-                    entering={FadeIn.delay(Math.min(index * 50, 500)).duration(400)}
+                    entering={Platform.OS === 'web' ? undefined : FadeIn.delay(Math.min(index * 50, 500)).duration(400)}
                     style={{ position: 'absolute', top: item.top, left: item.left, width: colWidth, height: item.height }}
                   >
                     <Pressable 
+                      style={{ width: '100%', height: '100%' }}
                       onPress={() => {
                         if (isSelecting) toggleSelection(item.url);
                         else setViewerIndex(item.originalIndex!);
@@ -775,23 +786,23 @@ export default function UploadPortfolioScreen() {
               pagingEnabled
               showsHorizontalScrollIndicator={false}
               initialScrollIndex={viewerIndex !== null && viewerIndex < photoData.length ? viewerIndex : 0}
-              getItemLayout={(data, index) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * index, index })}
+              getItemLayout={(data, index) => ({ length: W, offset: W * index, index })}
               onViewableItemsChanged={onViewableItemsChanged}
               viewabilityConfig={viewabilityConfig}
               renderItem={({ item }) => (
-                <View style={{ width: SCREEN_WIDTH, flex: 1, flexDirection: 'column', paddingBottom: 6 }}>
+                <View style={{ width: W, flex: 1, flexDirection: 'column', paddingBottom: 6 }}>
                   {/* Image container occupies remaining space, scales image as large as possible */}
-                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: SCREEN_WIDTH, overflow: 'hidden' }}>
+                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: W, overflow: 'hidden' }}>
                     {/* Blurred background to gracefully fill empty space (especially for 9:16 vertical photos) */}
                     <Image 
                       source={{ uri: formatPhotoUrl(item.url) }} 
-                      style={[StyleSheet.absoluteFill, { opacity: 0.3 }]} 
+                      style={[StyleSheet.absoluteFill, { opacity: Platform.OS === 'web' ? 0.1 : 0.3 }]} 
                       resizeMode="cover"
-                      blurRadius={25}
+                      blurRadius={Platform.OS === 'web' ? 0 : 25}
                     />
                     <Image 
                       source={{ uri: formatPhotoUrl(item.url) }} 
-                      style={{ width: SCREEN_WIDTH, height: '100%' }} 
+                      style={{ width: W, height: '100%' }} 
                       resizeMode="contain" 
                     />
                   </View>

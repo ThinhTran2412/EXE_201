@@ -10,6 +10,8 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
+  useWindowDimensions,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
@@ -62,7 +64,10 @@ export default function PhotographerPortfolioScreen() {
   const flatListRef = useRef<FlatList>(null);
   const thumbnailsRef = useRef<ScrollView>(null);
 
-  const colWidth = (SCREEN_WIDTH - 32 - 16) / 2;
+  const { width: windowWidth } = useWindowDimensions();
+  const W = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
+  const numColumns = Platform.OS === 'web' ? 4 : (W >= 768 ? 3 : 2);
+  const colWidth = (W - 32 - 16 * (numColumns - 1)) / numColumns;
 
   useEffect(() => {
     loadData();
@@ -118,35 +123,35 @@ export default function PhotographerPortfolioScreen() {
     }
   }
 
-  let h1 = 0;
-  let h2 = 0;
+  const colHeights = Array(numColumns).fill(0);
   const positions = photoData.map(p => {
     const itemHeight = colWidth / p.aspectRatio;
-    let top = 0;
-    let left = 0;
-
-    if (h1 <= h2) {
-      top = h1;
-      left = 0;
-      h1 += itemHeight + 16;
-    } else {
-      top = h2;
-      left = colWidth + 16;
-      h2 += itemHeight + 16;
+    
+    let minColIdx = 0;
+    let minColHeight = colHeights[0];
+    for (let i = 1; i < numColumns; i++) {
+      if (colHeights[i] < minColHeight) {
+        minColHeight = colHeights[i];
+        minColIdx = i;
+      }
     }
-
+    
+    const top = colHeights[minColIdx];
+    const left = minColIdx * (colWidth + 16);
+    colHeights[minColIdx] += itemHeight + 16;
+    
     return { ...p, top, left, height: itemHeight };
   });
-
-  const containerHeight = Math.max(h1, h2);
-
+  
+  const containerHeight = Math.max(...colHeights);
+ 
   const featuredThree = useMemo(() => photoData.slice(0, 3), [photoData]);
   const recentStrip = useMemo(() => photoData.slice(3, 12), [photoData]);
-
+ 
   const scrollToThumbnail = (index: number) => {
     if (!thumbnailsRef.current) return;
     const center = 45 + index * 62;
-    const scrollX = center - SCREEN_WIDTH / 2;
+    const scrollX = center - W / 2;
     thumbnailsRef.current.scrollTo({ x: Math.max(0, scrollX), animated: true });
   };
 
@@ -275,20 +280,20 @@ export default function PhotographerPortfolioScreen() {
               viewerIndex !== null && viewerIndex < photoData.length ? viewerIndex : 0
             }
             getItemLayout={(_, index) => ({
-              length: SCREEN_WIDTH,
-              offset: SCREEN_WIDTH * index,
+              length: W,
+              offset: W * index,
               index,
             })}
             onMomentumScrollEnd={e => {
               if (viewerIndex === null) return;
-              const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              const idx = Math.round(e.nativeEvent.contentOffset.x / W);
               setViewerIndex(idx);
               scrollToThumbnail(idx);
             }}
             renderItem={({ item }) => (
               <View
                 style={{
-                  width: SCREEN_WIDTH,
+                  width: W,
                   flex: 1,
                   justifyContent: 'center',
                   alignItems: 'center',
@@ -296,7 +301,7 @@ export default function PhotographerPortfolioScreen() {
               >
                 <PortfolioImageCell
                   uri={item.url}
-                  style={{ width: SCREEN_WIDTH, height: '88%' }}
+                  style={{ width: W, height: '88%' }}
                   borderRadius={0}
                   resizeMode="contain"
                 />

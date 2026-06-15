@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ScrollView, StyleSheet, Text, View, Pressable, Image, ActivityIndicator,
   Dimensions, TextInput, Alert, Modal, KeyboardAvoidingView, Platform, Switch,
+  useWindowDimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -45,7 +46,9 @@ export default function PProfileScreen() {
   const { colors, isDark, toggleTheme } = usePhotographerTheme();
   const styles = getStyles(colors, isDark);
 
-  const photoSize = Math.floor((SCREEN_WIDTH - spacing[5] * 2 - spacing[2] * 2) / 3);
+  const { width: windowWidth } = useWindowDimensions();
+  const containerWidth = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
+  const photoSize = Math.floor((containerWidth - spacing[5] * 2 - spacing[2] * 2) / 3);
   const gridGap = spacing[2];
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -243,12 +246,24 @@ export default function PProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
         <View style={styles.coverContainer}>
           <Animated.View entering={FadeIn.duration(800)} style={StyleSheet.absoluteFillObject}>
             <Image source={{ uri: coverUrl }} style={styles.cover} />
             <LinearGradient pointerEvents="none" colors={['rgba(13,11,20,0.02)', 'rgba(13,11,20,0.18)', 'rgba(13,11,20,0.42)']} style={StyleSheet.absoluteFillObject} />
           </Animated.View>
+
+          <View style={[styles.topActions, { top: Math.max(insets.top, 16) }]}> 
+            <Pressable style={styles.iconBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="chevron-back" size={24} color="#FFFBF0" />
+            </Pressable>
+            <Pressable style={styles.iconBtn} onPress={() => setEditModalVisible(true)}>
+              <Ionicons name="pencil" size={20} color="#FFFBF0" />
+            </Pressable>
+          </View>
 
           <Pressable
             style={styles.coverActionOverlay}
@@ -259,18 +274,10 @@ export default function PProfileScreen() {
             <Ionicons name="image-outline" size={18} color="#FFFBF0" />
             <Text style={styles.coverActionText}>{savingImage === 'cover' ? 'Đang tải...' : 'Đổi ảnh bìa'}</Text>
           </Pressable>
-
-          <View style={[styles.topActions, { top: Math.max(insets.top, 16) }]}> 
-            <Pressable style={styles.iconBtn} onPress={() => navigation.goBack()}>
-              <Ionicons name="chevron-back" size={24} color="#FFFBF0" />
-            </Pressable>
-            <Pressable style={styles.iconBtn} onPress={() => setEditModalVisible(true)}>
-              <Ionicons name="pencil" size={20} color="#FFFBF0" />
-            </Pressable>
-          </View>
         </View>
 
         <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.profileHeader}>
+
           <View style={styles.avatarWrapper}>
             <Image source={{ uri: avatarUrl }} style={styles.avatar} />
             <Pressable style={styles.avatarEditBtn} onPress={() => pickAndUploadImage('avatar')}>
@@ -770,7 +777,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   coverContainer: { width: '100%', aspectRatio: 16 / 9, maxHeight: 260, position: 'relative' },
   cover: { width: '100%', height: '100%', resizeMode: 'cover' },
-  coverActionOverlay: { position: 'absolute', bottom: 18, right: 16, zIndex: 9999, elevation: 9999, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.22)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 22 },
+  coverActionOverlay: { position: 'absolute', bottom: 72, right: 16, zIndex: 9999, elevation: 9999, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.22)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 22 },
   coverActionText: { color: '#FFFBF0', fontSize: 13, fontWeight: '600' },
   topActions: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', zIndex: 10 },
   iconBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
