@@ -25,6 +25,7 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAdminReportExportService, AdminReportExportService>();
+builder.Services.AddScoped<IRealtimeNotificationPublisher, RealtimeNotificationPublisher>();
 
 // ──────────────────────────────────────────
 //  CORS — allow mobile (Expo Go) requests over LAN
@@ -223,5 +224,6 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", time = DateTime
 // SignalR Hub — WebSocket URL: wss://host/hubs/chat
 // Client must pass JWT via ?access_token=... query string
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<LocationHub>("/hubs/location");
 
 app.Run();

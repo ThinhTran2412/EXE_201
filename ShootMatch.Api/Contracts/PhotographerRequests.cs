@@ -54,3 +54,5 @@ public sealed record EquipmentDto(
     bool IsPrimary);
 
 public sealed record UpdateEquipmentsRequest(List<EquipmentDto> Equipments);
+
+public sealed record UpdateSessionStatusRequest(string Status);

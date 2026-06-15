@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { Alert } from 'react-native';
 import { useAuth } from '../../features/auth/AuthContext';
 import * as ChatHub from '../../features/chat/ChatHub';
 import {
@@ -85,6 +86,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           };
           setItems((prev) => [n, ...prev.filter((x) => x.id !== n.id)]);
           if (!n.read) setUnreadCount((c) => c + 1);
+          Alert.alert(n.title, n.body);
         });
       } catch {}
     })();

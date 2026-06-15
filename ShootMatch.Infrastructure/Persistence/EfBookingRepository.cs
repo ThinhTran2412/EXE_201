@@ -23,6 +23,11 @@ public sealed class EfBookingRepository(ShootMatchDbContext db) : IBookingReposi
                 EscrowStatus     = booking.EscrowStatus.ToString(),
                 AgreedPrice      = booking.AgreedPrice,
                 Commission       = booking.Commission,
+                DepositRate      = booking.DepositRate,
+                DepositAmount    = booking.DepositAmount,
+                TotalAmount      = booking.TotalAmount,
+                PaymentStatus    = booking.PaymentStatus.ToString(),
+                PayOsOrderCode   = booking.PayOsOrderCode,
                 ScheduledAt      = booking.ScheduledAt,
                 CreatedAt        = booking.CreatedAt,
                 CompletedAt      = booking.CompletedAt,
@@ -38,6 +43,8 @@ public sealed class EfBookingRepository(ShootMatchDbContext db) : IBookingReposi
         {
             existing.Status             = booking.Status.ToString();
             existing.EscrowStatus       = booking.EscrowStatus.ToString();
+            existing.PaymentStatus      = booking.PaymentStatus.ToString();
+            existing.PayOsOrderCode     = booking.PayOsOrderCode;
             existing.CompletedAt        = booking.CompletedAt;
             existing.CancelledAt        = booking.CancelledAt;
             existing.CancellationReason = booking.CancellationReason;
@@ -86,11 +93,16 @@ public sealed class EfBookingRepository(ShootMatchDbContext db) : IBookingReposi
     }
 
     private static BookingAggregate ToEntity(BookingRecord r)
-        => BookingAggregate.Reconstitute(
+    {
+        var aggregate = BookingAggregate.Reconstitute(
             r.Id, r.CustomerId, r.PhotographerId, r.MatchId, r.ServicePackageId,
-            Enum.Parse<BookingStatus>(r.Status),
-            Enum.Parse<EscrowStatus>(r.EscrowStatus),
-            r.AgreedPrice, r.Commission, r.ScheduledAt,
+            string.IsNullOrEmpty(r.Status) ? BookingStatus.Pending : Enum.Parse<BookingStatus>(r.Status),
+            string.IsNullOrEmpty(r.EscrowStatus) ? EscrowStatus.Held : Enum.Parse<EscrowStatus>(r.EscrowStatus),
+            string.IsNullOrEmpty(r.PaymentStatus) ? PaymentStatus.Unpaid : Enum.Parse<PaymentStatus>(r.PaymentStatus),
+            r.AgreedPrice, r.Commission, r.DepositRate, r.DepositAmount, r.TotalAmount, r.PayOsOrderCode, r.ScheduledAt,
             r.CreatedAt, r.CompletedAt, r.CancelledAt, r.CancellationReason,
             r.Phone, r.Location, r.Note, r.Requirements);
+
+        return aggregate;
+    }
 }

@@ -583,3 +583,18 @@
   - [Mobile] Thêm tính năng `ManageEquipmentScreen.tsx`: Cho phép thêm/sửa/xóa/ẩn thiết bị nhiếp ảnh gia với UI Modal cải tiến nghệ thuật, khắc phục triệt để lỗi màn hình bị mờ khi mở form.
 - Notes:
   - Theme của Customer và Photographer được tách biệt độc lập để không ảnh hưởng lẫn nhau.
+
+## Session 2026-06-14 — Live Map Performance & UX Optimizations (Customer Booking Detail)
+- Goal: Fix performance issues (lag, stuttering) and UI bugs on the Customer's booking tracking map, and simplify the sonar wave effect for a premium feel.
+- Changes:
+  - [Mobile] `BookingDetailScreen.tsx`:
+    - **Performance:** Removed continuous `requestAnimationFrame` loops for the map sonar wave which caused Android native render thread freezes.
+    - **Platform Specific:**
+      - Android: Implemented static concentric rings (10m, 18m, 26m) for stable layout without re-render stutter.
+      - iOS: Implemented a simplified, ultra-slow pulsing outer ring (6m to 12m over 6 seconds) and a static 10m soft blue zone for a smooth, premium aesthetic.
+    - **Data Flow:** Added dynamic "Preview Fallback" (3-second timeout) to draw markers even if SignalR location updates haven't arrived yet, preventing the map from appearing empty/broken.
+    - **API Integration:** Integrated `getMyBookingsAsPhotographer` to handle data fetching when the current user is a Photographer.
+    - **Type Safety:** Resolved TypeScript build errors (implicit `any` in array finders, missing imports).
+- Notes:
+  - Addressed user feedback regarding UI performance (lag/stuttering) specifically on the map screen when tracking the photographer.
+  - Ensured the UI feels "nhỏ gọn" (compact) and "siêu chậm" (ultra-slow) per user preference.

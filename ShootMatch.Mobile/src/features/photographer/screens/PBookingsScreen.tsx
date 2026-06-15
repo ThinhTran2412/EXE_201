@@ -28,7 +28,11 @@ const CAL_CELL = Math.floor((SCREEN_WIDTH - 40 - 36) / 7);
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   Pending: { label: 'Chờ duyệt', color: '#B4781A', bg: 'rgba(212, 175, 55, 0.15)', icon: 'time-outline' },
+  AwaitingDeposit: { label: 'Chờ khách cọc', color: '#ea580c', bg: 'rgba(234, 88, 12, 0.15)', icon: 'wallet-outline' },
   Confirmed: { label: 'Đã xác nhận', color: '#3A6073', bg: 'rgba(58, 96, 115, 0.12)', icon: 'checkmark-circle-outline' },
+  Moving: { label: 'Đang di chuyển', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)', icon: 'bicycle-outline' },
+  Arrived: { label: 'Đã đến nơi', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', icon: 'flag-outline' },
+  InProgress: { label: 'Đang chụp', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)', icon: 'camera-outline' },
   Completed: { label: 'Hoàn tất', color: '#3D7055', bg: 'rgba(61, 112, 85, 0.12)', icon: 'checkmark-done-circle' },
   Cancelled: { label: 'Đã hủy', color: '#914141', bg: 'rgba(145, 65, 65, 0.12)', icon: 'close-circle-outline' },
 };
@@ -75,6 +79,7 @@ function BookingCard({
   const styles = getStyles(colors);
   const cfg = STATUS_CFG[booking.status] ?? STATUS_CFG.Pending;
   const isPending = booking.status === 'Pending';
+  const isAwaitingDeposit = booking.status === 'AwaitingDeposit';
   const isConfirmed = booking.status === 'Confirmed';
 
   const displayTitle = booking.servicePackageName || (booking.requirements || `Yêu cầu chụp riêng #${booking.id.slice(0, 6)}`);
@@ -170,6 +175,12 @@ function BookingCard({
                   <Text style={styles.detailBtnText}>Nhận</Text>
                 </Pressable>
               </>
+            )}
+            {isAwaitingDeposit && (
+              <View style={[styles.completedRibbon, { backgroundColor: 'rgba(234, 88, 12, 0.1)' }]}>
+                <Ionicons name="time" size={14} color="#ea580c" />
+                <Text style={[styles.completedRibbonText, { color: '#ea580c' }]}>Chờ khách cọc</Text>
+              </View>
             )}
             {isConfirmed && (
               <Pressable style={[styles.detailBtn, { flexDirection: 'row', gap: 6 }]} onPress={onComplete}>
@@ -322,6 +333,8 @@ export default function PBookingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   async function load() {
     try {
@@ -354,7 +367,13 @@ export default function PBookingsScreen() {
 
   const stats = useMemo(() => ({
     pending: bookings.filter((b) => b.status === 'Pending').length,
-    confirmed: bookings.filter((b) => b.status === 'Confirmed').length,
+    confirmed: bookings.filter((b) => 
+      b.status === 'Confirmed' || 
+      b.status === 'AwaitingDeposit' || 
+      b.status === 'Moving' || 
+      b.status === 'Arrived' || 
+      b.status === 'InProgress'
+    ).length,
     completed: bookings.filter((b) => b.status === 'Completed').length,
   }), [bookings]);
 
@@ -367,8 +386,26 @@ export default function PBookingsScreen() {
 
   const filteredBookings = useMemo(() => {
     if (statusFilter === 'All') return selectedBookings;
+    if (statusFilter === 'Confirmed') {
+      return selectedBookings.filter(b => 
+        b.status === 'Confirmed' || 
+        b.status === 'AwaitingDeposit' || 
+        b.status === 'Moving' || 
+        b.status === 'Arrived' || 
+        b.status === 'InProgress'
+      );
+    }
     return selectedBookings.filter(b => b.status === statusFilter);
   }, [selectedBookings, statusFilter]);
+
+  const { active, completed, cancelled } = useMemo(() => {
+    if (statusFilter !== 'All') return { active: filteredBookings, completed: [], cancelled: [] };
+    return {
+      active: filteredBookings.filter(b => b.status !== 'Completed' && b.status !== 'Cancelled'),
+      completed: filteredBookings.filter(b => b.status === 'Completed'),
+      cancelled: filteredBookings.filter(b => b.status === 'Cancelled')
+    };
+  }, [filteredBookings, statusFilter]);
 
   const isToday = toKey(selectedDate) === toKey(new Date());
   const dateLabel = isToday ? 'Hôm nay' : formatDate(selectedDate);
@@ -539,17 +576,98 @@ export default function PBookingsScreen() {
                  <Text style={styles.emptyText}>Không tìm thấy lịch hẹn nào phù hợp với bộ lọc đã chọn.</Text>
                </View>
              ) : (
-               <>
-                 {filteredBookings.map((b, i) => (
-                   <Animated.View key={b.id} entering={FadeInDown.duration(300).delay(i * 35)}>
-                     <BookingCard
-                       booking={b}
-                       onCancel={() => doAction(b, 'cancel')}
-                       onConfirm={() => doAction(b, 'confirm')}
-                       onComplete={() => doAction(b, 'complete')}
-                     />
-                   </Animated.View>
-                 ))}
+                <>
+                  {statusFilter === 'All' ? (
+                    <>
+                      {active.map((b, i) => (
+                        <Animated.View key={b.id} entering={FadeInDown.duration(300).delay(i * 35)}>
+                          <BookingCard
+                            booking={b}
+                            onCancel={() => doAction(b, 'cancel')}
+                            onConfirm={() => doAction(b, 'confirm')}
+                            onComplete={() => doAction(b, 'complete')}
+                          />
+                        </Animated.View>
+                      ))}
+
+                      {completed.length > 0 && (
+                        <>
+                          <Pressable
+                            style={styles.cancelledHeader}
+                            onPress={() => setShowCompleted(!showCompleted)}
+                          >
+                            <Text style={styles.cancelledHeaderText}>
+                              Lịch đã hoàn tất ({completed.length})
+                            </Text>
+                            <Ionicons
+                              name={showCompleted ? 'chevron-up' : 'chevron-down'}
+                              size={16}
+                              color={colors.textMuted}
+                            />
+                          </Pressable>
+
+                          {showCompleted && (
+                            <View style={{ opacity: 0.8, marginTop: 10 }}>
+                              {completed.map((b, i) => (
+                                <Animated.View key={b.id} entering={FadeInDown.duration(300).delay(i * 35)}>
+                                  <BookingCard
+                                    booking={b}
+                                    onCancel={() => doAction(b, 'cancel')}
+                                    onConfirm={() => doAction(b, 'confirm')}
+                                    onComplete={() => doAction(b, 'complete')}
+                                  />
+                                </Animated.View>
+                              ))}
+                            </View>
+                          )}
+                        </>
+                      )}
+
+                      {cancelled.length > 0 && (
+                        <>
+                          <Pressable
+                            style={styles.cancelledHeader}
+                            onPress={() => setShowCancelled(!showCancelled)}
+                          >
+                            <Text style={styles.cancelledHeaderText}>
+                              Lịch đã hủy ({cancelled.length})
+                            </Text>
+                            <Ionicons
+                              name={showCancelled ? 'chevron-up' : 'chevron-down'}
+                              size={16}
+                              color={colors.textMuted}
+                            />
+                          </Pressable>
+
+                          {showCancelled && (
+                            <View style={{ opacity: 0.65, marginTop: 10 }}>
+                              {cancelled.map((b, i) => (
+                                <Animated.View key={b.id} entering={FadeInDown.duration(300).delay(i * 35)}>
+                                  <BookingCard
+                                    booking={b}
+                                    onCancel={() => doAction(b, 'cancel')}
+                                    onConfirm={() => doAction(b, 'confirm')}
+                                    onComplete={() => doAction(b, 'complete')}
+                                  />
+                                </Animated.View>
+                              ))}
+                            </View>
+                          )}
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    filteredBookings.map((b, i) => (
+                      <Animated.View key={b.id} entering={FadeInDown.duration(300).delay(i * 35)}>
+                        <BookingCard
+                          booking={b}
+                          onCancel={() => doAction(b, 'cancel')}
+                          onConfirm={() => doAction(b, 'confirm')}
+                          onComplete={() => doAction(b, 'complete')}
+                        />
+                      </Animated.View>
+                    ))
+                  )}
                  
                  {/* Photography Quote Box */}
                  <View style={styles.quoteCard}>
@@ -1133,4 +1251,6 @@ const getStyles = (colors: any) => StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: colors.border },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { color: colors.text, fontSize: 12 },
+  cancelledHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, backgroundColor: colors.surfaceStrong, borderRadius: 12, marginTop: 16 },
+  cancelledHeaderText: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
 });

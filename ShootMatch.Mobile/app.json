@@ -14,7 +14,11 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.shootmatch.mobile"
+      "bundleIdentifier": "com.shootmatch.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Cho phép ShootMatch truy cập vị trí của bạn để theo dõi tiến trình di chuyển của buổi chụp ảnh.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Cho phép ShootMatch truy cập vị trí của bạn để theo dõi tiến trình di chuyển của buổi chụp ảnh."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +26,11 @@
         "backgroundColor": "#fff7e1"
       },
       "package": "com.shootmatch.mobile",
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

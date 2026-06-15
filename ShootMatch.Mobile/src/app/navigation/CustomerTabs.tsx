@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CustomerTabParamList, CustomerStackParamList } from './types';
 import { colors } from '../theme/colors';
 import { fontSizes } from '../theme/typography';
@@ -42,13 +43,17 @@ const TAB_CONFIG: Record<keyof CustomerTabParamList, { label: string; icon: Icon
 };
 
 function CustomerTabNavigator() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = Platform.OS === 'ios' ? 88 : (60 + insets.bottom);
+  const tabBarPaddingBottom = Platform.OS === 'ios' ? 24 : (insets.bottom > 0 ? insets.bottom : 8);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => {
         const cfg = TAB_CONFIG[route.name as keyof CustomerTabParamList];
         return {
           headerShown: false,
-          tabBarStyle: styles.tabBar,
+          tabBarStyle: [styles.tabBar, { height: tabBarHeight, paddingBottom: tabBarPaddingBottom }],
           tabBarActiveTintColor:   colors.tabActive,
           tabBarInactiveTintColor: colors.tabInactive,
           tabBarLabelStyle: styles.label,

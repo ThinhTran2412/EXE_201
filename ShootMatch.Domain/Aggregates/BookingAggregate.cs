@@ -23,6 +23,11 @@ public sealed class BookingAggregate : AggregateRoot
     public EscrowStatus EscrowStatus { get; private set; }
     public decimal AgreedPrice { get; private set; }
     public decimal Commission { get; private set; }
+    public decimal DepositRate { get; private set; }
+    public decimal DepositAmount { get; private set; }
+    public decimal TotalAmount { get; private set; }
+    public PaymentStatus PaymentStatus { get; private set; }
+    public long? PayOsOrderCode { get; private set; }
     public DateTime ScheduledAt { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? CompletedAt { get; private set; }
@@ -40,8 +45,8 @@ public sealed class BookingAggregate : AggregateRoot
     /// </summary>
     public static BookingAggregate Reconstitute(
         Guid id, Guid customerId, Guid photographerId, Guid matchId, Guid? servicePackageId,
-        BookingStatus status, EscrowStatus escrowStatus,
-        decimal agreedPrice, decimal commission, DateTime scheduledAt,
+        BookingStatus status, EscrowStatus escrowStatus, PaymentStatus paymentStatus,
+        decimal agreedPrice, decimal commission, decimal depositRate, decimal depositAmount, decimal totalAmount, long? payOsOrderCode, DateTime scheduledAt,
         DateTime createdAt, DateTime? completedAt, DateTime? cancelledAt, string? cancellationReason,
         string? phone, string? location, string? note, string? requirements) => new()
     {
@@ -52,8 +57,13 @@ public sealed class BookingAggregate : AggregateRoot
         ServicePackageId   = servicePackageId,
         Status             = status,
         EscrowStatus       = escrowStatus,
+        PaymentStatus      = paymentStatus,
         AgreedPrice        = agreedPrice,
         Commission         = commission,
+        DepositRate        = depositRate,
+        DepositAmount      = depositAmount,
+        TotalAmount        = totalAmount,
+        PayOsOrderCode     = payOsOrderCode,
         ScheduledAt        = scheduledAt,
         CreatedAt          = createdAt,
         CompletedAt        = completedAt,
@@ -88,6 +98,10 @@ public sealed class BookingAggregate : AggregateRoot
         if (commission < 0)
             throw new DomainException("Commission must be non-negative.");
 
+        var depositRate = 0.20m; // Hardcoded 20% deposit for now
+        var totalAmount = agreedPrice;
+        var depositAmount = totalAmount * depositRate;
+
         return new BookingAggregate
         {
             Id = Guid.NewGuid(),
@@ -99,6 +113,10 @@ public sealed class BookingAggregate : AggregateRoot
             EscrowStatus = EscrowStatus.Held,
             AgreedPrice = agreedPrice,
             Commission = commission,
+            DepositRate = depositRate,
+            DepositAmount = depositAmount,
+            TotalAmount = totalAmount,
+            PaymentStatus = PaymentStatus.Unpaid,
             ScheduledAt = scheduledAt,
             CreatedAt = DateTime.UtcNow,
             Phone = phone,
@@ -110,15 +128,66 @@ public sealed class BookingAggregate : AggregateRoot
 
     /// <summary>
     /// Photographer confirms the booking.
-    /// Fires BookingConfirmed → escrow is held by payment handler.
+    /// Booking goes to AwaitingDeposit instead of Confirmed.
     /// </summary>
     public void Confirm()
     {
         if (Status != BookingStatus.Pending)
             throw new DomainException($"Cannot confirm a booking that is {Status}.");
 
+        Status = BookingStatus.AwaitingDeposit;
+        // Raise event to notify user to deposit
+    }
+
+    /// <summary>
+    /// Update Payment Status from Webhook
+    /// </summary>
+    public void MarkDepositPaid()
+    {
+        if (Status != BookingStatus.AwaitingDeposit)
+            throw new DomainException($"Cannot pay deposit for a booking that is {Status}.");
+
         Status = BookingStatus.Confirmed;
+        PaymentStatus = PaymentStatus.DepositPaid;
         RaiseDomainEvent(new BookingConfirmed(Id, CustomerId, PhotographerId, AgreedPrice, Commission, DateTime.UtcNow));
+    }
+
+    public void AssignPayOsOrderCode(long orderCode)
+    {
+        PayOsOrderCode = orderCode;
+    }
+
+    /// <summary>
+    /// Starts the session, photographer begins moving to meeting point.
+    /// </summary>
+    public void StartMoving()
+    {
+        if (Status != BookingStatus.Confirmed)
+            throw new DomainException($"Cannot start moving for a booking that is {Status}.");
+
+        Status = BookingStatus.Moving;
+    }
+
+    /// <summary>
+    /// Photographer or customer arrives at meeting point.
+    /// </summary>
+    public void Arrive()
+    {
+        if (Status != BookingStatus.Moving)
+            throw new DomainException($"Cannot mark as arrived for a booking that is {Status}.");
+
+        Status = BookingStatus.Arrived;
+    }
+
+    /// <summary>
+    /// Starts the active photo shoot.
+    /// </summary>
+    public void StartShooting()
+    {
+        if (Status != BookingStatus.Arrived)
+            throw new DomainException($"Cannot start shooting for a booking that is {Status}.");
+
+        Status = BookingStatus.InProgress;
     }
 
     /// <summary>
@@ -127,7 +196,7 @@ public sealed class BookingAggregate : AggregateRoot
     /// </summary>
     public void Complete()
     {
-        if (Status != BookingStatus.Confirmed)
+        if (Status != BookingStatus.InProgress)
             throw new DomainException($"Cannot complete a booking that is {Status}.");
 
         Status = BookingStatus.Completed;
@@ -158,7 +227,7 @@ public sealed class BookingAggregate : AggregateRoot
     /// </summary>
     public void Dispute()
     {
-        if (Status is not (BookingStatus.Confirmed or BookingStatus.Completed))
+        if (Status is not (BookingStatus.Confirmed or BookingStatus.Moving or BookingStatus.Arrived or BookingStatus.InProgress or BookingStatus.Completed))
             throw new DomainException($"Cannot dispute a booking that is {Status}.");
 
         Status = BookingStatus.Disputed;
@@ -175,5 +244,6 @@ public sealed class BookingAggregate : AggregateRoot
     }
 }
 
-public enum BookingStatus { Pending, Confirmed, Completed, Cancelled, Disputed }
+public enum BookingStatus { Pending, AwaitingDeposit, Confirmed, Moving, Arrived, InProgress, Completed, Cancelled, Disputed }
 public enum EscrowStatus  { Held, Released, Refunded }
+public enum PaymentStatus { Unpaid, DepositPaid, FullyPaid }

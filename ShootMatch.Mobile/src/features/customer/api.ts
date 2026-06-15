@@ -75,8 +75,12 @@ function normalizeStatus(status: string): string {
   if (!status) return 'Pending';
   const s = status.toUpperCase();
   if (s === 'PENDING') return 'Pending';
+  if (s === 'AWAITINGDEPOSIT' || s === 'AWAITING_DEPOSIT') return 'AwaitingDeposit';
   if (s === 'PROCESSING') return 'Processing';
   if (s === 'CONFIRMED') return 'Confirmed';
+  if (s === 'MOVING') return 'Moving';
+  if (s === 'ARRIVED') return 'Arrived';
+  if (s === 'INPROGRESS' || s === 'IN_PROGRESS') return 'InProgress';
   if (s === 'COMPLETED') return 'Completed';
   if (s === 'CANCELLED') return 'Cancelled';
   if (s === 'DISPUTED') return 'Disputed';
@@ -453,8 +457,25 @@ export async function createBooking(payload: {
   return data.bookingId;
 }
 
+export async function createPaymentLink(bookingId: string): Promise<string> {
+  const { data } = await apiClient.post(`/api/bookings/${bookingId}/create-payment-link`);
+  return data.checkoutUrl;
+}
+
 export async function cancelBooking(id: string, reason: string) {
   await apiClient.post(`/api/bookings/${id}/cancel`, { reason });
+}
+
+export async function confirmBooking(id: string) {
+  await apiClient.post(`/api/bookings/${id}/confirm`);
+}
+
+export async function completeBooking(id: string) {
+  await apiClient.post(`/api/bookings/${id}/complete`);
+}
+
+export async function updateBookingSessionStatus(id: string, status: 'Moving' | 'Arrived' | 'InProgress') {
+  await apiClient.put(`/api/bookings/${id}/session-status`, { status });
 }
 
 // ── Reviews ───────────────────────────────────────────────────────────────────

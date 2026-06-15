@@ -59,6 +59,7 @@ public static class DependencyInjection
         services.AddSingleton<IAuthTokenService, JwtTokenService>();
         services.AddScoped<IPasswordHasher,      BcryptPasswordHasher>();
         services.AddScoped<IGoogleAuthService,   GoogleAuthService>();
+        services.AddSingleton<IPaymentService,   Services.PayOsPaymentService>();
 
         // ── Storage (Supabase if configured, otherwise local disk) ───────────
         var supabaseKey = configuration["Supabase:ServiceKey"];

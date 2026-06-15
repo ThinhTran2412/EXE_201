@@ -4,7 +4,9 @@ using ShootMatch.Domain.Entities;
 
 namespace ShootMatch.Application.Services;
 
-public sealed class NotificationService(INotificationRepository repository)
+public sealed class NotificationService(
+    INotificationRepository repository,
+    IRealtimeNotificationPublisher realtimePublisher)
 {
     public async Task<AppNotification> CreateAsync(
         Guid recipientId,
@@ -30,6 +32,16 @@ public sealed class NotificationService(INotificationRepository repository)
         };
 
         await repository.SaveAsync(notification, cancellationToken);
+
+        try
+        {
+            await realtimePublisher.PublishNotificationAsync(notification, cancellationToken);
+        }
+        catch
+        {
+            // Fail-silent to ensure real-time failures do not crash core database transaction
+        }
+
         return notification;
     }
 
@@ -85,6 +97,36 @@ public sealed class NotificationService(INotificationRepository repository)
             "booking",
             "Booking đã được xác nhận",
             $"Photographer đã xác nhận lịch chụp {scheduledAt:dd/MM/yyyy HH:mm}.",
+            "open_booking_detail",
+            new { bookingId },
+            cancellationToken);
+
+    public Task<AppNotification> NotifyDepositPaidToCustomerAsync(
+        Guid customerId,
+        Guid bookingId,
+        DateTime scheduledAt,
+        CancellationToken cancellationToken = default)
+        => CreateAsync(
+            customerId,
+            "customer",
+            "booking",
+            "Thanh toán đặt cọc thành công",
+            $"Lịch chụp ngày {scheduledAt:dd/MM/yyyy HH:mm} đã được thanh toán cọc và xác nhận.",
+            "open_booking_detail",
+            new { bookingId },
+            cancellationToken);
+
+    public Task<AppNotification> NotifyDepositPaidToPhotographerAsync(
+        Guid photographerId,
+        Guid bookingId,
+        DateTime scheduledAt,
+        CancellationToken cancellationToken = default)
+        => CreateAsync(
+            photographerId,
+            "photographer",
+            "booking",
+            "Khách hàng đã thanh toán đặt cọc",
+            $"Lịch chụp ngày {scheduledAt:dd/MM/yyyy HH:mm} đã được thanh toán cọc và xác nhận.",
             "open_booking_detail",
             new { bookingId },
             cancellationToken);
@@ -157,6 +199,33 @@ public sealed class NotificationService(INotificationRepository repository)
             "Bạn và customer đã match. Hãy bắt đầu cuộc trò chuyện.",
             "open_conversation",
             new { matchId },
+            cancellationToken);
+    }
+
+    public Task<AppNotification> NotifyBookingSessionStatusChangedAsync(
+        Guid recipientId,
+        string recipientRole,
+        Guid bookingId,
+        string newStatus,
+        CancellationToken cancellationToken = default)
+    {
+        string title = "Cập nhật trạng thái buổi chụp";
+        string body = newStatus switch
+        {
+            "Moving" => "Photographer đang di chuyển đến địa điểm hẹn.",
+            "Arrived" => "Photographer hoặc Customer đã đến địa điểm chụp.",
+            "InProgress" => "Buổi chụp ảnh đã bắt đầu.",
+            _ => $"Trạng thái đổi thành {newStatus}"
+        };
+
+        return CreateAsync(
+            recipientId,
+            recipientRole,
+            "booking",
+            title,
+            body,
+            "open_booking_detail",
+            new { bookingId, status = newStatus },
             cancellationToken);
     }
 }

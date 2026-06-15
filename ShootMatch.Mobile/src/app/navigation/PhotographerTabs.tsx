@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PhotographerTabParamList, PhotographerStackParamList } from './types';
 import { fontSizes } from '../theme/typography';
 import { PhotographerThemeProvider, usePhotographerTheme } from '../../features/photographer/PhotographerThemeContext';
@@ -39,13 +40,17 @@ const CFG: Record<keyof PhotographerTabParamList, { label: string; icon: IconNam
 
 function PhotographerTabNavigator() {
   const { colors } = usePhotographerTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = Platform.OS === 'ios' ? 88 : (60 + insets.bottom);
+  const tabBarPaddingBottom = Platform.OS === 'ios' ? 24 : (insets.bottom > 0 ? insets.bottom : 8);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => {
         const cfg = CFG[route.name as keyof PhotographerTabParamList];
         return {
           headerShown: false,
-          tabBarStyle: [styles.tabBar, { backgroundColor: colors.tabBar, borderTopWidth: 1, borderTopColor: colors.border }],
+          tabBarStyle: [styles.tabBar, { backgroundColor: colors.tabBar, borderTopWidth: 1, borderTopColor: colors.border, height: tabBarHeight, paddingBottom: tabBarPaddingBottom }],
           tabBarActiveTintColor:   colors.tabActive,
           tabBarInactiveTintColor: colors.tabInactive,
           tabBarLabelStyle: styles.label,

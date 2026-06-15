@@ -7,9 +7,14 @@ public sealed class BookingRecord
     public Guid PhotographerId { get; set; }
     public Guid MatchId { get; set; }
     public Guid? ServicePackageId { get; set; }
-    public string Status { get; set; } = "Pending"; // Pending | Confirmed | Completed | Cancelled | Disputed
+    public string Status { get; set; } = "Pending"; // Pending | AwaitingDeposit | Confirmed | Completed | Cancelled | Disputed
     public decimal AgreedPrice { get; set; }
     public decimal Commission { get; set; }
+    public decimal DepositRate { get; set; }
+    public decimal DepositAmount { get; set; }
+    public decimal TotalAmount { get; set; }
+    public string PaymentStatus { get; set; } = "Unpaid"; // Unpaid | DepositPaid | FullyPaid
+    public long? PayOsOrderCode { get; set; }
     public string EscrowStatus { get; set; } = "Held"; // Held | Released | Refunded
     public DateTime ScheduledAt { get; set; }
     public DateTime CreatedAt { get; set; }
