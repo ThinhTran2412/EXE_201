@@ -584,17 +584,27 @@
 - Notes:
   - Theme của Customer và Photographer được tách biệt độc lập để không ảnh hưởng lẫn nhau.
 
-## Session 2026-06-14 — Live Map Performance & UX Optimizations (Customer Booking Detail)
-- Goal: Fix performance issues (lag, stuttering) and UI bugs on the Customer's booking tracking map, and simplify the sonar wave effect for a premium feel.
+## Session 2026-06-14 & 15 — PayOS Deposit Payment & Live Map Optimizations
+- Goal: Tích hợp thanh toán tiền cọc (Deposit Payment) qua cổng PayOS và tối ưu hóa trải nghiệm theo dõi vị trí (Live Map) trên ứng dụng.
 - Changes:
-  - [Mobile] `BookingDetailScreen.tsx`:
-    - **Performance:** Removed continuous `requestAnimationFrame` loops for the map sonar wave which caused Android native render thread freezes.
-    - **Platform Specific:**
-      - Android: Implemented static concentric rings (10m, 18m, 26m) for stable layout without re-render stutter.
-      - iOS: Implemented a simplified, ultra-slow pulsing outer ring (6m to 12m over 6 seconds) and a static 10m soft blue zone for a smooth, premium aesthetic.
-    - **Data Flow:** Added dynamic "Preview Fallback" (3-second timeout) to draw markers even if SignalR location updates haven't arrived yet, preventing the map from appearing empty/broken.
-    - **API Integration:** Integrated `getMyBookingsAsPhotographer` to handle data fetching when the current user is a Photographer.
-    - **Type Safety:** Resolved TypeScript build errors (implicit `any` in array finders, missing imports).
+  - **PayOS Deposit Integration:**
+    - [Infrastructure/Migrations] Khởi tạo migration `20260614095059_AddPayOSFieldsToBooking` thêm cột `DepositAmount`, `DepositRate`, `TotalAmount`, `PaymentStatus` vào `BookingRecord`. Cập nhật `BookingAggregate`.
+    - [Application/Infrastructure] Thêm `IPaymentService` và triển khai `PayOsPaymentService` để gọi API tạo link thanh toán từ PayOS.
+    - [API/Controllers] Thêm `PaymentsController` cung cấp `POST /api/payments/create-payment-link` và xử lý webhook `POST /api/payments/webhook`.
+    - [API/Hubs] Triển khai `RealtimeNotificationPublisher` và sử dụng `LocationHub` để push thông báo thành công thời gian thực về Mobile App khi nhận được webhook từ PayOS.
+    - [Mobile] Tạo component `PayOsCheckoutModal.tsx` để hiển thị cổng thanh toán/mã QR qua WebView.
+    - [Mobile] Lắng nghe sự kiện từ SignalR (`LocationHub.ts` & `NotificationContext`) để tự động đóng modal và đổi trạng thái booking thành "Đã cọc" lập tức.
+    - [Test] Khởi tạo thư mục `ScratchPayOs` với project Console App độc lập để test thử luồng API PayOS.
+  - **Live Map Optimizations:**
+    - [Mobile] `BookingDetailScreen.tsx`:
+      - **Performance:** Removed continuous `requestAnimationFrame` loops for the map sonar wave which caused Android native render thread freezes.
+      - **Platform Specific:**
+        - Android: Implemented static concentric rings (10m, 18m, 26m) for stable layout without re-render stutter.
+        - iOS: Implemented a simplified, ultra-slow pulsing outer ring (6m to 12m over 6 seconds) and a static 10m soft blue zone for a smooth, premium aesthetic.
+      - **Data Flow:** Added dynamic "Preview Fallback" (3-second timeout) to draw markers even if SignalR location updates haven't arrived yet, preventing the map from appearing empty/broken.
+      - **API Integration:** Integrated `getMyBookingsAsPhotographer` to handle data fetching when the current user is a Photographer.
+      - **Type Safety:** Resolved TypeScript build errors (implicit `any` in array finders, missing imports).
 - Notes:
+  - Hoàn thành phần thiết kế "Thanh toán tiền cọc" (Deposit Payment) trong plan `[SHOOTMATCH]_deposit-gps-session-plan.md`.
   - Addressed user feedback regarding UI performance (lag/stuttering) specifically on the map screen when tracking the photographer.
   - Ensured the UI feels "nhỏ gọn" (compact) and "siêu chậm" (ultra-slow) per user preference.

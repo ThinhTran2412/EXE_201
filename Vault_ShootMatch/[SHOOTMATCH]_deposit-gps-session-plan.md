@@ -6,21 +6,21 @@
 
 **Thiết kế Database & API:**
 
-- **SystemConfigs:** Thêm bảng/cột để lưu cấu hình: `DepositPercentage = 20` (hoặc 10).
+- **SystemConfigs:** Thêm bảng/cột để lưu cấu hình: `DepositPercentage = 20` (hoặc 10). (✅ Đã tích hợp qua code/const)
 - **Bookings:**
-  - Thêm cột `DepositRate` (chỉ số phần trăm % được lấy ra tại thời điểm tạo đơn, việc lưu thẳng vào đơn giúp dự phòng sau này nếu admin đổi rate thì các đơn cũ không bị lệch số tiền).
-  - Thêm cột `DepositAmount`, `TotalAmount`, `PaymentStatus` (Pending, DepositPaid, FullyPaid).
-  - Mở rộng `BookingStatus`: thêm `AwaitingDeposit` (Chờ cọc) nằm sau `Accepted` và trước `Confirmed`.
-- **Transactions:** Bảng lưu mã giao dịch để đối soát với hệ thống PayOS.
+  - Thêm cột `DepositRate` (chỉ số phần trăm % được lấy ra tại thời điểm tạo đơn, việc lưu thẳng vào đơn giúp dự phòng sau này nếu admin đổi rate thì các đơn cũ không bị lệch số tiền). (✅ Hoàn thành qua `AddPayOSFieldsToBooking` migration)
+  - Thêm cột `DepositAmount`, `TotalAmount`, `PaymentStatus` (Pending, DepositPaid, FullyPaid). (✅ Hoàn thành)
+  - Mở rộng `BookingStatus`: thêm `AwaitingDeposit` (Chờ cọc) nằm sau `Accepted` và trước `Confirmed`. (✅ Hoàn thành)
+- **Transactions:** Bảng lưu mã giao dịch để đối soát với hệ thống PayOS. (✅ Hoàn thành - tích hợp thẳng vào PayOS webhook/service)
 - **API Flow:**
   1. `GET /api/configs`: App gọi để biết rate.
-  2. `POST /api/payments/create-payos-link`: Gửi `BookingId` lên, BE gọi API PayOS để sinh link checkout/Mã QR.
-  3. `POST /api/payments/payos-webhook`: (Dành cho PayOS gọi vào). Khi user chuyển khoản thành công, PayOS gọi API này, BE cập nhật `PaymentStatus = DepositPaid` và `BookingStatus = Confirmed`, sau đó bắn **SignalR** cho Mobile App nhảy màn hình hoàn tất ngay lập tức.
+  2. `POST /api/payments/create-payos-link`: Gửi `BookingId` lên, BE gọi API PayOS để sinh link checkout/Mã QR. (✅ Hoàn thành API `POST /api/payments/create-payment-link`)
+  3. `POST /api/payments/payos-webhook`: (Dành cho PayOS gọi vào). Khi user chuyển khoản thành công, PayOS gọi API này, BE cập nhật `PaymentStatus = DepositPaid` và `BookingStatus = Confirmed`, sau đó bắn **SignalR** cho Mobile App nhảy màn hình hoàn tất ngay lập tức. (✅ Hoàn thành Webhook `POST /api/payments/webhook`)
 
 **Mobile App:**
 
-- Màn hình "Thanh toán cọc": Dùng `WebView` mở link checkout của PayOS hoặc show mã QR trực tiếp.
-- Lắng nghe sự kiện từ SignalR để tự cập nhật trạng thái khi thanh toán báo về thành công.
+- Màn hình "Thanh toán cọc": Dùng `WebView` mở link checkout của PayOS hoặc show mã QR trực tiếp. (✅ Hoàn thành Component `PayOsCheckoutModal`)
+- Lắng nghe sự kiện từ SignalR để tự cập nhật trạng thái khi thanh toán báo về thành công. (✅ Hoàn thành qua `LocationHub.ts` & `NotificationContext`)
 
 ---
 
