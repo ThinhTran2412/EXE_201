@@ -32,6 +32,7 @@ Tài liệu này ghi lại các lỗi đã phát sinh trong quá trình phát tr
 | **Out-of-Memory (OOM)** | App crash hoặc không render được ảnh 4K/2K trên Android. | ✅ Fixed | Dùng `expo-image-manipulator` nén và scale ảnh xuống Full HD trước khi upload. |
 | **HEIC/MimeType Error** | Upload ảnh từ iPhone bị lỗi định dạng file không hợp lệ. | ✅ Fixed | Tự động phát hiện extension và map đúng MimeType (`image/jpeg`, `image/png`). |
 | **Memory Leak (Gallery)** | Mở gallery nhiều lần gây lag máy. | ✅ Fixed | Sử dụng `memo` cho các item ảnh và dọn dẹp listener khi Modal đóng. |
+| **Map Render Freeze (Android)** | App bị crash/stutter nặng khi `Circle` prop cập nhật quá nhanh (60fps) trên bản đồ gốc của Android. | ✅ Fixed | Bỏ `requestAnimationFrame`, dùng hiệu ứng tĩnh cho Android và hiệu ứng thở `withTiming` siêu chậm cho iOS. |
 
 ---
 

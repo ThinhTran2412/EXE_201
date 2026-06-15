@@ -30,11 +30,11 @@
 
 **Các chức năng trên Map (Use-cases):**
 
-1. **Tìm thợ ảnh (Fast Match):** Quét và hiển thị marker các Photographer đang rảnh xung quanh User để book khẩn cấp.
-2. **Chọn điểm chụp (Location Picker):** Cho phép User kéo thả ghim trên bản đồ để chốt toạ độ điểm hẹn khi tạo Booking. (Thay cho việc gõ địa chỉ thủ công).
-3. **Theo dõi thời gian thực (Live Tracking):** Khi tới giờ chụp, map hiển thị quá trình di chuyển của 2 bên. Toạ độ được truyền qua SignalR.
-4. **Chuyển hướng (Nav handoff):** Nút "Chỉ đường" sẽ bắn toạ độ sang app Google Maps gốc của máy để Google tính toán đường đi, app mình không tự tính.
-5. **Bonus - Tự động "Đã đến nơi" (Geofencing):** App tự tính khoảng cách đường chim bay giữa Vị trí hiện tại và Điểm hẹn bằng công thức toán học. Nếu &lt; 50m, hiện popup xác nhận đã tới nơi (0 đồng).
+1. **Tìm thợ ảnh (Fast Match):** Quét và hiển thị marker các Photographer đang rảnh xung quanh User để book khẩn cấp. (⏳ Pending)
+2. **Chọn điểm chụp (Location Picker):** Cho phép User kéo thả ghim trên bản đồ để chốt toạ độ điểm hẹn khi tạo Booking. (⏳ Pending)
+3. **Theo dõi thời gian thực (Live Tracking):** Khi tới giờ chụp, map hiển thị quá trình di chuyển của 2 bên. Toạ độ được truyền qua SignalR. (✅ Hoàn thành)
+4. **Chuyển hướng (Nav handoff):** Nút "Chỉ đường" sẽ bắn toạ độ sang app Google Maps gốc của máy để Google tính toán đường đi, app mình không tự tính. (✅ Hoàn thành trên màn Booking Detail)
+5. **Bonus - Tự động "Đã đến nơi" (Geofencing):** App tự tính khoảng cách đường chim bay giữa Vị trí hiện tại và Điểm hẹn bằng công thức toán học. Nếu &lt; 50m, hiện popup xác nhận đã tới nơi (0 đồng). (⏳ Pending)
 
 **Thiết kế Database & API:**
 

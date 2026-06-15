@@ -1,6 +1,6 @@
 # ShootMatch Mobile — UI Progress
 
-> Cập nhật: **2026-06-12**  
+> Cập nhật: **2026-06-15**  
 > Stack: React Native + Expo (SDK 54), TypeScript  
 > Design: PicKic (cream `#fff7e1`, dark `#1a1a0f`, orange `#ff4200`, Photographer Theme)
 

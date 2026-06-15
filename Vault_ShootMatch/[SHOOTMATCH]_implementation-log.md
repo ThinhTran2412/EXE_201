@@ -1,8 +1,8 @@
 # SHOOTMATCH — Implementation Log
 
 ## Snapshot
-- **Ngày cập nhật**: 2026-04-20
-- **Mục tiêu phiên này**: chạy PostgreSQL Migration, tách command/query, và lập danh mục đầy đủ Domain/Entity + nghiệp vụ đã triển khai.
+- **Ngày cập nhật**: 2026-06-15
+- **Mục tiêu phiên này**: Tối ưu Live Map (Android/iOS), hoàn thiện UI Booking Detail, đồng bộ Vault.
 
 ## 1) Những gì đã triển khai (full list)
 
