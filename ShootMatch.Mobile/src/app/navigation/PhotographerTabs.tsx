@@ -25,6 +25,8 @@ import CallScreen from '../../features/chat/screens/CallScreen';
 import CustomerProfileViewScreen from '../../features/photographer/screens/CustomerProfileViewScreen';
 import BookingDetailScreen from '../../features/customer/screens/BookingDetailScreen';
 import PNotificationsScreen from '../../features/photographer/screens/PNotificationsScreen';
+import PhotographerPortfolioScreen from '../../features/customer/screens/PhotographerPortfolioScreen';
+
 
 const Tab   = createBottomTabNavigator<PhotographerTabParamList>();
 const Stack = createNativeStackNavigator<PhotographerStackParamList>();
@@ -84,6 +86,7 @@ function PhotographerStackNavigation() {
       <Stack.Screen name="CustomerProfile" component={CustomerProfileViewScreen} />
       <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
       <Stack.Screen name="Notifications" component={PNotificationsScreen} />
+      <Stack.Screen name="PhotographerPortfolio" component={PhotographerPortfolioScreen} />
     </Stack.Navigator>
   );
 }

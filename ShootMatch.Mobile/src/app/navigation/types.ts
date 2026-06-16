@@ -76,5 +76,6 @@ export type PhotographerStackParamList = {
     avatarUrl?: string;
   };
   Notifications: undefined;
+  PhotographerPortfolio: { photographer: any };
 };
 

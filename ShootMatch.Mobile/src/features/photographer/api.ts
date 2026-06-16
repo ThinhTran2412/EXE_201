@@ -98,6 +98,24 @@ export async function getPhotographerProfile(): Promise<PhotographerProfile | nu
   return data.photographerProfile;
 }
 
+export async function getPhotographersFeed(): Promise<PhotographerProfile[]> {
+  const data = await gql<{ photographers: PhotographerProfile[] }>(`
+    query { photographers {
+      id displayName phone email region
+      bio quote avatarUrl coverPhotoUrl instagramUrl
+      minBudget maxBudget rating isPremium isAvailable verificationStatus portfolioPhotos acceptsInstantBooking
+      equipments {
+        id
+        category
+        name
+        description
+        isPrimary
+      }
+    }}
+  `);
+  return data.photographers ?? [];
+}
+
 export async function updateProfile(payload: Partial<PhotographerProfile>) {
   await apiClient.put('/api/photographers/profile', payload);
 }
