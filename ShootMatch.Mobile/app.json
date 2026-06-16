@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "ShootMatch",
+    "name": "PicKic",
     "slug": "shootmatch-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/cream_original_square.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -33,8 +33,8 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png",
-      "shortName": "ShootMatch",
+      "favicon": "./assets/images/cream_original_square.png",
+      "shortName": "PicKic",
       "themeColor": "#fff7e1",
       "backgroundColor": "#fff7e1",
       "display": "standalone",

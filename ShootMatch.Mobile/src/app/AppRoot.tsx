@@ -87,7 +87,7 @@ export default function AppRoot() {
       <SafeAreaProvider>
         <AuthProvider>
           <NotificationProvider>
-            <NavigationContainer ref={navigationRef} theme={navTheme}>
+            <NavigationContainer ref={navigationRef} theme={navTheme} documentTitle={{ formatter: () => 'PicKic' }}>
               <Router />
               <CallListener />
             </NavigationContainer>
