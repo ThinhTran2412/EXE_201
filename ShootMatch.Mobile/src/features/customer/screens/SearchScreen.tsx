@@ -11,6 +11,8 @@ import {
   TextInput,
   View,
   Dimensions,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,10 +30,6 @@ import {
   FeaturedPhotographerCard, 
   PortfolioFeedItem 
 } from '../api';
-
-const { width: W } = Dimensions.get('window');
-const HOT_CARD_W = W * 0.68;
-const LOOKBOOK_CARD_W = W * 0.5;
 
 const REGIONS = [
   { label: 'Tất cả khu vực', value: '' },
@@ -142,6 +140,12 @@ const MOCK_LOOKBOOKS = [
 
 export default function SearchScreen() {
   const navigation = useNavigation<any>();
+
+  const { width: windowWidth } = useWindowDimensions();
+  const W = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
+  const HOT_CARD_W = W * 0.68;
+  const LOOKBOOK_CARD_W = W * 0.5;
+  const styles = React.useMemo(() => getStyles(W, HOT_CARD_W, LOOKBOOK_CARD_W), [W, HOT_CARD_W, LOOKBOOK_CARD_W]);
 
   // State filters
   const [query, setQuery] = useState('');
@@ -845,7 +849,7 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (W: number, HOT_CARD_W: number, LOOKBOOK_CARD_W: number) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   searchHeader: {
     flexDirection: 'row',

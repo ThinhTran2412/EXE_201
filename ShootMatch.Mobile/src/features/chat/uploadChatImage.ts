@@ -2,6 +2,7 @@ import { API_URL } from '../../shared/api/config';
 import { parseApiError } from '../../shared/api/parseApiError';
 import { ensureAccessToken } from '../../shared/auth/tokenRefresh';
 import type { ChatImageUploadResult } from './types';
+import { appendFileToFormData } from '../../shared/api/uploadHelper';
 
 export type { ChatImageUploadResult } from './types';
 
@@ -19,11 +20,7 @@ export async function uploadChatImage(
   if (!token) throw new Error('Chưa đăng nhập — không thể gửi ảnh.');
 
   const form = new FormData();
-  form.append('file', {
-    uri,
-    name: filename,
-    type: mimeType,
-  } as any);
+  await appendFileToFormData(form, 'file', uri, filename, mimeType);
 
   const url = `${API_URL}/api/conversations/${conversationId}/media/upload`;
   const response = await fetch(url, {

@@ -33,7 +33,12 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "shortName": "ShootMatch",
+      "themeColor": "#fff7e1",
+      "backgroundColor": "#fff7e1",
+      "display": "standalone",
+      "startUrl": "."
     },
     "experiments": {
       "tsconfigPaths": true

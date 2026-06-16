@@ -22,9 +22,13 @@ const { width } = Dimensions.get('window');
 const formatPhotoUrl = (url?: string) => {
   if (!url) return '';
   const apiUrl = process.env.EXPO_PUBLIC_API_URL || '';
-  const ipMatch = apiUrl.match(/http:\/\/((\d+\.){3}\d+)/);
-  if (ipMatch && (url.includes('localhost') || url.includes('127.0.0.1'))) {
-    return url.replace(/localhost|127\.0\.0\.1/, ipMatch[1]);
+  if (url.includes('trycloudflare.com') || url.includes('localhost') || url.includes('127.0.0.1')) {
+    try {
+      const parsed = new URL(url);
+      return `${apiUrl}${parsed.pathname}${parsed.search}`;
+    } catch (e) {
+      return url;
+    }
   }
   return url;
 };

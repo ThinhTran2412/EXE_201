@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ScrollView, StyleSheet, Text, View, Pressable, Alert, ActivityIndicator, Image,
-  Dimensions, Modal, FlatList, TextInput, PanResponder, Platform, useWindowDimensions
+  Dimensions, Modal, FlatList, TextInput, PanResponder, Platform
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInUp, FadeInDown } from 'react-native-reanimated';
@@ -30,7 +30,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const formatPhotoUrl = (url?: string) => {
   if (!url) return '';
   const apiUrl = process.env.EXPO_PUBLIC_API_URL || '';
-  
+
   // Rewrite old trycloudflare.com tunnels or localhost to current API URL
   if (url.includes('trycloudflare.com') || url.includes('localhost') || url.includes('127.0.0.1')) {
     try {
@@ -64,7 +64,7 @@ export default function UploadPortfolioScreen() {
   const [uploading, setUploading] = useState(false);
   const [photoData, setPhotoData] = useState<PhotoData[]>([]);
   const [selectedUrls, setSelectedUrls] = useState<string[]>([]);
-  
+
   const [profile, setProfile] = useState<any>(null);
   const [stylesList, setStylesList] = useState<Style[]>([]);
   const [conceptsList, setConceptsList] = useState<Concept[]>([]);
@@ -81,7 +81,7 @@ export default function UploadPortfolioScreen() {
   const [isSelectingMoodboard, setIsSelectingMoodboard] = useState(false);
 
   const insets = useSafeAreaInsets();
-  
+
   // Image Viewer State
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const flatListRef = useRef<FlatList>(null);
@@ -112,10 +112,7 @@ export default function UploadPortfolioScreen() {
   }).current;
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
 
-  const { width: windowWidth } = useWindowDimensions();
-  const W = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
-  const numColumns = Platform.OS === 'web' ? 4 : (W >= 768 ? 3 : 2);
-  const colWidth = (W - 32 - 16 * (numColumns - 1)) / numColumns;
+  const colWidth = (SCREEN_WIDTH - 32 - 16) / 2; // padding 16*2, gap 16
 
   useEffect(() => {
     loadData();
@@ -129,7 +126,7 @@ export default function UploadPortfolioScreen() {
         getMyDetailedPortfolioPhotos(),
         getActiveStylesAndConcepts()
       ]);
-      
+
       if (p) {
         setProfile(p);
         setPhilosophyInput(p.quote || '');
@@ -138,7 +135,7 @@ export default function UploadPortfolioScreen() {
           if (storedMasterpiece) {
             setMasterpiecePhotoId(storedMasterpiece);
           }
-          
+
           const storedMoodboard = await AsyncStorage.getItem(`@moodboard_${p.id}`);
           if (storedMoodboard) {
             setMoodboardPhotoIds(JSON.parse(storedMoodboard));
@@ -184,7 +181,7 @@ export default function UploadPortfolioScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
-      allowsEditing: false, 
+      allowsEditing: false,
       quality: 0.8,
       base64: false,
     });
@@ -258,10 +255,10 @@ export default function UploadPortfolioScreen() {
     setIsSavingTags(true);
     try {
       await updatePortfolioPhotoTags(photo.id, selectedStyles, selectedConcepts);
-      
+
       const updatedStyles = stylesList.filter(s => selectedStyles.includes(s.id));
       const updatedConcepts = conceptsList.filter(c => selectedConcepts.includes(c.id));
-      
+
       setPhotoData(prev => {
         const copy = [...prev];
         copy[viewerIndex] = {
@@ -271,7 +268,7 @@ export default function UploadPortfolioScreen() {
         };
         return copy;
       });
-      
+
       setIsTagModalOpen(false);
       Alert.alert('Thành công', 'Đã cập nhật các tag cho tác phẩm.');
     } catch (err) {
@@ -346,9 +343,9 @@ export default function UploadPortfolioScreen() {
           colors={['transparent', 'rgba(0,0,0,0.85)']}
           style={styles.masterpieceGradient}
         />
-        
-        <Pressable 
-          style={styles.changeMasterpieceBtn} 
+
+        <Pressable
+          style={styles.changeMasterpieceBtn}
           onPress={() => setIsSelectingMasterpiece(true)}
         >
           <Ionicons name="camera-outline" size={20} color="#FFFBF0" />
@@ -357,14 +354,14 @@ export default function UploadPortfolioScreen() {
         <View style={styles.masterpieceOverlay}>
           <Text style={styles.masterpieceHeaderLabel}>M A S T E R P I E C E</Text>
           <Text style={styles.masterpieceIssue}>ISSUE #01 / EDITORIAL</Text>
-          
+
           <View style={styles.masterpieceDivider} />
-          
+
           <Text style={styles.masterpieceTitleText}>{photographerName}</Text>
           <Text style={styles.masterpieceQuoteText}>
             *"Mỗi bức ảnh là một bài thơ không lời, ghi lại khoảnh khắc chạm đến trái tim."*
           </Text>
-          
+
           <View style={styles.masterpieceTagsRow}>
             {latestPhoto.styles.slice(0, 2).map(s => (
               <View key={s.id} style={styles.masterpieceTagBadge}>
@@ -378,7 +375,7 @@ export default function UploadPortfolioScreen() {
   };
 
   const renderPhilosophy = () => {
-    const quoteText = profile?.quote || 
+    const quoteText = profile?.quote ||
       "Nhiếp ảnh là cách ta cảm nhận, chạm và yêu. Những gì ta ghi lại được sẽ còn mãi sau khi mọi thứ đã trôi qua.";
 
     return (
@@ -386,8 +383,8 @@ export default function UploadPortfolioScreen() {
         <View style={styles.philosophyHeaderRow}>
           <Text style={styles.philosophyLabel}>TRIẾT LÝ NGHỆ THUẬT</Text>
         </View>
-        <Pressable 
-          style={styles.editPhilosophyBtn} 
+        <Pressable
+          style={styles.editPhilosophyBtn}
           onPress={() => {
             setPhilosophyInput(quoteText);
             setIsEditingPhilosophy(true);
@@ -421,14 +418,14 @@ export default function UploadPortfolioScreen() {
             <Text style={styles.creativeSectionLabel}>INSPIRATION MOODBOARD</Text>
             <Text style={styles.creativeSectionSub}>Cảm hứng bất tận</Text>
           </View>
-          <Pressable 
-            style={styles.editMoodboardBtn} 
+          <Pressable
+            style={styles.editMoodboardBtn}
             onPress={() => setIsSelectingMoodboard(true)}
           >
             <Ionicons name="create-outline" size={20} color={colors.accent} />
           </Pressable>
         </View>
-        
+
         <View style={styles.moodboardGrid}>
           {items[0] && (
             <View style={[styles.moodboardPhotoFrame, styles.moodboardPhoto1]}>
@@ -531,39 +528,39 @@ export default function UploadPortfolioScreen() {
   }
 
   const toggleSelection = (url: string) => {
-    setSelectedUrls(prev => 
+    setSelectedUrls(prev =>
       prev.includes(url) ? prev.filter(u => u !== url) : [...prev, url]
     );
   };
 
   const isSelecting = selectedUrls.length > 0;
 
-  const colHeights = Array(numColumns).fill(0);
+  let h1 = 0;
+  let h2 = 0;
   const positions = photoData.map((p, idx) => {
     const itemHeight = colWidth / p.aspectRatio;
-    
-    let minColIdx = 0;
-    let minColHeight = colHeights[0];
-    for (let i = 1; i < numColumns; i++) {
-      if (colHeights[i] < minColHeight) {
-        minColHeight = colHeights[i];
-        minColIdx = i;
-      }
+    let top = 0;
+    let left = 0;
+
+    if (h1 <= h2) {
+      top = h1;
+      left = 0;
+      h1 += itemHeight + 16;
+    } else {
+      top = h2;
+      left = colWidth + 16;
+      h2 += itemHeight + 16;
     }
-    
-    const top = colHeights[minColIdx];
-    const left = minColIdx * (colWidth + 16);
-    colHeights[minColIdx] += itemHeight + 16;
-    
+
     return { ...p, originalIndex: idx, top, left, height: itemHeight };
   });
-  
-  const containerHeight = Math.max(...colHeights);
+
+  const containerHeight = Math.max(h1, h2);
 
   const scrollToThumbnail = (index: number) => {
     if (!thumbnailsRef.current) return;
     const center = 45 + index * 62;
-    const scrollX = center - W / 2;
+    const scrollX = center - SCREEN_WIDTH / 2;
     thumbnailsRef.current.scrollTo({ x: Math.max(0, scrollX), animated: true });
   };
 
@@ -672,12 +669,12 @@ export default function UploadPortfolioScreen() {
               {positions.map((item, index) => {
                 const isSelected = selectedUrls.includes(item.url);
                 return (
-                  <Animated.View 
-                    key={`m-${item.originalIndex ?? index}`} 
-                    entering={Platform.OS === 'web' ? undefined : FadeIn.delay(Math.min(index * 50, 500)).duration(400)}
+                  <Animated.View
+                    key={`m-${item.originalIndex ?? index}`}
+                    entering={FadeIn.delay(Math.min(index * 40, 400)).duration(350)}
                     style={{ position: 'absolute', top: item.top, left: item.left, width: colWidth, height: item.height }}
                   >
-                    <Pressable 
+                    <Pressable
                       style={{ width: '100%', height: '100%' }}
                       onPress={() => {
                         if (isSelecting) toggleSelection(item.url);
@@ -688,11 +685,11 @@ export default function UploadPortfolioScreen() {
                       }}
                     >
                       <PortfolioImageCell
-                        uri={item.url} 
+                        uri={item.url}
                         style={[
                           styles.masonryImage,
                           isSelected && { opacity: 0.8 }
-                        ]} 
+                        ]}
                         borderRadius={12}
                         resizeMode="cover"
                       />
@@ -712,7 +709,7 @@ export default function UploadPortfolioScreen() {
                           ))}
                         </View>
                       )}
-                      
+
                       {/* Checkmark overlay */}
                       {isSelecting && (
                         <View style={[styles.selectOverlay, isSelected && styles.selectOverlayActive]}>
@@ -739,8 +736,8 @@ export default function UploadPortfolioScreen() {
       {/* FLOATING ACTION BUTTON */}
       {!isSelecting && (
         <Animated.View entering={FadeInUp.delay(400).duration(600)} style={[styles.fabContainer, { bottom: Math.max(8, insets.bottom - 6) }]}>
-          <Pressable onPress={handlePickImage} disabled={uploading} style={({pressed}) => [styles.fabBtn, pressed && { transform: [{scale: 0.85}] }]}>
-            <LinearGradient colors={[colors.accent, '#e63b00']} style={styles.fabGradient} start={{x: 0, y: 0}} end={{x: 1, y: 0}}>
+          <Pressable onPress={handlePickImage} disabled={uploading} style={({ pressed }) => [styles.fabBtn, pressed && { transform: [{ scale: 0.85 }] }]}>
+            <LinearGradient colors={[colors.accent, '#e63b00']} style={styles.fabGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
               {uploading ? <ActivityIndicator color="#FFFBF0" /> : <Ionicons name="add" size={32} color="#FFFBF0" />}
             </LinearGradient>
           </Pressable>
@@ -750,17 +747,17 @@ export default function UploadPortfolioScreen() {
       {/* IMAGE VIEWER OVERLAY VIEW */}
       {viewerIndex !== null && (
         <View style={[StyleSheet.absoluteFill, styles.viewerBackground, { zIndex: 9999, paddingTop: Math.max(0, insets.top - 2), paddingBottom: (insets.bottom || 8) + 4 }]}>
-          
+
           {/* Header */}
           <View style={styles.viewerHeader}>
             <Pressable style={styles.viewerClose} onPress={() => setViewerIndex(null)}>
               <Ionicons name="close" size={28} color="#FFFBF0" />
             </Pressable>
-            
+
             <View style={{ flexDirection: 'row', gap: 12 }}>
               {viewerIndex !== null && photoData[viewerIndex] && (
-                <Pressable 
-                  style={styles.viewerActionButton} 
+                <Pressable
+                  style={styles.viewerActionButton}
                   onPress={() => openTagEditor(viewerIndex!)}
                 >
                   <Ionicons name="create-outline" size={20} color="#FFFBF0" />
@@ -780,87 +777,81 @@ export default function UploadPortfolioScreen() {
             {/* Main Full-Screen List */}
             <View style={{ flex: 1 }} {...panResponder.panHandlers}>
               <FlatList
-              ref={flatListRef}
-              data={photoData}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              initialScrollIndex={viewerIndex !== null && viewerIndex < photoData.length ? viewerIndex : 0}
-              getItemLayout={(data, index) => ({ length: W, offset: W * index, index })}
-              onViewableItemsChanged={onViewableItemsChanged}
-              viewabilityConfig={viewabilityConfig}
-              renderItem={({ item }) => (
-                <View style={{ width: W, flex: 1, flexDirection: 'column', paddingBottom: 6 }}>
-                  {/* Image container occupies remaining space, scales image as large as possible */}
-                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: W, overflow: 'hidden' }}>
-                    {/* Blurred background to gracefully fill empty space (especially for 9:16 vertical photos) */}
-                    <Image 
-                      source={{ uri: formatPhotoUrl(item.url) }} 
-                      style={[StyleSheet.absoluteFill, { opacity: Platform.OS === 'web' ? 0.1 : 0.3 }]} 
-                      resizeMode="cover"
-                      blurRadius={Platform.OS === 'web' ? 0 : 25}
-                    />
-                    <Image 
-                      source={{ uri: formatPhotoUrl(item.url) }} 
-                      style={{ width: W, height: '100%' }} 
-                      resizeMode="contain" 
-                    />
-                  </View>
-                  
-                  {/* Clean Tags positioned at the bottom of the middle area, right under the image */}
-                  <View>
-                    <ScrollView 
-                      horizontal 
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.viewerTagsContainer}
-                      style={{ flexGrow: 0, paddingVertical: 24 }}
-                    >
-                      {item.styles.length === 0 && item.concepts.length === 0 ? (
-                        <Text style={styles.noTagsText}>Nhấn "Gắn thẻ" để phân loại ảnh</Text>
-                      ) : (
-                        <>
-                          {item.styles.map((s: Style) => (
-                            <View key={s.id} style={styles.viewerTagBadge}>
-                              <Text style={styles.viewerTagText}>#{s.name}</Text>
-                            </View>
-                          ))}
-                          {item.concepts.map((c: Concept) => (
-                            <View key={c.id} style={[styles.viewerTagBadge, { backgroundColor: 'rgba(230,59,0,0.4)' }]}>
-                              <Text style={styles.viewerTagText}>#{c.name}</Text>
-                            </View>
-                          ))}
-                        </>
-                      )}
-                    </ScrollView>
-                  </View>
-                </View>
-              )}
-              keyExtractor={item => item.url}
-            />
-          </View>
+                ref={flatListRef}
+                data={photoData}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                initialScrollIndex={viewerIndex !== null && viewerIndex < photoData.length ? viewerIndex : 0}
+                getItemLayout={(data, index) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * index, index })}
+                onViewableItemsChanged={onViewableItemsChanged}
+                viewabilityConfig={viewabilityConfig}
+                renderItem={({ item }) => (
+                  <View style={{ width: SCREEN_WIDTH, flex: 1, flexDirection: 'column', paddingBottom: 6 }}>
+                    {/* Image container occupies remaining space, scales image as large as possible */}
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: SCREEN_WIDTH, overflow: 'hidden' }}>
+                      <PortfolioImageCell
+                        uri={item.url}
+                        style={{ width: SCREEN_WIDTH, height: '100%' }}
+                        borderRadius={0}
+                        resizeMode="contain"
+                      />
+                    </View>
 
-          {/* Thumbnails Row */}
-          <View style={styles.viewerFooter}>
-            <ScrollView 
-              ref={thumbnailsRef} 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              contentContainerStyle={styles.thumbnailsScroll}
-            >
-              {photoData.map((p, i) => (
-                <Pressable key={p.url} onPress={() => {
-                  setViewerIndex(i);
-                  flatListRef.current?.scrollToIndex({ index: i, animated: false });
-                  scrollToThumbnail(i);
-                }}>
-                  <Image 
-                    source={{ uri: formatPhotoUrl(p.url) }} 
-                    style={[styles.thumbnail, i === viewerIndex && styles.thumbnailActive]} 
-                  />
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
+                    {/* Clean Tags positioned at the bottom of the middle area, right under the image */}
+                    <View>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.viewerTagsContainer}
+                        style={{ flexGrow: 0, paddingVertical: 24 }}
+                      >
+                        {item.styles.length === 0 && item.concepts.length === 0 ? (
+                          <Text style={styles.noTagsText}>Nhấn "Gắn thẻ" để phân loại ảnh</Text>
+                        ) : (
+                          <>
+                            {item.styles.map((s: Style) => (
+                              <View key={s.id} style={styles.viewerTagBadge}>
+                                <Text style={styles.viewerTagText}>#{s.name}</Text>
+                              </View>
+                            ))}
+                            {item.concepts.map((c: Concept) => (
+                              <View key={c.id} style={[styles.viewerTagBadge, { backgroundColor: 'rgba(230,59,0,0.4)' }]}>
+                                <Text style={styles.viewerTagText}>#{c.name}</Text>
+                              </View>
+                            ))}
+                          </>
+                        )}
+                      </ScrollView>
+                    </View>
+                  </View>
+                )}
+                keyExtractor={item => item.url}
+              />
+            </View>
+
+            {/* Thumbnails Row */}
+            <View style={styles.viewerFooter}>
+              <ScrollView
+                ref={thumbnailsRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.thumbnailsScroll}
+              >
+                {photoData.map((p, i) => (
+                  <Pressable key={p.url} onPress={() => {
+                    setViewerIndex(i);
+                    flatListRef.current?.scrollToIndex({ index: i, animated: false });
+                    scrollToThumbnail(i);
+                  }}>
+                    <Image
+                      source={{ uri: formatPhotoUrl(p.url) }}
+                      style={[styles.thumbnail, i === viewerIndex && styles.thumbnailActive]}
+                    />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
           </View>
         </View>
       )}
@@ -882,8 +873,8 @@ export default function UploadPortfolioScreen() {
               keyExtractor={item => item.id}
               contentContainerStyle={styles.pickerList}
               renderItem={({ item }) => (
-                <Pressable 
-                  style={styles.pickerGridItem} 
+                <Pressable
+                  style={styles.pickerGridItem}
                   onPress={() => selectMasterpiece(item.id)}
                 >
                   <Image source={{ uri: formatPhotoUrl(item.url) }} style={styles.pickerGridImage} />
@@ -920,8 +911,8 @@ export default function UploadPortfolioScreen() {
               renderItem={({ item }) => {
                 const isSelected = moodboardPhotoIds.includes(item.id);
                 return (
-                  <Pressable 
-                    style={styles.pickerGridItem} 
+                  <Pressable
+                    style={styles.pickerGridItem}
                     onPress={() => toggleMoodboardSelection(item.id)}
                   >
                     <Image source={{ uri: formatPhotoUrl(item.url) }} style={styles.pickerGridImage} />
@@ -1031,9 +1022,9 @@ export default function UploadPortfolioScreen() {
               <Pressable style={styles.tagEditorCancelBtn} onPress={() => setIsTagModalOpen(false)}>
                 <Text style={styles.tagEditorCancelText}>Hủy</Text>
               </Pressable>
-              
-              <Pressable 
-                style={styles.tagEditorSaveBtn} 
+
+              <Pressable
+                style={styles.tagEditorSaveBtn}
                 onPress={handleSaveTags}
                 disabled={isSavingTags}
               >
@@ -1055,11 +1046,11 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   scroll: { paddingHorizontal: 16, paddingTop: 16, gap: 24 },
-  
+
   header: { marginBottom: 8 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  title: isDark 
-    ? { fontSize: 36, fontWeight: '900', color: '#FFFBF0', letterSpacing: -1, textShadowColor: colors.accent, textShadowRadius: 12, textShadowOffset: {width: 0, height: 2} }
+  title: isDark
+    ? { fontSize: 36, fontWeight: '900', color: '#FFFBF0', letterSpacing: -1, textShadowColor: colors.accent, textShadowRadius: 12, textShadowOffset: { width: 0, height: 2 } }
     : { fontSize: 36, fontWeight: '900', color: colors.text, letterSpacing: -1 },
   sub: isDark
     ? { fontSize: 14, color: 'rgba(255, 255, 255, 0.7)', marginTop: 4, fontWeight: '500' }
@@ -1069,7 +1060,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     : { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
   sectionLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 2, textTransform: 'uppercase', color: colors.textLight },
   sectionHint: { fontSize: 12, color: colors.textMuted, marginTop: 4, marginBottom: 2 },
-  
+
   galleryContainer: { flex: 1 },
   masonryImage: { width: '100%', height: '100%', borderRadius: 12, backgroundColor: colors.surfaceStrong },
   quickPhotoWrap: { width: 108, height: 148, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.surfaceStrong },
@@ -1102,6 +1093,10 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#e63b00',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,

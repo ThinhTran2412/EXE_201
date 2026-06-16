@@ -15,19 +15,12 @@ import { getPhotographerProfile, updateProfile, updatePersonalInfo, uploadProfil
 import { formatRegion } from '../../../shared/constants/regions';
 import { spacing } from '../../../app/theme/spacing';
 import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
+import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { usePhotographerTheme } from '../PhotographerThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const formatPhotoUrl = (url: string) => {
-  if (!url) return '';
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL || '';
-  const ipMatch = apiUrl.match(/http:\/\/((\d+\.){3}\d+)/);
-  if (ipMatch && (url.includes('localhost') || url.includes('127.0.0.1'))) {
-    return url.replace(/localhost|127\.0\.0\.1/, ipMatch[1]);
-  }
-  return url;
-};
+
 
 async function prepareImage(uri: string, kind: 'avatar' | 'cover') {
   const actions = kind === 'avatar'
@@ -240,8 +233,8 @@ export default function PProfileScreen() {
   }
 
   const photos = profile?.portfolioPhotos || [];
-  const coverUrl = formatPhotoUrl(profile?.coverPhotoUrl) || 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4';
-  const avatarUrl = formatPhotoUrl(profile?.avatarUrl) || 'https://i.pravatar.cc/150';
+  const coverUrl = formatImageUrl(profile?.coverPhotoUrl) || 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4';
+  const avatarUrl = formatImageUrl(profile?.avatarUrl) || 'https://i.pravatar.cc/150';
   const canVerify = profile?.verificationStatus !== 'Verified' && profile?.verificationStatus !== 'Pending';
 
   return (
@@ -486,7 +479,12 @@ export default function PProfileScreen() {
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         {r.authorAvatarUrl ? (
-                          <Image source={{ uri: formatPhotoUrl(r.authorAvatarUrl) }} style={styles.reviewAvatarImage} />
+                          <PortfolioImageCell 
+                            uri={r.authorAvatarUrl} 
+                            style={styles.reviewAvatarImage} 
+                            borderRadius={16} 
+                            resizeMode="cover" 
+                          />
                         ) : (
                           <View style={styles.reviewAvatar}>
                             <Text style={{ fontSize: 11, fontWeight: 'bold', color: colors.text }}>

@@ -41,8 +41,9 @@ const CFG: Record<keyof PhotographerTabParamList, { label: string; icon: IconNam
 function PhotographerTabNavigator() {
   const { colors } = usePhotographerTheme();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = Platform.OS === 'ios' ? 88 : (60 + insets.bottom);
-  const tabBarPaddingBottom = Platform.OS === 'ios' ? 24 : (insets.bottom > 0 ? insets.bottom : 8);
+  const isWeb = Platform.OS === 'web';
+  const tabBarHeight = Platform.OS === 'ios' ? 88 : (isWeb ? 60 : 60 + insets.bottom);
+  const tabBarPaddingBottom = Platform.OS === 'ios' ? 24 : (isWeb ? 4 : (insets.bottom > 0 ? insets.bottom : 8));
 
   return (
     <Tab.Navigator
@@ -50,7 +51,7 @@ function PhotographerTabNavigator() {
         const cfg = CFG[route.name as keyof PhotographerTabParamList];
         return {
           headerShown: false,
-          tabBarStyle: [styles.tabBar, { backgroundColor: colors.tabBar, borderTopWidth: 1, borderTopColor: colors.border, height: tabBarHeight, paddingBottom: tabBarPaddingBottom }],
+          tabBarStyle: [styles.tabBar, { backgroundColor: colors.tabBar, borderTopWidth: isWeb ? 0 : 1, borderTopColor: colors.border, height: tabBarHeight, paddingBottom: tabBarPaddingBottom, paddingTop: isWeb ? 4 : 8 }],
           tabBarActiveTintColor:   colors.tabActive,
           tabBarInactiveTintColor: colors.tabInactive,
           tabBarLabelStyle: styles.label,

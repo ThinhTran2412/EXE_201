@@ -34,9 +34,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("MobileDevPolicy", policy =>
         policy
-            .AllowAnyOrigin()
+            .SetIsOriginAllowed(origin => true)
             .AllowAnyMethod()
-            .AllowAnyHeader());
+            .AllowAnyHeader()
+            .AllowCredentials());
 });
 
 // ──────────────────────────────────────────

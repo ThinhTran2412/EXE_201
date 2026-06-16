@@ -11,6 +11,8 @@ type Props = {
   borderRadius?: number;
   /** Mặc định cover; dùng contain cho xem fullscreen */
   resizeMode?: 'cover' | 'contain';
+  /** Blur cho background layer */
+  blurRadius?: number;
 };
 
 /** Ảnh portfolio: chuẩn hóa URL, loading, lỗi tải → placeholder (tránh ô xám trống). */
@@ -21,6 +23,7 @@ export default function PortfolioImageCell({
   imageStyle,
   borderRadius = 12,
   resizeMode = 'cover',
+  blurRadius,
 }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -52,6 +55,7 @@ export default function PortfolioImageCell({
           style={[StyleSheet.absoluteFillObject, { borderRadius }, imageStyle]}
           resizeMode={resizeMode}
           resizeMethod="resize"
+          blurRadius={blurRadius}
           onLoadEnd={() => setLoading(false)}
           onError={() => {
             setError(true);

@@ -19,6 +19,7 @@ export async function connect(): Promise<signalR.HubConnection> {
           return token ?? '';
         },
         transport: signalR.HttpTransportType.WebSockets,
+        skipNegotiation: true,
       })
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.None)

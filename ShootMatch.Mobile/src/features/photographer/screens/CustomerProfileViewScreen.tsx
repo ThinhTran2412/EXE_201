@@ -9,6 +9,8 @@ import {
   ImageBackground,
   ActivityIndicator,
   Dimensions,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,11 +23,6 @@ import { radius, spacing } from '../../../app/theme/spacing';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { localPictureSlice } from '../../../shared/assets/localPictures';
 import { getCustomerById, type CustomerProfile } from '../../customer/api';
-
-const { width: W } = Dimensions.get('window');
-const PAD = spacing[5];
-const GAP = spacing[3];
-const COL = (W - PAD * 2 - GAP) / 2;
 
 const THEME = {
   primary: '#fff7e1',
@@ -52,29 +49,30 @@ function ViewfinderFrame() {
 }
 const vf = StyleSheet.create({ corner: { position: 'absolute' } });
 
-const POLAROID_W = Math.floor((W - PAD * 2 - spacing[3] * 2) / 3);
-const POLAROID_IMG_W = POLAROID_W - spacing[2] * 2;
-const POLAROID_IMG_H = Math.round(POLAROID_IMG_W * 1.18);
-
 function HeroPolaroid({
   imageUri,
   localSource,
   rotation,
+  width,
 }: {
   imageUri?: string;
   localSource?: ReturnType<typeof localPictureSlice>[number];
   rotation: string;
+  width: number;
 }) {
   const { colors } = usePhotographerTheme();
   const styles = getStyles(colors);
+  const polaroidImgW = width - spacing[2] * 2;
+  const polaroidImgH = Math.round(polaroidImgW * 1.18);
+
   return (
-    <View style={[styles.heroPolaroid, { width: POLAROID_W, transform: [{ rotate: rotation }] }]}>
+    <View style={[styles.heroPolaroid, { width: width, transform: [{ rotate: rotation }] }]}>
       {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.heroPolaroidImg} />
+        <Image source={{ uri: imageUri }} style={[styles.heroPolaroidImg, { width: polaroidImgW, height: polaroidImgH }]} />
       ) : localSource ? (
-        <Image source={localSource} style={styles.heroPolaroidImg} resizeMode="cover" />
+        <Image source={localSource} style={[styles.heroPolaroidImg, { width: polaroidImgW, height: polaroidImgH }]} resizeMode="cover" />
       ) : (
-        <View style={styles.heroPolaroidFallback}>
+        <View style={[styles.heroPolaroidFallback, { width: polaroidImgW, height: polaroidImgH }]}>
           <Ionicons name="person-outline" size={28} color={colors.background} />
         </View>
       )}
@@ -89,6 +87,13 @@ export default function CustomerProfileViewScreen() {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const { customerId, customerName } = route.params as { customerId: string; customerName?: string };
+
+  const { width: windowWidth } = useWindowDimensions();
+  const W = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
+  const PAD = spacing[5];
+  const GAP = spacing[3];
+  const COL = (W - PAD * 2 - GAP) / 2;
+  const POLAROID_W = Math.floor((W - PAD * 2 - spacing[3] * 2) / 3);
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -209,9 +214,9 @@ export default function CustomerProfileViewScreen() {
 
             <View style={styles.heroBottom}>
               <View style={styles.heroPolaroidRow}>
-                <HeroPolaroid imageUri={highlight1Uri} localSource={!highlight1Uri ? filmStrip[0] : undefined} rotation="-6deg" />
-                <HeroPolaroid imageUri={highlight2Uri} localSource={!highlight2Uri ? filmStrip[1] : undefined} rotation="2deg" />
-                <HeroPolaroid imageUri={highlight3Uri} localSource={!highlight3Uri ? filmStrip[2] : undefined} rotation="6deg" />
+                <HeroPolaroid imageUri={highlight1Uri} localSource={!highlight1Uri ? filmStrip[0] : undefined} rotation="-6deg" width={POLAROID_W} />
+                <HeroPolaroid imageUri={highlight2Uri} localSource={!highlight2Uri ? filmStrip[1] : undefined} rotation="2deg" width={POLAROID_W} />
+                <HeroPolaroid imageUri={highlight3Uri} localSource={!highlight3Uri ? filmStrip[2] : undefined} rotation="6deg" width={POLAROID_W} />
               </View>
             </View>
           </View>
@@ -330,7 +335,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: PAD,
+    paddingHorizontal: spacing[5],
     zIndex: 2,
   },
   heroEyebrow: {
@@ -347,7 +352,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   heroBottom: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: PAD, paddingBottom: spacing[5],
+    paddingHorizontal: spacing[5], paddingBottom: spacing[5],
     zIndex: 20, elevation: 20,
     alignItems: 'center', justifyContent: 'flex-end',
   },
@@ -389,20 +394,19 @@ const getStyles = (colors: any) => StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4, shadowRadius: 14, elevation: 12,
   },
-  heroPolaroidImg: { width: POLAROID_IMG_W, height: POLAROID_IMG_H, backgroundColor: colors.surfaceStrong },
+  heroPolaroidImg: { backgroundColor: colors.surfaceStrong },
   heroPolaroidFallback: {
-    width: POLAROID_IMG_W, height: POLAROID_IMG_H,
     backgroundColor: colors.surfaceStrong, alignItems: 'center', justifyContent: 'center',
   },
 
   filmBlock: { marginTop: -spacing[4], marginBottom: spacing[6] },
   filmHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: PAD, marginBottom: spacing[3],
+    paddingHorizontal: spacing[5], marginBottom: spacing[3],
   },
   filmLabel: { fontSize: 9, fontWeight: fontWeights.bold, letterSpacing: 2.5, color: colors.textMuted },
   filmCounter: { fontSize: 9, color: colors.textLight, fontFamily: 'monospace' },
-  filmScroll: { paddingHorizontal: PAD, gap: spacing[2] },
+  filmScroll: { paddingHorizontal: spacing[5], gap: spacing[2] },
   filmFrame: {
     width: 72, height: 96, borderRadius: 4, overflow: 'hidden',
     borderWidth: 2, borderColor: colors.borderStrong, backgroundColor: colors.surfaceStrong,
@@ -414,7 +418,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: colors.textLight, fontFamily: 'monospace',
   },
 
-  section: { paddingHorizontal: PAD, marginBottom: spacing[7] },
+  section: { paddingHorizontal: spacing[5], marginBottom: spacing[7] },
   sectionEyebrow: {
     fontSize: 9, fontWeight: fontWeights.bold, letterSpacing: 2.5,
     color: colors.accentOrange, textTransform: 'uppercase', marginBottom: 4,

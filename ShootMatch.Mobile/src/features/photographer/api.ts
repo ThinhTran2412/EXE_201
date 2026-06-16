@@ -1,5 +1,6 @@
 import { apiClient } from '../../shared/api/client';
 import { gql } from '../../shared/api/graphql';
+import { appendFileToFormData } from '../../shared/api/uploadHelper';
 
 export interface PhotographerAvailabilitySlot {
   id?: string;
@@ -126,11 +127,7 @@ export async function uploadProfileImage(uri: string, mimeType: string, kind: 'a
   }
 
   const form = new FormData();
-  form.append('file', {
-    uri,
-    name: filename,
-    type: mimeType ?? 'image/jpeg',
-  } as any);
+  await appendFileToFormData(form, 'file', uri, filename, mimeType ?? 'image/jpeg');
 
   const endpoint = kind === 'avatar'
     ? '/api/photographers/profile/avatar/upload'
@@ -238,11 +235,7 @@ export async function uploadPortfolioPhoto(uri: string, mimeType: string): Promi
   }
 
   const form = new FormData();
-  form.append('file', {
-    uri,
-    name: filename,
-    type: mimeType ?? 'image/jpeg',
-  } as any);
+  await appendFileToFormData(form, 'file', uri, filename, mimeType ?? 'image/jpeg');
 
   const { data } = await apiClient.post<{ photoUrl: string }>(
     '/api/photographers/portfolio/upload',
@@ -260,11 +253,7 @@ export async function uploadServicePackageMedia(uri: string, mimeType: string): 
   }
 
   const form = new FormData();
-  form.append('file', {
-    uri,
-    name: filename,
-    type: mimeType ?? 'image/jpeg',
-  } as any);
+  await appendFileToFormData(form, 'file', uri, filename, mimeType ?? 'image/jpeg');
 
   const { data } = await apiClient.post<{ photoUrl: string }>(
     '/api/photographers/service-packages/media/upload',

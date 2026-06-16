@@ -1,6 +1,7 @@
 import { apiClient } from '../../shared/api/client';
 import { gql } from '../../shared/api/graphql';
 import { tokenStorage } from '../../shared/storage/tokenStorage';
+import { appendFileToFormData } from '../../shared/api/uploadHelper';
 
 export interface AvailabilitySlot {
   specificDate: string;
@@ -275,11 +276,7 @@ export async function updateCustomerProfile(payload: Partial<Pick<CustomerProfil
 export async function uploadCustomerRollPreviewPhoto(uri: string, mimeType: string) {
   const filename = uri.split('/').pop() ?? `roll_preview_${Date.now()}.jpg`;
   const form = new FormData();
-  form.append('file', {
-    uri,
-    name: filename,
-    type: mimeType ?? 'image/jpeg',
-  } as any);
+  await appendFileToFormData(form, 'file', uri, filename, mimeType ?? 'image/jpeg');
 
   const { data } = await apiClient.post<{ photoUrl: string }>('/api/customers/profile/roll-preview/upload', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -299,11 +296,7 @@ const UPLOAD_ENDPOINTS: Record<CustomerPhotoSlot, string> = {
 export async function uploadCustomerProfileImage(uri: string, mimeType: string, kind: CustomerPhotoSlot) {
   const filename = uri.split('/').pop() ?? `${kind}_${Date.now()}.jpg`;
   const form = new FormData();
-  form.append('file', {
-    uri,
-    name: filename,
-    type: mimeType ?? 'image/jpeg',
-  } as any);
+  await appendFileToFormData(form, 'file', uri, filename, mimeType ?? 'image/jpeg');
 
   const endpoint = UPLOAD_ENDPOINTS[kind];
 

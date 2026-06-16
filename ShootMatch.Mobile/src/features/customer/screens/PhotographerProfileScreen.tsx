@@ -674,7 +674,12 @@ export default function PhotographerProfileScreen() {
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       {r.authorAvatarUrl ? (
-                        <Image source={{ uri: formatImageUrl(r.authorAvatarUrl) }} style={styles.reviewAvatarImage} />
+                        <PortfolioImageCell 
+                          uri={r.authorAvatarUrl} 
+                          style={styles.reviewAvatarImage} 
+                          borderRadius={16} 
+                          resizeMode="cover" 
+                        />
                       ) : (
                         <View style={styles.reviewAvatar}>
                           <Text style={{ fontSize: 11, fontWeight: 'bold', color: THEME.accent }}>

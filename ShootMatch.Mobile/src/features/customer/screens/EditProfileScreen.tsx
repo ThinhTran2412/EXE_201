@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ScrollView, StyleSheet, Text, View, TextInput, Pressable, Alert, Image, ActivityIndicator,
-  Dimensions, Platform, KeyboardAvoidingView, useWindowDimensions
+  Dimensions, Platform, KeyboardAvoidingView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -55,15 +55,6 @@ function ViewfinderBrackets({ color = 'rgba(255, 247, 225, 0.45)', size = 10, th
 
 export default function EditProfileScreen() {
   const navigation = useNavigation<any>();
-  const { width: windowWidth } = useWindowDimensions();
-  const RW = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
-  // scroll padding = 20*2, rollSectionContainer padding = 16*2
-  const [containerWidth, setContainerWidth] = useState(RW - 40 - 32);
-  const ROLL_SLOT_W = Math.floor((containerWidth - 8 * 3) / 4);
-  const ROLL_SLOT_H = Math.round(ROLL_SLOT_W * 1.3);
-  const COLLAGE_W_R = RW - spacing[5] * 2;
-  const LEFT_COL_W_R = Math.floor((COLLAGE_W_R - GAP) * 0.54);
-  const RIGHT_COL_W_R = Math.floor((COLLAGE_W_R - GAP) * 0.46);
   const { session } = useAuth();
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
@@ -161,10 +152,10 @@ export default function EditProfileScreen() {
       const uploadedUrl = await uploadCustomerProfileImage(preparedUri, 'image/jpeg', slot);
       const patch =
         slot === 'avatar' ? { avatarUrl: uploadedUrl }
-          : slot === 'cover' ? { coverPhotoUrl: uploadedUrl }
-            : slot === 'highlight1' ? { highlightPhoto1Url: uploadedUrl }
-              : slot === 'highlight2' ? { highlightPhoto2Url: uploadedUrl }
-                : { highlightPhoto3Url: uploadedUrl };
+        : slot === 'cover' ? { coverPhotoUrl: uploadedUrl }
+        : slot === 'highlight1' ? { highlightPhoto1Url: uploadedUrl }
+        : slot === 'highlight2' ? { highlightPhoto2Url: uploadedUrl }
+        : { highlightPhoto3Url: uploadedUrl };
       await updateCustomerProfile(patch);
       setProfile(prev => (prev ? { ...prev, ...patch } : prev));
     } catch {
@@ -235,7 +226,7 @@ export default function EditProfileScreen() {
 
   async function handleSave() {
     if (!name.trim()) { Alert.alert('Thiếu tên', 'Vui lòng nhập tên hiển thị.'); return; }
-
+    
     // Custom Roll Preview Validation
     let rollPreviewPhotosPayload = '';
     if (rollPreviewEnabled) {
@@ -356,7 +347,7 @@ export default function EditProfileScreen() {
           <Animated.View entering={FadeInDown.duration(600).delay(200)} style={styles.collageContainer}>
             {/* Highlight 1 (Dominant Vertical Poster Format) */}
             <Pressable
-              style={[styles.highlightTall, { width: LEFT_COL_W_R, height: COLLAGE_H }]}
+              style={[styles.highlightTall, { width: LEFT_COL_W, height: COLLAGE_H }]}
               onPress={() => handlePhotoPress('highlight1')}
             >
               {highlight1Uri ? (
@@ -380,7 +371,7 @@ export default function EditProfileScreen() {
             </Pressable>
 
             {/* Right Column Stack (Highlight 2 & 3) */}
-            <View style={{ width: RIGHT_COL_W_R, height: COLLAGE_H, justifyContent: 'space-between' }}>
+            <View style={{ width: RIGHT_COL_W, height: COLLAGE_H, justifyContent: 'space-between' }}>
               {/* Highlight 2 */}
               <Pressable
                 style={[styles.highlightSmall, { height: (COLLAGE_H - GAP) / 2 }]}
@@ -435,15 +426,15 @@ export default function EditProfileScreen() {
               <Text style={styles.sectionEyebrow}>02 // THE IDENTITY</Text>
               <Text style={styles.sectionSubtitleText}>Nhập liệu tối giản gạch dưới · Phản hồi ánh sáng</Text>
             </View>
-            <Pressable
-              style={styles.toggleCollapseBtn}
+            <Pressable 
+              style={styles.toggleCollapseBtn} 
               onPress={() => setIdentityExpanded(!identityExpanded)}
               hitSlop={10}
             >
-              <Ionicons
-                name={identityExpanded ? "chevron-up" : "chevron-down"}
-                size={18}
-                color={colors.accentOrange}
+              <Ionicons 
+                name={identityExpanded ? "chevron-up" : "chevron-down"} 
+                size={18} 
+                color={colors.accentOrange} 
               />
             </Pressable>
           </View>
@@ -529,15 +520,15 @@ export default function EditProfileScreen() {
               <Text style={styles.sectionEyebrow}>03 // CUSTOM ROLL PREVIEW</Text>
               <Text style={styles.sectionSubtitleText}>Kích hoạt cuộn phim bản thảo cá nhân từ 4 đến 8 ảnh</Text>
             </View>
-            <Pressable
-              style={styles.toggleCollapseBtn}
+            <Pressable 
+              style={styles.toggleCollapseBtn} 
               onPress={() => setRollExpanded(!rollExpanded)}
               hitSlop={10}
             >
-              <Ionicons
-                name={rollExpanded ? "chevron-up" : "chevron-down"}
-                size={18}
-                color={colors.accentOrange}
+              <Ionicons 
+                name={rollExpanded ? "chevron-up" : "chevron-down"} 
+                size={18} 
+                color={colors.accentOrange} 
               />
             </Pressable>
           </View>
@@ -571,11 +562,8 @@ export default function EditProfileScreen() {
                   <Text style={styles.gridInfoText}>
                     ĐÃ TẢI LÊN: <Text style={styles.gridInfoHighlight}>{rollPreviewPhotos.length}/8</Text> ẢNH {rollPreviewPhotos.length < 4 && <Text style={styles.gridInfoWarning}>(Cần thêm ít nhất {4 - rollPreviewPhotos.length} ảnh)</Text>}
                   </Text>
-
-                  <View
-                    style={styles.rollGrid}
-                    onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
-                  >
+                  
+                  <View style={styles.rollGrid}>
                     {Array.from({ length: 8 }).map((_, i) => {
                       const hasPhoto = i < rollPreviewPhotos.length;
                       const isNextToUpload = i === rollPreviewPhotos.length;
@@ -584,14 +572,14 @@ export default function EditProfileScreen() {
 
                       if (hasPhoto) {
                         return (
-                          <View key={i} style={[styles.rollSlot, { width: ROLL_SLOT_W }]}>
-                            <Pressable style={[styles.rollSlotInner, { height: ROLL_SLOT_H }]} onPress={() => handleRollPhotoPress(i)}>
+                          <View key={i} style={styles.rollSlot}>
+                            <Pressable style={styles.rollSlotInner} onPress={() => handleRollPhotoPress(i)}>
                               <Image source={{ uri: photoUrl! }} style={styles.rollSlotImage} />
                               <View style={styles.rollSlotOverlay} />
                               <ViewfinderBrackets size={6} thick={1} />
                               <Text style={styles.rollSlotFrameNo}>{String(i + 1).padStart(2, '0')}</Text>
                             </Pressable>
-
+                            
                             {/* Delete Button */}
                             <Pressable
                               style={styles.rollSlotDeleteBtn}
@@ -606,9 +594,9 @@ export default function EditProfileScreen() {
 
                       if (isNextToUpload) {
                         return (
-                          <View key={i} style={[styles.rollSlot, { width: ROLL_SLOT_W }]}>
+                          <View key={i} style={styles.rollSlot}>
                             <Pressable
-                              style={[styles.rollSlotInner, styles.rollSlotEmpty, { height: ROLL_SLOT_H }]}
+                              style={[styles.rollSlotInner, styles.rollSlotEmpty]}
                               onPress={() => handleRollPhotoPress(i)}
                               disabled={isUploading}
                             >
@@ -628,8 +616,8 @@ export default function EditProfileScreen() {
 
                       // Locked slot
                       return (
-                        <View key={i} style={[styles.rollSlot, { width: ROLL_SLOT_W }]}>
-                          <View style={[styles.rollSlotInner, styles.rollSlotLocked, { height: ROLL_SLOT_H }]}>
+                        <View key={i} style={styles.rollSlot}>
+                          <View style={[styles.rollSlotInner, styles.rollSlotLocked]}>
                             <Ionicons name="lock-closed-outline" size={14} color="rgba(26,26,15,0.15)" />
                             <Text style={styles.rollSlotFrameNo}>{String(i + 1).padStart(2, '0')}</Text>
                           </View>
@@ -648,15 +636,15 @@ export default function EditProfileScreen() {
               <Text style={styles.sectionEyebrow}>04 // MY STYLE PREFERENCES</Text>
               <Text style={styles.sectionSubtitleText}>Lựa chọn gu ảnh nghệ thuật đặc trưng của bạn</Text>
             </View>
-            <Pressable
-              style={styles.toggleCollapseBtn}
+            <Pressable 
+              style={styles.toggleCollapseBtn} 
               onPress={() => setStyleExpanded(!styleExpanded)}
               hitSlop={10}
             >
-              <Ionicons
-                name={styleExpanded ? "chevron-up" : "chevron-down"}
-                size={18}
-                color={colors.accentOrange}
+              <Ionicons 
+                name={styleExpanded ? "chevron-up" : "chevron-down"} 
+                size={18} 
+                color={colors.accentOrange} 
               />
             </Pressable>
           </View>
@@ -666,7 +654,7 @@ export default function EditProfileScreen() {
               <Text style={styles.styleHintText}>
                 Chọn các phong cách chụp ảnh bạn mong muốn để hiển thị trên profile (chạm để chọn/bỏ chọn, chạm để xem giải thích):
               </Text>
-
+              
               <View style={styles.stylePillsGrid}>
                 {STYLE_DEFINITIONS.map(item => {
                   const isSelected = selectedStyles.includes(item.id);
@@ -675,9 +663,9 @@ export default function EditProfileScreen() {
                     <Pressable
                       key={item.id}
                       onPress={() => {
-                        setSelectedStyles(prev =>
-                          prev.includes(item.id)
-                            ? prev.filter(x => x !== item.id)
+                        setSelectedStyles(prev => 
+                          prev.includes(item.id) 
+                            ? prev.filter(x => x !== item.id) 
                             : [...prev, item.id]
                         );
                         setActiveStyleId(item.id);
@@ -688,10 +676,10 @@ export default function EditProfileScreen() {
                         isActiveDesc && styles.editorStylePillActiveDesc
                       ]}
                     >
-                      <Ionicons
-                        name={isSelected ? "aperture" : "aperture-outline"}
-                        size={12}
-                        color={isSelected ? "#fff7e1" : colors.accentOrange}
+                      <Ionicons 
+                        name={isSelected ? "aperture" : "aperture-outline"} 
+                        size={12} 
+                        color={isSelected ? "#fff7e1" : colors.accentOrange} 
                       />
                       <Text style={[
                         styles.editorStylePillText,
@@ -758,7 +746,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#fff7e1' },
   loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff7e1' },
   loadingText: { marginTop: 12, fontSize: 13, color: '#1a1a0f', letterSpacing: 1.5, fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', fontStyle: 'italic' },
-
+  
   // --- HEADER VIEW-FINDER ---
   header: {
     flexDirection: 'row',
@@ -884,7 +872,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#fff7e1',
   },
-
+  
   // Avatar circular ring
   avatarDock: {
     position: 'absolute',
@@ -1265,11 +1253,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   rollSlot: {
+    width: Math.floor((W - spacing[5] * 2 - spacing[4] * 2 - 8 * 3) / 4),
     position: 'relative',
     marginBottom: 4,
   },
   rollSlotInner: {
     width: '100%',
+    height: Math.round(Math.floor((W - spacing[5] * 2 - spacing[4] * 2 - 8 * 3) / 4) * 1.3),
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#1a1a0f',

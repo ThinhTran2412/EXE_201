@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Text,
   View,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -51,8 +53,6 @@ type TimeSlot = {
 
 type ShiftKey = TimeSlot['shift'];
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CELL = Math.floor((SCREEN_WIDTH - spacing[6] * 2 - 12 * 6) / 7);
 const MONTH_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 const TIME_SLOTS: TimeSlot[] = [
@@ -127,7 +127,12 @@ function getMonthGrid(year: number, month: number) {
 export default function PBookingCalendarScreen() {
   const navigation = useNavigation<any>();
   const { colors, isDark } = usePhotographerTheme();
-  const styles = getStyles(colors);
+
+  const { width: windowWidth } = useWindowDimensions();
+  const SCREEN_WIDTH = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
+  const CELL = Math.floor((SCREEN_WIDTH - spacing[6] * 2 - 12 * 6) / 7);
+  const styles = React.useMemo(() => getStyles(colors, CELL), [colors, CELL]);
+
   const [selected, setSelected] = useState(new Date());
   const [events, setEvents] = useState<BookingEvent[]>(INITIAL_EVENTS);
   const [availabilitySlots, setAvailabilitySlots] = useState<PhotographerAvailabilitySlot[]>([]);
@@ -705,7 +710,7 @@ export default function PBookingCalendarScreen() {
 
 function Legend({ color, label }: { color: string; label: string }) {
   const { colors } = usePhotographerTheme();
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, 0);
   return (
     <View style={styles.legendItem}>
       <View style={[styles.legendDot, { backgroundColor: color }]} />
@@ -714,7 +719,7 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, CELL: number) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing[4], gap: spacing[4], backgroundColor: colors.background },
   hero: {
