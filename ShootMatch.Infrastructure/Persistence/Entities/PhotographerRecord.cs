@@ -26,6 +26,8 @@ public sealed class PhotographerRecord
     public string VerificationStatus { get; set; } = "Unverified";
     public string? PasswordHash { get; set; }
     public string? GoogleId { get; set; }
+    public double? CurrentLatitude { get; set; }
+    public double? CurrentLongitude { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }

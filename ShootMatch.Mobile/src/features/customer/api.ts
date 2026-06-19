@@ -22,6 +22,8 @@ export interface PhotographerCard {
   similarityScore: number;
   finalScore:     number;
   avatarUrl?:     string;
+  currentLatitude?: number;
+  currentLongitude?: number;
   portfolioPhotos?: string[];
 }
 
@@ -375,6 +377,7 @@ export async function searchPhotographers(params: {
       ) {
         photographerId displayName region avatarUrl portfolioPhotos
         minBudget maxBudget rating isPremium similarityScore finalScore
+        currentLatitude currentLongitude
       }
     }
   `, params);

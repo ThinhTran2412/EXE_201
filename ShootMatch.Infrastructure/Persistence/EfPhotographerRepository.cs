@@ -146,7 +146,9 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
             existing.VerificationDocumentFrontUrl = photographer.VerificationDocumentFrontUrl ?? existing.VerificationDocumentFrontUrl;
             existing.VerificationDocumentBackUrl  = photographer.VerificationDocumentBackUrl ?? existing.VerificationDocumentBackUrl;
             existing.VerificationPortraitUrl      = photographer.VerificationPortraitUrl ?? existing.VerificationPortraitUrl;
-            existing.UpdatedAt            = DateTime.UtcNow;
+            existing.CurrentLatitude              = photographer.CurrentLatitude ?? existing.CurrentLatitude;
+            existing.CurrentLongitude             = photographer.CurrentLongitude ?? existing.CurrentLongitude;
+            existing.UpdatedAt                    = DateTime.UtcNow;
             existing.DeletedAt            = photographer.DeletedAt;
 
             // Sync Equipments
@@ -193,6 +195,8 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
         VerificationStatus   = r.VerificationStatus,
         PasswordHash         = r.PasswordHash,
         GoogleId             = r.GoogleId,
+        CurrentLatitude      = r.CurrentLatitude,
+        CurrentLongitude     = r.CurrentLongitude,
         CreatedAt            = r.CreatedAt,
         UpdatedAt            = r.UpdatedAt,
         DeletedAt            = r.DeletedAt,
@@ -240,6 +244,8 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
         VerificationStatus   = p.VerificationStatus,
         PasswordHash         = p.PasswordHash,
         GoogleId             = p.GoogleId,
+        CurrentLatitude      = p.CurrentLatitude,
+        CurrentLongitude     = p.CurrentLongitude,
         CreatedAt            = p.CreatedAt,
         UpdatedAt            = p.UpdatedAt,
         DeletedAt            = p.DeletedAt,

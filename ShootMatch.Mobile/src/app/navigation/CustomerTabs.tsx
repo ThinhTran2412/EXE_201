@@ -29,6 +29,7 @@ import CustomerFavoritesScreen   from '../../features/customer/screens/CustomerF
 import CustomerSharedMediaScreen from '../../features/customer/screens/CustomerSharedMediaScreen';
 import ChatScreen                from '../../features/chat/screens/ChatScreen';
 import CallScreen                from '../../features/chat/screens/CallScreen';
+import EmergencySearchScreen     from '../../features/customer/screens/EmergencySearchScreen';
 
 const Tab   = createBottomTabNavigator<CustomerTabParamList>();
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -80,6 +81,7 @@ export default function CustomerTabs() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CustomerRoot"         component={CustomerTabNavigator} />
       <Stack.Screen name="Search"               component={SearchScreen} />
+      <Stack.Screen name="EmergencySearch"      component={EmergencySearchScreen} />
       <Stack.Screen name="PhotographerProfile"  component={PhotographerProfileScreen} />
       <Stack.Screen name="PhotographerPortfolio" component={PhotographerPortfolioScreen} />
       <Stack.Screen name="PhotographerServicePackages" component={PhotographerServicePackagesScreen} />

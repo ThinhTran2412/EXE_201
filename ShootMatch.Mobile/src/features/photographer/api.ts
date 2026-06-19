@@ -162,6 +162,10 @@ export async function setAvailability(isAvailable: boolean) {
   await apiClient.patch('/api/photographers/availability', { isAvailable });
 }
 
+export async function updateLiveLocation(latitude: number, longitude: number) {
+  await apiClient.put('/api/photographers/location', { latitude, longitude });
+}
+
 export async function getAvailability(): Promise<PhotographerAvailabilitySlot[]> {
   try {
     const { data } = await apiClient.get<PhotographerAvailabilitySlot[]>('/api/photographers/availability');

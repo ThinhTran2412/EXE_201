@@ -203,6 +203,10 @@ app.UseStaticFiles();
 var uploadRoot = app.Configuration["Storage:LocalPath"] ?? @"D:\pic_Stogare";
 if (!Directory.Exists(uploadRoot))
     uploadRoot = System.IO.Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads");
+
+// Ensure the path is an absolute, fully-qualified path (required by PhysicalFileProvider on Windows)
+uploadRoot = System.IO.Path.GetFullPath(uploadRoot);
+
 Directory.CreateDirectory(uploadRoot); // ensure it exists
 app.UseStaticFiles(new StaticFileOptions
 {

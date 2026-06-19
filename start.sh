@@ -23,12 +23,12 @@ if command -v gnome-terminal &> /dev/null; then
   sleep 0.5
 
   gnome-terminal --title="☁️ Cloudflare Tunnel" \
-    -- bash -c "cloudflared tunnel run PicKic; exec bash" &
+    -- bash -c "cloudflared tunnel run pickic; exec bash" &
 
   echo "✅  Đã mở 3 cửa sổ terminal riêng biệt:"
   echo "   🟢 Backend API      → http://localhost:5062"
   echo "   🌐 Mobile Web       → http://localhost:8081"
-  echo "   ☁️  Cloudflare       → tunnel: shootmatch"
+  echo "   ☁️  Cloudflare       → tunnel: pickic"
   echo ""
   echo "   (Nhìn Taskbar để thấy 3 cửa sổ)"
 
@@ -39,7 +39,7 @@ elif command -v tmux &> /dev/null; then
 
   tmux new-session  -d -s $SESSION -n "Backend"   "cd /data/EXE201/ShootMatch.Api && dotnet run --launch-profile production"
   tmux new-window      -t $SESSION -n "Web"        "cd /data/EXE201/ShootMatch.Mobile && npm run web"
-  tmux new-window      -t $SESSION -n "Cloudflare" "cloudflared tunnel run PicKic"
+  tmux new-window      -t $SESSION -n "Cloudflare" "cloudflared tunnel run pickic"
   tmux select-window   -t $SESSION:Backend
 
   echo "✅  Đã tạo tmux session '$SESSION' với 3 windows:"
@@ -56,7 +56,7 @@ else
 
   (cd /data/EXE201/ShootMatch.Api    && dotnet run --launch-profile production) > "$LOG_DIR/sm-backend.log"    2>&1 &
   (cd /data/EXE201/ShootMatch.Mobile && npm run web)                            > "$LOG_DIR/sm-web.log"         2>&1 &
-  cloudflared tunnel run Pickic		                                        > "$LOG_DIR/sm-cloudflare.log"  2>&1 &
+  cloudflared tunnel run pickic		                                        > "$LOG_DIR/sm-cloudflare.log"  2>&1 &
 
   PIDS="$! "
   echo "✅  Đang chạy nền. Log tại /tmp/sm-*.log"

@@ -17,11 +17,12 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { cancelBooking, completeBooking, confirmBooking, getMyBookingsAsPhotographer, PBooking } from '../api';
+import { cancelBooking, completeBooking, confirmBooking, getMyBookingsAsPhotographer, updateBookingSessionStatus, PBooking } from '../api';
 import { usePhotographerTheme } from '../PhotographerThemeContext';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { spacing } from '../../../app/theme/spacing';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
+import * as Location from 'expo-location';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CAL_CELL = Math.floor((SCREEN_WIDTH - 40 - 36) / 7);
@@ -67,12 +68,14 @@ function BookingCard({
   onConfirm,
   onComplete,
   onCancel,
+  onUpdateSession,
 }: {
   booking: PBooking;
   onPress?: () => void;
   onConfirm: () => void;
   onComplete: () => void;
   onCancel: () => void;
+  onUpdateSession?: (status: 'Moving' | 'Arrived' | 'InProgress') => void;
 }) {
   const navigation = useNavigation<any>();
   const { colors, isDark } = usePhotographerTheme();
@@ -81,6 +84,9 @@ function BookingCard({
   const isPending = booking.status === 'Pending';
   const isAwaitingDeposit = booking.status === 'AwaitingDeposit';
   const isConfirmed = booking.status === 'Confirmed';
+  const isMoving = booking.status === 'Moving';
+  const isArrived = booking.status === 'Arrived';
+  const isInProgress = booking.status === 'InProgress';
 
   const displayTitle = booking.servicePackageName || (booking.requirements || `Yêu cầu chụp riêng #${booking.id.slice(0, 6)}`);
   const packageImg = booking.servicePackageImageUrl 
@@ -183,15 +189,33 @@ function BookingCard({
               </View>
             )}
             {isConfirmed && (
+              <Pressable style={[styles.detailBtn, { flexDirection: 'row', gap: 6, backgroundColor: '#8b5cf6' }]} onPress={() => onUpdateSession?.('Moving')}>
+                <Ionicons name="bicycle-outline" size={14} color="#fff" />
+                <Text style={[styles.detailBtnText, { color: '#fff' }]}>Di chuyển</Text>
+              </Pressable>
+            )}
+            {isMoving && (
+              <Pressable style={[styles.detailBtn, { flexDirection: 'row', gap: 6, backgroundColor: '#10b981' }]} onPress={() => onUpdateSession?.('Arrived')}>
+                <Ionicons name="flag-outline" size={14} color="#fff" />
+                <Text style={[styles.detailBtnText, { color: '#fff' }]}>Đã đến nơi</Text>
+              </Pressable>
+            )}
+            {isArrived && (
+              <Pressable style={[styles.detailBtn, { flexDirection: 'row', gap: 6, backgroundColor: '#3b82f6' }]} onPress={() => onUpdateSession?.('InProgress')}>
+                <Ionicons name="camera-outline" size={14} color="#fff" />
+                <Text style={[styles.detailBtnText, { color: '#fff' }]}>Bắt đầu chụp</Text>
+              </Pressable>
+            )}
+            {isInProgress && (
               <Pressable style={[styles.detailBtn, { flexDirection: 'row', gap: 6 }]} onPress={onComplete}>
-                <Ionicons name="camera-outline" size={14} color={colors.background} />
-                <Text style={styles.detailBtnText}>Bấm máy</Text>
+                <Ionicons name="checkmark-done" size={14} color={colors.background} />
+                <Text style={styles.detailBtnText}>Hoàn tất</Text>
               </Pressable>
             )}
             {booking.status === 'Completed' && (
               <View style={styles.completedRibbon}>
                 <Ionicons name="checkmark-done" size={14} color={colors.success} />
-                <Text style={styles.completedRibbonText}>Hoàn tất</Text>
+                <Text style={styles.completedRibbonText}>Đã hoàn tất</Text>
               </View>
             )}
           </View>
@@ -354,14 +378,33 @@ export default function PBookingsScreen() {
     return unsubscribe;
   }, [navigation]);
 
-  async function doAction(b: PBooking, type: 'confirm' | 'complete' | 'cancel') {
+  async function doAction(b: PBooking, type: 'confirm' | 'complete' | 'cancel' | 'updateSession', sessionStatus?: 'Moving' | 'Arrived' | 'InProgress') {
     try {
       if (type === 'confirm') await confirmBooking(b.id);
       if (type === 'complete') await completeBooking(b.id);
       if (type === 'cancel') await cancelBooking(b.id, 'Nhiếp ảnh gia hủy');
+      if (type === 'updateSession' && sessionStatus) {
+        if (sessionStatus === 'Moving') {
+          // Khi bắt đầu di chuyển, yêu cầu quyền vị trí để gửi GPS (mô phỏng)
+          try {
+            if (Platform.OS === 'web') {
+              await new Promise<GeolocationPosition>((resolve, reject) => {
+                if (!navigator?.geolocation) { reject(new Error('no geolocation')); return; }
+                navigator.geolocation.getCurrentPosition(resolve, reject);
+              });
+            } else {
+              await Location.requestForegroundPermissionsAsync();
+              await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            }
+          } catch {
+            // Vẫn tiếp tục dù user không cho phép
+          }
+        }
+        await updateBookingSessionStatus(b.id, sessionStatus);
+      }
       await load();
     } catch {
-      Alert.alert('Thất bại', 'Không cập nhật được trạng thái shot hình.');
+      Alert.alert('Thất bại', 'Không cập nhật được trạng thái.');
     }
   }
 
@@ -586,6 +629,7 @@ export default function PBookingsScreen() {
                             onCancel={() => doAction(b, 'cancel')}
                             onConfirm={() => doAction(b, 'confirm')}
                             onComplete={() => doAction(b, 'complete')}
+                            onUpdateSession={(status) => doAction(b, 'updateSession', status)}
                           />
                         </Animated.View>
                       ))}
@@ -664,6 +708,7 @@ export default function PBookingsScreen() {
                           onCancel={() => doAction(b, 'cancel')}
                           onConfirm={() => doAction(b, 'confirm')}
                           onComplete={() => doAction(b, 'complete')}
+                          onUpdateSession={(status) => doAction(b, 'updateSession', status)}
                         />
                       </Animated.View>
                     ))

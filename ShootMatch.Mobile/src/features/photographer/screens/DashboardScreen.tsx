@@ -1,23 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ScrollView, StyleSheet, Text, View, Pressable, ActivityIndicator, Image,
-  RefreshControl, ImageBackground, Dimensions, StatusBar, Platform, FlatList
+  RefreshControl, ImageBackground, Dimensions, StatusBar, Platform, FlatList,
+  LayoutAnimation, UIManager
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import * as Location from 'expo-location';
 import { 
   getPhotographerProfile, 
   getPhotographersFeed,
   setAvailability, 
   getMyBookingsAsPhotographer,
   confirmBooking,
-  cancelBooking 
+  cancelBooking,
+  updateLiveLocation
 } from '../api';
 import { useAuth } from '../../auth/AuthContext';
 import { usePhotographerTheme } from '../PhotographerThemeContext';
 import { localPicture } from '../../../shared/assets/localPictures';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const { width } = Dimensions.get('window');
 
@@ -113,11 +120,42 @@ export default function DashboardScreen() {
   async function toggleAvailability() {
     if (!profile) return;
     const newVal = !profile.isAvailable;
+    
+    // Smooth layout animation transition
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    
+    // Optimistic UI update
+    setProfile({ ...profile, isAvailable: newVal });
+
     try {
       await setAvailability(newVal);
-      setProfile({ ...profile, isAvailable: newVal });
+      
+      if (newVal) {
+        // Khi bật Sẵn sàng nhận job, tiến hành lấy GPS và báo lên server
+        try {
+          if (Platform.OS === 'web') {
+            await new Promise<GeolocationPosition>((resolve, reject) => {
+              if (!navigator?.geolocation) { reject(new Error('no geolocation')); return; }
+              navigator.geolocation.getCurrentPosition(resolve, reject);
+            }).then(async pos => {
+              await updateLiveLocation(pos.coords.latitude, pos.coords.longitude);
+            });
+          } else {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status === 'granted') {
+              const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+              await updateLiveLocation(location.coords.latitude, location.coords.longitude);
+            }
+          }
+        } catch (locErr) {
+          console.error('Failed to update live location', locErr);
+        }
+      }
     } catch (err) {
       console.error('Toggle availability error:', err);
+      // Revert if API call fails
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setProfile({ ...profile, isAvailable: !newVal });
     }
   }
 
@@ -247,7 +285,11 @@ export default function DashboardScreen() {
             {/* Top Bar */}
             <View style={styles.topbar}>
               <Pressable 
-                style={[styles.availPill, !isAvailable && styles.availPillOff]} 
+                style={({ pressed }) => [
+                  styles.availPill, 
+                  !isAvailable && styles.availPillOff,
+                  pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] }
+                ]} 
                 onPress={toggleAvailability}
               >
                 <View style={[styles.availDot, !isAvailable && styles.availDotOff]} />
@@ -257,11 +299,23 @@ export default function DashboardScreen() {
               </Pressable>
               
               <View style={styles.topActions}>
-                <Pressable style={styles.iconBtnNotif} onPress={() => navigation.navigate('Notifications')}>
+                <Pressable 
+                  style={({ pressed }) => [
+                    styles.iconBtnNotif,
+                    pressed && { opacity: 0.7, transform: [{ scale: 0.9 }] }
+                  ]} 
+                  onPress={() => navigation.navigate('Notifications')}
+                >
                   <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
                   <View style={styles.notifDot} />
                 </Pressable>
-                <Pressable style={styles.iconBtnLogout} onPress={logout}>
+                <Pressable 
+                  style={({ pressed }) => [
+                    styles.iconBtnLogout,
+                    pressed && { opacity: 0.7, transform: [{ scale: 0.9 }] }
+                  ]} 
+                  onPress={logout}
+                >
                   <Ionicons name="power-outline" size={18} color="#f87171" />
                 </Pressable>
               </View>

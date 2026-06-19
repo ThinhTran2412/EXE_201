@@ -410,17 +410,11 @@ export default function SearchScreen() {
       {/* Emergency & Quick Actions */}
       <View style={styles.quickBar}>
         <Pressable
-          style={[styles.emergencyBtn, isEmergency && styles.emergencyBtnActive]}
-          onPress={() => setIsEmergency(!isEmergency)}
+          style={styles.emergencyBtn}
+          onPress={() => navigation.navigate('EmergencySearch')}
         >
-          <Ionicons
-            name={isEmergency ? "flash" : "flash-outline"}
-            size={16}
-            color={isEmergency ? colors.white : colors.accent}
-          />
-          <Text style={[styles.emergencyText, isEmergency && styles.emergencyTextActive]}>
-            ⚡ Chụp khẩn cấp (Đặt ngay)
-          </Text>
+          <Ionicons name="flash" size={16} color={colors.accent} />
+          <Text style={styles.emergencyText}>⚡ Chụp khẩn cấp (Đặt ngay)</Text>
         </Pressable>
 
         {isSearching && (
@@ -1259,16 +1253,18 @@ const getStyles = (W: number, HOT_CARD_W: number, LOOKBOOK_CARD_W: number) => St
   portfolioGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing[2],
+    justifyContent: 'space-between',
+    rowGap: spacing[2],
   },
   portfolioGridCard: {
-    width: (W - 32 - spacing[2]) / 2,
+    width: '48.5%',
     height: 140,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: colors.clayLight,
     borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: 0,
   },
   portfolioGridImg: {
     width: '100%',

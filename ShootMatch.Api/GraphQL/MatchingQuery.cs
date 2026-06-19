@@ -310,6 +310,8 @@ public sealed class MatchingQuery
                 AvatarUrl = p.AvatarUrl,
                 SimilarityScore = similarity,
                 FinalScore = similarity + premiumBoost + ratingBoost,
+                CurrentLatitude = p.CurrentLatitude,
+                CurrentLongitude = p.CurrentLongitude,
                 PortfolioPhotos = p.PortfolioPhotos.OrderBy(x => x.DisplayOrder).Select(x => x.ImageUrl).ToList()
             });
         }

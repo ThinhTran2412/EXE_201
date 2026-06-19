@@ -40,6 +40,55 @@ public sealed class PhotographersController(
         return Ok(items);
     }
 
+    [HttpPatch("availability")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetAvailability([FromBody] SetAvailabilityRequest request, CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var existing = await photographerRepository.GetByIdAsync(id, cancellationToken);
+        if (existing is null) return NotFound();
+
+        var updated = new Photographer
+        {
+            Id                            = existing.Id,
+            Phone                         = existing.Phone,
+            Email                         = existing.Email,
+            DisplayName                   = existing.DisplayName,
+            Bio                           = existing.Bio,
+            Quote                         = existing.Quote,
+            NationalId                    = existing.NationalId,
+            Region                        = existing.Region,
+            PersonalAddress               = existing.PersonalAddress,
+            VerificationDocumentFrontUrl  = existing.VerificationDocumentFrontUrl,
+            VerificationDocumentBackUrl   = existing.VerificationDocumentBackUrl,
+            VerificationPortraitUrl       = existing.VerificationPortraitUrl,
+            AvatarUrl                     = existing.AvatarUrl,
+            CoverPhotoUrl                 = existing.CoverPhotoUrl,
+            InstagramUrl                  = existing.InstagramUrl,
+            MinBudget                     = existing.MinBudget,
+            MaxBudget                     = existing.MaxBudget,
+            AcceptsInstantBooking         = existing.AcceptsInstantBooking,
+            Rating                        = existing.Rating,
+            IsPremium                     = existing.IsPremium,
+            IsAvailable                   = request.IsAvailable,
+            VerificationStatus            = existing.VerificationStatus,
+            PasswordHash                  = existing.PasswordHash,
+            GoogleId                      = existing.GoogleId,
+            CurrentLatitude               = existing.CurrentLatitude,
+            CurrentLongitude              = existing.CurrentLongitude,
+            CreatedAt                     = existing.CreatedAt,
+            UpdatedAt                     = DateTime.UtcNow,
+            DeletedAt                     = existing.DeletedAt,
+            PortfolioEmbeddings           = existing.PortfolioEmbeddings,
+            PortfolioPhotos               = existing.PortfolioPhotos,
+            Equipments                    = existing.Equipments
+        };
+
+        await photographerRepository.UpsertAsync(updated, cancellationToken);
+        return NoContent();
+    }
+
     [HttpGet("{id:guid}/availability")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(IReadOnlyList<PhotographerAvailability>), StatusCodes.Status200OK)]
@@ -259,6 +308,53 @@ public sealed class PhotographersController(
 
         await photographerRepository.UpsertAsync(updated, cancellationToken);
         return Ok(updated);
+    }
+
+    [HttpPut("location")]
+    public async Task<IActionResult> UpdateLocation([FromBody] UpdateLocationRequest request, CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var existing = await photographerRepository.GetByIdAsync(id, cancellationToken);
+        if (existing is null) return NotFound();
+
+        var updated = new Photographer
+        {
+            Id                            = existing.Id,
+            Phone                         = existing.Phone,
+            Email                         = existing.Email,
+            DisplayName                   = existing.DisplayName,
+            Bio                           = existing.Bio,
+            Quote                         = existing.Quote,
+            NationalId                    = existing.NationalId,
+            Region                        = existing.Region,
+            PersonalAddress               = existing.PersonalAddress,
+            VerificationDocumentFrontUrl  = existing.VerificationDocumentFrontUrl,
+            VerificationDocumentBackUrl   = existing.VerificationDocumentBackUrl,
+            VerificationPortraitUrl       = existing.VerificationPortraitUrl,
+            AvatarUrl                     = existing.AvatarUrl,
+            CoverPhotoUrl                 = existing.CoverPhotoUrl,
+            InstagramUrl                  = existing.InstagramUrl,
+            MinBudget                     = existing.MinBudget,
+            MaxBudget                     = existing.MaxBudget,
+            AcceptsInstantBooking         = existing.AcceptsInstantBooking,
+            Rating                        = existing.Rating,
+            IsPremium                     = existing.IsPremium,
+            IsAvailable                   = existing.IsAvailable,
+            VerificationStatus            = existing.VerificationStatus,
+            PasswordHash                  = existing.PasswordHash,
+            GoogleId                      = existing.GoogleId,
+            CurrentLatitude               = request.Latitude,
+            CurrentLongitude              = request.Longitude,
+            CreatedAt                     = existing.CreatedAt,
+            UpdatedAt                     = DateTime.UtcNow,
+            DeletedAt                     = existing.DeletedAt,
+            PortfolioEmbeddings           = existing.PortfolioEmbeddings,
+            PortfolioPhotos               = existing.PortfolioPhotos,
+            Equipments                    = existing.Equipments
+        };
+
+        await photographerRepository.UpsertAsync(updated, cancellationToken);
+        return Ok();
     }
 
     [HttpPost("verify")]
@@ -520,3 +616,5 @@ public sealed class PhotographersController(
 }
 
 public record ProposeTagRequest(string Name, string? Description, string? Keywords);
+
+public record UpdateLocationRequest(double Latitude, double Longitude);
