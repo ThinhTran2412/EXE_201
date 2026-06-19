@@ -21,6 +21,7 @@ public static class DatabaseBootstrap
         await EnsureCallSessionsTableAsync(db, logger, cancellationToken);
         await EnsureChatMediaAndNotificationsAsync(db, logger, cancellationToken);
         await EnsureBookingFieldsAsync(db, logger, cancellationToken);
+        await EnsureStylesAndConceptsSeededAsync(db, logger, cancellationToken);
     }
 
     private static async Task EnsureCallSessionsTableAsync(
@@ -138,6 +139,59 @@ public static class DatabaseBootstrap
         catch (Exception ex)
         {
             logger.LogWarning(ex, "bookings fields bootstrap alteration skipped.");
+        }
+    }
+
+    private static async Task EnsureStylesAndConceptsSeededAsync(
+        ShootMatchDbContext db,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var stylesCount = await db.Styles.CountAsync(cancellationToken);
+            if (stylesCount == 0)
+            {
+                logger.LogInformation("Seeding default styles...");
+                var defaultStyles = new List<Entities.StyleRecord>
+                {
+                    new() { Id = Guid.Parse("b114d334-0803-4f93-b67f-82db23719001"), Name = "Vintage", Description = "Phong cách cổ điển, hoài niệm", Keywords = "vintage, retro, classic, hoai co, co dien", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("b114d334-0803-4f93-b67f-82db23719002"), Name = "Portrait", Description = "Chụp ảnh chân dung tập trung vào gương mặt", Keywords = "portrait, chan dung, mat, face", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("b114d334-0803-4f93-b67f-82db23719003"), Name = "Editorial", Description = "Phong cách thời trang tạp chí cao cấp", Keywords = "editorial, fashion, magazine, tap chi, thoi trang", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("b114d334-0803-4f93-b67f-82db23719004"), Name = "Streetwear", Description = "Thời trang đường phố năng động, tự nhiên", Keywords = "streetwear, street, duong pho, nang dong, bui bam", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("b114d334-0803-4f93-b67f-82db23719005"), Name = "Minimalist", Description = "Phong cách tối giản, tinh tế", Keywords = "minimalist, minimal, toi gian, tinh te", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("b114d334-0803-4f93-b67f-82db23719006"), Name = "Film Look", Description = "Màu film mơ màng hoài cổ", Keywords = "film, film look, mau film, mo mang, tho tho", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("b114d334-0803-4f93-b67f-82db23719007"), Name = "Cyberpunk", Description = "Tương lai viễn tưởng, ánh sáng neon", Keywords = "cyberpunk, neon, tuong lai, sci-fi", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("b114d334-0803-4f93-b67f-82db23719008"), Name = "Black and White", Description = "Ảnh đen trắng nghệ thuật", Keywords = "black and white, bnw, den trang, monochrome", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+                };
+
+                await db.Styles.AddRangeAsync(defaultStyles, cancellationToken);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            var conceptsCount = await db.Concepts.CountAsync(cancellationToken);
+            if (conceptsCount == 0)
+            {
+                logger.LogInformation("Seeding default concepts...");
+                var defaultConcepts = new List<Entities.ConceptRecord>
+                {
+                    new() { Id = Guid.Parse("c114d334-0803-4f93-b67f-82db23719001"), Name = "Wedding", Description = "Ảnh cưới cô dâu chú rể ngoại cảnh hoặc studio", Keywords = "wedding, cuoi, dam cuoi, co dau, chu re", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("c114d334-0803-4f93-b67f-82db23719002"), Name = "Couple", Description = "Chụp ảnh đôi tình nhân, bạn bè", Keywords = "couple, doi, cap doi, tinh nhan", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("c114d334-0803-4f93-b67f-82db23719003"), Name = "Family", Description = "Ảnh gia đình đầm ấm", Keywords = "family, gia dinh, bo me, con cai", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("c114d334-0803-4f93-b67f-82db23719004"), Name = "Newborn", Description = "Ảnh sơ sinh và em bé nhỏ", Keywords = "newborn, baby, em be, so sinh", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("c114d334-0803-4f93-b67f-82db23719005"), Name = "Gen Z", Description = "Phong cách trẻ trung, năng động của thế hệ mới", Keywords = "gen z, tre trung, ca tinh, doc dao", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("c114d334-0803-4f93-b67f-82db23719006"), Name = "Corporate / Profile", Description = "Ảnh chân dung doanh nhân, hồ sơ cá nhân chuyên nghiệp", Keywords = "corporate, profile, doanh nhan, headshot", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("c114d334-0803-4f93-b67f-82db23719007"), Name = "Lookbook", Description = "Thời trang sản phẩm, bán hàng thương mại", Keywords = "lookbook, fashion, san pham, ban hang, clothing", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new() { Id = Guid.Parse("c114d334-0803-4f93-b67f-82db23719008"), Name = "Graduation", Description = "Kỷ yếu tốt nghiệp học sinh sinh viên", Keywords = "graduation, ky yeu, tot nghiep, hoc sinh, sinh vien", Status = "Approved", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+                };
+
+                await db.Concepts.AddRangeAsync(defaultConcepts, cancellationToken);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Styles and concepts database seeding skipped.");
         }
     }
 }

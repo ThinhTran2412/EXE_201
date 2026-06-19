@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ShootMatch.Domain.Common;
+using ShootMatch.Domain.Entities;
 using ShootMatch.Infrastructure.Persistence.Entities;
 
 namespace ShootMatch.Infrastructure.Persistence;
@@ -26,8 +27,12 @@ public sealed class ShootMatchDbContext(
     public DbSet<ReviewRecord> Reviews => Set<ReviewRecord>();
     public DbSet<VerificationRequestRecord> VerificationRequests => Set<VerificationRequestRecord>();
     public DbSet<PhotographerAvailabilityRecord> PhotographerAvailabilities => Set<PhotographerAvailabilityRecord>();
+    public DbSet<PhotographerEquipmentRecord> PhotographerEquipments => Set<PhotographerEquipmentRecord>();
     public DbSet<OtpRecordEntry> OtpRecords => Set<OtpRecordEntry>();
     public DbSet<AppNotificationRecord> AppNotifications => Set<AppNotificationRecord>();
+    public DbSet<StyleRecord> Styles => Set<StyleRecord>();
+    public DbSet<ConceptRecord> Concepts => Set<ConceptRecord>();
+    public DbSet<ConceptStyleRelationRecord> ConceptStyleRelations => Set<ConceptStyleRelationRecord>();
 
     // Conversation & Messaging
     public DbSet<ConversationRecord> Conversations => Set<ConversationRecord>();
@@ -84,6 +89,18 @@ public sealed class ShootMatchDbContext(
             entity.HasMany(x => x.ServicePackages).WithOne(x => x.Photographer).HasForeignKey(x => x.PhotographerId).OnDelete(DeleteBehavior.Cascade);
         });
 
+        // ── PhotographerEquipment ───────────────────────────────────────────
+        modelBuilder.Entity<PhotographerEquipmentRecord>(entity =>
+        {
+            entity.ToTable("photographer_equipments");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Category).HasConversion<int>();
+            entity.Property(x => x.Name).HasMaxLength(200);
+            entity.Property(x => x.Description).HasMaxLength(1000);
+            entity.HasIndex(x => x.PhotographerId);
+            entity.HasOne(x => x.Photographer).WithMany(x => x.Equipments).HasForeignKey(x => x.PhotographerId).OnDelete(DeleteBehavior.Cascade);
+        });
+
         // ── PortfolioEmbedding ───────────────────────────────────────────────
         modelBuilder.Entity<PortfolioEmbeddingRecord>(entity =>
         {
@@ -99,6 +116,7 @@ public sealed class ShootMatchDbContext(
             entity.HasKey(x => x.Id);
             entity.Property(x => x.ImageUrl).HasMaxLength(1024);
             entity.Property(x => x.ThumbnailUrl).HasMaxLength(1024);
+            entity.Property(x => x.DominantColors).HasMaxLength(200).HasDefaultValue("");
             entity.HasIndex(x => x.PhotographerId);
         });
 
@@ -114,6 +132,9 @@ public sealed class ShootMatchDbContext(
             entity.Property(x => x.HeroSubtitle).HasMaxLength(500);
             entity.Property(x => x.CallToAction).HasMaxLength(100);
             entity.Property(x => x.Price).HasColumnType("numeric(18,2)");
+            entity.Property(x => x.LocationType).HasConversion<int>().HasDefaultValue(LocationType.Flexible);
+            entity.Property(x => x.AgeGroup).HasConversion<int>().HasDefaultValue(AgeGroup.Adults);
+            entity.Property(x => x.GroupSize).HasConversion<int>().HasDefaultValue(GroupSize.Solo);
             entity.HasIndex(x => x.PhotographerId);
             entity.HasMany(x => x.Media).WithOne(x => x.ServicePackage).HasForeignKey(x => x.ServicePackageId).OnDelete(DeleteBehavior.Cascade);
         });
@@ -325,6 +346,87 @@ public sealed class ShootMatchDbContext(
             entity.Property(x => x.ActionType).HasMaxLength(50);
             entity.HasIndex(x => new { x.RecipientId, x.RecipientRole, x.CreatedAt });
             entity.HasIndex(x => new { x.RecipientId, x.RecipientRole, x.ReadAt });
+        });
+
+        // ── Style ────────────────────────────────────────────────────────────
+        modelBuilder.Entity<StyleRecord>(entity =>
+        {
+            entity.ToTable("styles");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(200);
+            entity.Property(x => x.Description).HasMaxLength(1000);
+            entity.Property(x => x.Keywords).HasMaxLength(1000);
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.HasIndex(x => x.Name);
+            
+            // Photographer Many-to-Many
+            entity.HasMany(x => x.Photographers)
+                .WithMany(x => x.Styles)
+                .UsingEntity<Dictionary<string, object>>(
+                    "photographer_styles",
+                    j => j.HasOne<PhotographerRecord>().WithMany().HasForeignKey("photographer_id").OnDelete(DeleteBehavior.Cascade),
+                    j => j.HasOne<StyleRecord>().WithMany().HasForeignKey("style_id").OnDelete(DeleteBehavior.Cascade));
+
+            // PortfolioPhoto Many-to-Many
+            entity.HasMany(x => x.PortfolioPhotos)
+                .WithMany(x => x.Styles)
+                .UsingEntity<Dictionary<string, object>>(
+                    "photo_styles",
+                    j => j.HasOne<PortfolioPhotoRecord>().WithMany().HasForeignKey("portfolio_photo_id").OnDelete(DeleteBehavior.Cascade),
+                    j => j.HasOne<StyleRecord>().WithMany().HasForeignKey("style_id").OnDelete(DeleteBehavior.Cascade));
+
+            // Customer Many-to-Many
+            entity.HasMany(x => x.Customers)
+                .WithMany(x => x.PreferredStyleRecords)
+                .UsingEntity<Dictionary<string, object>>(
+                    "customer_preferred_styles",
+                    j => j.HasOne<CustomerRecord>().WithMany().HasForeignKey("customer_id").OnDelete(DeleteBehavior.Cascade),
+                    j => j.HasOne<StyleRecord>().WithMany().HasForeignKey("style_id").OnDelete(DeleteBehavior.Cascade));
+        });
+
+        // ── Concept ──────────────────────────────────────────────────────────
+        modelBuilder.Entity<ConceptRecord>(entity =>
+        {
+            entity.ToTable("concepts");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(200);
+            entity.Property(x => x.Description).HasMaxLength(1000);
+            entity.Property(x => x.Keywords).HasMaxLength(1000);
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.HasIndex(x => x.Name);
+
+            // Photographer Many-to-Many
+            entity.HasMany(x => x.Photographers)
+                .WithMany(x => x.Concepts)
+                .UsingEntity<Dictionary<string, object>>(
+                    "photographer_concepts",
+                    j => j.HasOne<PhotographerRecord>().WithMany().HasForeignKey("photographer_id").OnDelete(DeleteBehavior.Cascade),
+                    j => j.HasOne<ConceptRecord>().WithMany().HasForeignKey("concept_id").OnDelete(DeleteBehavior.Cascade));
+
+            // PortfolioPhoto Many-to-Many
+            entity.HasMany(x => x.PortfolioPhotos)
+                .WithMany(x => x.Concepts)
+                .UsingEntity<Dictionary<string, object>>(
+                    "photo_concepts",
+                    j => j.HasOne<PortfolioPhotoRecord>().WithMany().HasForeignKey("portfolio_photo_id").OnDelete(DeleteBehavior.Cascade),
+                    j => j.HasOne<ConceptRecord>().WithMany().HasForeignKey("concept_id").OnDelete(DeleteBehavior.Cascade));
+
+            // Customer Many-to-Many
+            entity.HasMany(x => x.Customers)
+                .WithMany(x => x.PreferredConceptRecords)
+                .UsingEntity<Dictionary<string, object>>(
+                    "customer_preferred_concepts",
+                    j => j.HasOne<CustomerRecord>().WithMany().HasForeignKey("customer_id").OnDelete(DeleteBehavior.Cascade),
+                    j => j.HasOne<ConceptRecord>().WithMany().HasForeignKey("concept_id").OnDelete(DeleteBehavior.Cascade));
+        });
+
+        // ── ConceptStyleRelation ─────────────────────────────────────────────
+        modelBuilder.Entity<ConceptStyleRelationRecord>(entity =>
+        {
+            entity.ToTable("concept_style_relations");
+            entity.HasKey(x => new { x.ConceptId, x.StyleId });
+            entity.HasOne(x => x.Concept).WithMany().HasForeignKey(x => x.ConceptId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Style).WithMany().HasForeignKey(x => x.StyleId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

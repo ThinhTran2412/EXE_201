@@ -9,23 +9,20 @@ import {
   ImageBackground,
   ActivityIndicator,
   Dimensions,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { colors } from '../../../app/theme/colors';
+import { usePhotographerTheme } from '../PhotographerThemeContext';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { radius, spacing } from '../../../app/theme/spacing';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { localPictureSlice } from '../../../shared/assets/localPictures';
 import { getCustomerById, type CustomerProfile } from '../../customer/api';
-
-const { width: W } = Dimensions.get('window');
-const PAD = spacing[5];
-const GAP = spacing[3];
-const COL = (W - PAD * 2 - GAP) / 2;
 
 const THEME = {
   primary: '#fff7e1',
@@ -52,27 +49,30 @@ function ViewfinderFrame() {
 }
 const vf = StyleSheet.create({ corner: { position: 'absolute' } });
 
-const POLAROID_W = Math.floor((W - PAD * 2 - spacing[3] * 2) / 3);
-const POLAROID_IMG_W = POLAROID_W - spacing[2] * 2;
-const POLAROID_IMG_H = Math.round(POLAROID_IMG_W * 1.18);
-
 function HeroPolaroid({
   imageUri,
   localSource,
   rotation,
+  width,
 }: {
   imageUri?: string;
   localSource?: ReturnType<typeof localPictureSlice>[number];
   rotation: string;
+  width: number;
 }) {
+  const { colors } = usePhotographerTheme();
+  const styles = getStyles(colors);
+  const polaroidImgW = width - spacing[2] * 2;
+  const polaroidImgH = Math.round(polaroidImgW * 1.18);
+
   return (
-    <View style={[styles.heroPolaroid, { width: POLAROID_W, transform: [{ rotate: rotation }] }]}>
+    <View style={[styles.heroPolaroid, { width: width, transform: [{ rotate: rotation }] }]}>
       {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.heroPolaroidImg} />
+        <Image source={{ uri: imageUri }} style={[styles.heroPolaroidImg, { width: polaroidImgW, height: polaroidImgH }]} />
       ) : localSource ? (
-        <Image source={localSource} style={styles.heroPolaroidImg} resizeMode="cover" />
+        <Image source={localSource} style={[styles.heroPolaroidImg, { width: polaroidImgW, height: polaroidImgH }]} resizeMode="cover" />
       ) : (
-        <View style={styles.heroPolaroidFallback}>
+        <View style={[styles.heroPolaroidFallback, { width: polaroidImgW, height: polaroidImgH }]}>
           <Ionicons name="person-outline" size={28} color={colors.background} />
         </View>
       )}
@@ -82,9 +82,18 @@ function HeroPolaroid({
 
 export default function CustomerProfileViewScreen() {
   const navigation = useNavigation<any>();
+  const { colors, isDark } = usePhotographerTheme();
+  const styles = getStyles(colors);
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const { customerId, customerName } = route.params as { customerId: string; customerName?: string };
+
+  const { width: windowWidth } = useWindowDimensions();
+  const W = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
+  const PAD = spacing[5];
+  const GAP = spacing[3];
+  const COL = (W - PAD * 2 - GAP) / 2;
+  const POLAROID_W = Math.floor((W - PAD * 2 - spacing[3] * 2) / 3);
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -156,7 +165,7 @@ export default function CustomerProfileViewScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtnSolo}>
-          <Ionicons name="chevron-back" size={26} color={colors.dark} />
+          <Ionicons name="chevron-back" size={26} color={colors.text} />
         </Pressable>
         <View style={styles.loadingBox}>
           <Ionicons name="person-circle-outline" size={64} color={colors.textLight} />
@@ -205,9 +214,9 @@ export default function CustomerProfileViewScreen() {
 
             <View style={styles.heroBottom}>
               <View style={styles.heroPolaroidRow}>
-                <HeroPolaroid imageUri={highlight1Uri} localSource={!highlight1Uri ? filmStrip[0] : undefined} rotation="-6deg" />
-                <HeroPolaroid imageUri={highlight2Uri} localSource={!highlight2Uri ? filmStrip[1] : undefined} rotation="2deg" />
-                <HeroPolaroid imageUri={highlight3Uri} localSource={!highlight3Uri ? filmStrip[2] : undefined} rotation="6deg" />
+                <HeroPolaroid imageUri={highlight1Uri} localSource={!highlight1Uri ? filmStrip[0] : undefined} rotation="-6deg" width={POLAROID_W} />
+                <HeroPolaroid imageUri={highlight2Uri} localSource={!highlight2Uri ? filmStrip[1] : undefined} rotation="2deg" width={POLAROID_W} />
+                <HeroPolaroid imageUri={highlight3Uri} localSource={!highlight3Uri ? filmStrip[2] : undefined} rotation="6deg" width={POLAROID_W} />
               </View>
             </View>
           </View>
@@ -219,8 +228,8 @@ export default function CustomerProfileViewScreen() {
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.heroAvatarImg} />
             ) : (
-              <View style={styles.heroAvatarFallback}>
-                <Text style={styles.heroAvatarLetter}>{initial}</Text>
+              <View style={[styles.heroAvatarFallback, { backgroundColor: colors.background }]}>
+                <Text style={[styles.heroAvatarLetter, { color: colors.text }]}>{initial}</Text>
               </View>
             )}
           </View>
@@ -275,7 +284,7 @@ export default function CustomerProfileViewScreen() {
               <Ionicons
                 name={isBasicInfoExpanded ? 'chevron-up' : 'chevron-down'}
                 size={20}
-                color={colors.dark}
+                color={colors.text}
               />
             </View>
           </Pressable>
@@ -302,7 +311,7 @@ export default function CustomerProfileViewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
 
   loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing[3] },
@@ -326,7 +335,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: PAD,
+    paddingHorizontal: spacing[5],
     zIndex: 2,
   },
   heroEyebrow: {
@@ -343,7 +352,7 @@ const styles = StyleSheet.create({
   },
   heroBottom: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: PAD, paddingBottom: spacing[5],
+    paddingHorizontal: spacing[5], paddingBottom: spacing[5],
     zIndex: 20, elevation: 20,
     alignItems: 'center', justifyContent: 'flex-end',
   },
@@ -356,21 +365,21 @@ const styles = StyleSheet.create({
   heroAvatarWrap: {
     width: 104, height: 104, borderRadius: 52,
     overflow: 'hidden',
-    borderWidth: 1.5, borderColor: 'rgba(255,247,225,0.8)',
-    backgroundColor: '#fff7e1',
+    borderWidth: 1.5, borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceStrong,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.28, shadowRadius: 12,
     elevation: 8,
   },
   heroAvatarImg: { width: '100%', height: '100%' },
-  heroAvatarFallback: { flex: 1, backgroundColor: THEME.accent, alignItems: 'center', justifyContent: 'center' },
-  heroAvatarLetter: { fontSize: 48, fontWeight: '900', color: THEME.primary },
+  heroAvatarFallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  heroAvatarLetter: { fontSize: 48, fontWeight: '900' },
   displayName: {
     marginTop: spacing[2],
     fontSize: fontSizes.xl,
     fontWeight: fontWeights.extrabold,
-    color: colors.dark,
+    color: colors.text,
     letterSpacing: -0.3,
   },
 
@@ -380,64 +389,65 @@ const styles = StyleSheet.create({
     width: '100%', zIndex: 5, elevation: 5, marginBottom: spacing[2],
   },
   heroPolaroid: {
-    backgroundColor: '#fff7e1', padding: spacing[2], paddingBottom: spacing[3],
+    backgroundColor: colors.surface, padding: spacing[2], paddingBottom: spacing[3],
+    borderWidth: 1, borderColor: colors.border,
     shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4, shadowRadius: 14, elevation: 12,
   },
-  heroPolaroidImg: { width: POLAROID_IMG_W, height: POLAROID_IMG_H, backgroundColor: colors.clay },
+  heroPolaroidImg: { backgroundColor: colors.surfaceStrong },
   heroPolaroidFallback: {
-    width: POLAROID_IMG_W, height: POLAROID_IMG_H,
-    backgroundColor: colors.dark, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surfaceStrong, alignItems: 'center', justifyContent: 'center',
   },
 
   filmBlock: { marginTop: -spacing[4], marginBottom: spacing[6] },
   filmHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: PAD, marginBottom: spacing[3],
+    paddingHorizontal: spacing[5], marginBottom: spacing[3],
   },
   filmLabel: { fontSize: 9, fontWeight: fontWeights.bold, letterSpacing: 2.5, color: colors.textMuted },
   filmCounter: { fontSize: 9, color: colors.textLight, fontFamily: 'monospace' },
-  filmScroll: { paddingHorizontal: PAD, gap: spacing[2] },
+  filmScroll: { paddingHorizontal: spacing[5], gap: spacing[2] },
   filmFrame: {
     width: 72, height: 96, borderRadius: 4, overflow: 'hidden',
-    borderWidth: 2, borderColor: colors.dark, backgroundColor: colors.dark,
+    borderWidth: 2, borderColor: colors.borderStrong, backgroundColor: colors.surfaceStrong,
   },
   filmImg: { width: '100%', height: '100%' },
   frameNo: {
     position: 'absolute', bottom: 3, right: 4,
     fontSize: 8, fontWeight: fontWeights.bold,
-    color: 'rgba(255,247,225,0.85)', fontFamily: 'monospace',
+    color: colors.textLight, fontFamily: 'monospace',
   },
 
-  section: { paddingHorizontal: PAD, marginBottom: spacing[7] },
+  section: { paddingHorizontal: spacing[5], marginBottom: spacing[7] },
   sectionEyebrow: {
     fontSize: 9, fontWeight: fontWeights.bold, letterSpacing: 2.5,
     color: colors.accentOrange, textTransform: 'uppercase', marginBottom: 4,
   },
   sectionTitle: {
     fontSize: fontSizes.xl, fontWeight: fontWeights.extrabold,
-    color: colors.dark, marginBottom: spacing[4], letterSpacing: -0.3,
+    color: colors.text, marginBottom: spacing[4], letterSpacing: -0.3,
   },
   tagScroll: { gap: spacing[2], paddingBottom: spacing[2] },
   styleTag: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: spacing[4], paddingVertical: spacing[2],
-    borderRadius: radius.full, backgroundColor: colors.dark,
+    borderRadius: radius.full, backgroundColor: colors.surfaceStrong,
+    borderWidth: 1, borderColor: colors.border,
   },
-  styleTagText: { fontSize: 11, fontWeight: fontWeights.semibold, color: colors.background, letterSpacing: 0.5 },
+  styleTagText: { fontSize: 11, fontWeight: fontWeights.semibold, color: colors.text, letterSpacing: 0.5 },
 
   toggleHeader: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', paddingVertical: spacing[1], marginBottom: spacing[2],
   },
-  contactSheet: { backgroundColor: colors.dark, borderRadius: radius.lg, padding: spacing[5] },
+  contactSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing[5], borderWidth: 1, borderColor: colors.border },
   contactRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[4] },
   contactKey: {
     width: 44, fontSize: 10, fontWeight: fontWeights.bold,
     letterSpacing: 2, color: colors.accentOrange, fontFamily: 'monospace',
   },
-  contactVal: { flex: 1, fontSize: fontSizes.md, fontWeight: fontWeights.semibold, color: '#fff7e1' },
-  contactDivider: { height: 1, backgroundColor: 'rgba(255,247,225,0.1)', marginVertical: spacing[4] },
+  contactVal: { flex: 1, fontSize: fontSizes.md, fontWeight: fontWeights.semibold, color: colors.text },
+  contactDivider: { height: 1, backgroundColor: colors.border, marginVertical: spacing[4] },
 
   footer: {
     textAlign: 'center', fontSize: 9, letterSpacing: 3,

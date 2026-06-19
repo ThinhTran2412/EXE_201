@@ -26,6 +26,8 @@ public sealed class PhotographerRecord
     public string VerificationStatus { get; set; } = "Unverified";
     public string? PasswordHash { get; set; }
     public string? GoogleId { get; set; }
+    public double? CurrentLatitude { get; set; }
+    public double? CurrentLongitude { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
@@ -33,4 +35,7 @@ public sealed class PhotographerRecord
     public ICollection<PortfolioPhotoRecord> PortfolioPhotos { get; set; } = [];
     public ICollection<ServicePackageRecord> ServicePackages { get; set; } = [];
     public ICollection<PhotographerAvailabilityRecord> Availabilities { get; set; } = [];
+    public ICollection<StyleRecord> Styles { get; set; } = [];
+    public ICollection<ConceptRecord> Concepts { get; set; } = [];
+    public ICollection<PhotographerEquipmentRecord> Equipments { get; set; } = [];
 }

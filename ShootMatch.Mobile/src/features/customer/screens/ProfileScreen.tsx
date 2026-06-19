@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Dimensions,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -34,11 +36,6 @@ import {
   type CustomerPhotoSlot,
   type CustomerProfile,
 } from '../api';
-
-const { width: W } = Dimensions.get('window');
-const PAD = spacing[5];
-const GAP = spacing[3];
-const COL = (W - PAD * 2 - GAP) / 2;
 
 const DEFAULT_STYLE_TAGS = ['Portrait', 'Golden hour', 'Film look', 'Lifestyle', 'Editorial'];
 
@@ -81,10 +78,6 @@ function ViewfinderFrame() {
 
 const vf = StyleSheet.create({ corner: { position: 'absolute' } });
 
-const POLAROID_W = Math.floor((W - PAD * 2 - spacing[3] * 2) / 3);
-const POLAROID_IMG_W = POLAROID_W - spacing[2] * 2;
-const POLAROID_IMG_H = Math.round(POLAROID_IMG_W * 1.18);
-
 function HeroPolaroid({
   imageUri,
   fallbackLetter,
@@ -92,6 +85,7 @@ function HeroPolaroid({
   rotation,
   onPress,
   saving,
+  width,
 }: {
   imageUri?: string;
   fallbackLetter?: string;
@@ -99,27 +93,31 @@ function HeroPolaroid({
   rotation: string;
   onPress?: () => void;
   saving?: boolean;
+  width: number;
 }) {
+  const polaroidImgW = width - spacing[2] * 2;
+  const polaroidImgH = Math.round(polaroidImgW * 1.18);
+
   return (
     <Pressable
       onPress={onPress}
       disabled={saving}
       style={({ pressed }) => [
         styles.heroPolaroid,
-        { width: POLAROID_W, transform: [{ rotate: rotation }] },
+        { width: width, transform: [{ rotate: rotation }] },
         pressed && { opacity: 0.85 }
       ]}
     >
       {saving ? (
-        <View style={styles.heroPolaroidFallback}>
+        <View style={[styles.heroPolaroidFallback, { width: polaroidImgW, height: polaroidImgH }]}>
           <ActivityIndicator size="small" color={colors.accentOrange} />
         </View>
       ) : imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.heroPolaroidImg} />
+        <Image source={{ uri: imageUri }} style={[styles.heroPolaroidImg, { width: polaroidImgW, height: polaroidImgH }]} />
       ) : localSource ? (
-        <Image source={localSource} style={styles.heroPolaroidImg} resizeMode="cover" />
+        <Image source={localSource} style={[styles.heroPolaroidImg, { width: polaroidImgW, height: polaroidImgH }]} resizeMode="cover" />
       ) : (
-        <View style={styles.heroPolaroidFallback}>
+        <View style={[styles.heroPolaroidFallback, { width: polaroidImgW, height: polaroidImgH }]}>
           <Text style={styles.heroPolaroidLetter}>{fallbackLetter ?? '+'}</Text>
         </View>
       )}
@@ -133,32 +131,31 @@ function ArchiveTile({
   count,
   images,
   tall,
-  wide,
   dark,
   onPress,
+  width,
+  height,
 }: {
   title: string;
   caption: string;
   count?: number;
   images: ReturnType<typeof localPictureSlice>;
   tall?: boolean;
-  wide?: boolean;
   dark?: boolean;
   onPress: () => void;
+  width: any;
+  height: number;
 }) {
-  const h = wide ? 168 : tall ? 220 : 168;
-  const w = wide ? W - PAD * 2 : COL;
-
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.archiveTile,
-        { width: w, height: h },
+        { width: width, height: height },
         pressed && { opacity: 0.94, transform: [{ scale: 0.985 }] },
       ]}
     >
-      {images.length >= 2 && !wide ? (
+      {images.length >= 2 ? (
         <View style={styles.archiveSplit}>
           <Image source={images[0]} style={styles.archiveHalf} resizeMode="cover" />
           <Image source={images[1]} style={styles.archiveHalf} resizeMode="cover" />
@@ -192,6 +189,13 @@ export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { logout, session, initializing } = useAuth();
+
+  const { width: windowWidth } = useWindowDimensions();
+  const W = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
+  const PAD = spacing[5];
+  const GAP = spacing[3];
+  const COL = (W - PAD * 2 - GAP) / 2;
+  const POLAROID_W = Math.floor((W - PAD * 2 - spacing[3] * 2) / 3);
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -295,6 +299,14 @@ export default function ProfileScreen() {
   );
 
   function handleLogout() {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Bạn chắc chắn muốn đăng xuất?');
+      if (confirmed) {
+        logout();
+      }
+      return;
+    }
+
     Alert.alert('Đăng xuất', 'Bạn chắc chắn muốn đăng xuất?', [
       { text: 'Hủy', style: 'cancel' },
       { text: 'Đăng xuất', style: 'destructive', onPress: logout },
@@ -420,6 +432,7 @@ export default function ProfileScreen() {
                   rotation="-6deg"
                   saving={savingImage === 'highlight1'}
                   onPress={() => pickAndUploadImage('highlight1')}
+                  width={POLAROID_W}
                 />
                 <HeroPolaroid
                   imageUri={highlight2Uri}
@@ -427,6 +440,7 @@ export default function ProfileScreen() {
                   rotation="2deg"
                   saving={savingImage === 'highlight2'}
                   onPress={() => pickAndUploadImage('highlight2')}
+                  width={POLAROID_W}
                 />
                 <HeroPolaroid
                   imageUri={highlight3Uri}
@@ -434,6 +448,7 @@ export default function ProfileScreen() {
                   rotation="6deg"
                   saving={savingImage === 'highlight3'}
                   onPress={() => pickAndUploadImage('highlight3')}
+                  width={POLAROID_W}
                 />
               </View>
             </View>
@@ -494,27 +509,38 @@ export default function ProfileScreen() {
           <Text style={styles.sectionEyebrow}>Album cá nhân</Text>
           <Text style={styles.sectionTitle}>Không gian của bạn</Text>
           <View style={styles.archiveGrid}>
-            <ArchiveTile
-              title="Yêu thích"
-              caption="Photographer & mood đã lưu"
-              images={favImages}
-              tall
-              onPress={() => navigation.navigate('CustomerFavorites')}
-            />
-            <ArchiveTile
-              title="Buổi đã chụp"
-              caption="Hoàn thành & kỷ niệm"
-              count={completedShoots}
-              images={shootImages}
-              dark
-              onPress={() => navigation.navigate('Bookings')}
-            />
+            <View style={{ flexDirection: 'row', gap: GAP, width: '100%', marginBottom: GAP }}>
+              <View style={{ flex: 1 }}>
+                <ArchiveTile
+                  title="Yêu thích"
+                  caption="Photographer & mood đã lưu"
+                  images={favImages}
+                  tall
+                  onPress={() => navigation.navigate('CustomerFavorites')}
+                  width="100%"
+                  height={220}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <ArchiveTile
+                  title="Buổi đã chụp"
+                  caption="Hoàn thành & kỷ niệm"
+                  count={completedShoots}
+                  images={shootImages}
+                  dark
+                  onPress={() => navigation.navigate('Bookings')}
+                  width="100%"
+                  height={220}
+                />
+              </View>
+            </View>
             <ArchiveTile
               title="Ảnh của bạn"
               caption="Chỉ hiện khi bạn đồng ý với photographer"
               images={sharedImages}
-              wide
               onPress={() => navigation.navigate('CustomerSharedMedia')}
+              width="100%"
+              height={168}
             />
           </View>
         </Animated.View>
@@ -581,7 +607,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[2],
-    marginHorizontal: PAD,
+    marginHorizontal: spacing[5],
     marginTop: spacing[2],
     padding: spacing[3],
     borderRadius: radius.md,
@@ -599,7 +625,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: PAD,
+    paddingHorizontal: spacing[5],
     zIndex: 2,
   },
   heroEyebrow: {
@@ -623,7 +649,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: PAD,
+    paddingHorizontal: spacing[5],
     paddingBottom: spacing[5],
     zIndex: 20,
     elevation: 20,
@@ -698,13 +724,9 @@ const styles = StyleSheet.create({
     borderColor: '#fff7e1',
   },
   heroPolaroidImg: {
-    width: POLAROID_IMG_W,
-    height: POLAROID_IMG_H,
     backgroundColor: colors.clay,
   },
   heroPolaroidFallback: {
-    width: POLAROID_IMG_W,
-    height: POLAROID_IMG_H,
     backgroundColor: colors.dark,
     alignItems: 'center',
     justifyContent: 'center',
@@ -719,12 +741,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: PAD,
+    paddingHorizontal: spacing[5],
     marginBottom: spacing[3],
   },
   filmLabel: { fontSize: 9, fontWeight: fontWeights.bold, letterSpacing: 2.5, color: colors.textMuted },
   filmCounter: { fontSize: 9, color: colors.textLight, fontFamily: 'monospace' },
-  filmScroll: { paddingHorizontal: PAD, gap: spacing[2] },
+  filmScroll: { paddingHorizontal: spacing[5], gap: spacing[2] },
   filmFrame: {
     width: 72,
     height: 96,
@@ -745,7 +767,7 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
   },
 
-  section: { paddingHorizontal: PAD, marginBottom: spacing[7] },
+  section: { paddingHorizontal: spacing[5], marginBottom: spacing[7] },
   sectionEyebrow: {
     fontSize: 9,
     fontWeight: fontWeights.bold,
@@ -785,7 +807,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  archiveGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
+  archiveGrid: { width: '100%' },
   archiveTile: { borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.dark },
   archiveSplit: { ...StyleSheet.absoluteFillObject, flexDirection: 'row' },
   archiveHalf: { flex: 1, height: '100%' },

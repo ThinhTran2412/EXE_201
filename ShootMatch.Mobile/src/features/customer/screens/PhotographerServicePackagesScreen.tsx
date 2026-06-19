@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, Dimensions, TouchableOpacity, Platform, Modal, FlatList, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,13 +28,25 @@ function splitDescriptionSections(text: string) {
     const match = text.match(new RegExp(`(?:^|\\n)${key}\\s*([\\s\\S]*?)(?=\\n(?:Mô tả chi tiết:|Tag ảnh:|Features:|Yêu cầu buổi chụp:)|$)`, 'i'));
     return match ? match[1].trim() : '';
   };
-  const tagsStr = getPart('Tag ảnh:');
-  return {
-    description: getPart('Mô tả chi tiết:') || (!text.includes('Mô tả chi tiết:') ? text.split('\n')[0] : ''),
-    tags: tagsStr,
-    features: getPart('Features:'),
-    requirements: getPart('Yêu cầu buổi chụp:'),
-  };
+
+  const tags = getPart('Tag ảnh:');
+  const features = getPart('Features:');
+  const requirements = getPart('Yêu cầu buổi chụp:');
+  let description = getPart('Mô tả chi tiết:');
+
+  if (!description) {
+    const firstPrefixIdx = Math.min(
+      ...['Tag ảnh:', 'Features:', 'Yêu cầu buổi chụp:']
+        .map(p => text.indexOf(p))
+        .filter(idx => idx !== -1)
+    );
+    if (firstPrefixIdx !== Infinity) {
+      description = text.slice(0, firstPrefixIdx).trim();
+    } else {
+      description = text.trim();
+    }
+  }
+  return { description, tags, features, requirements };
 }
 
 const previewText = (text: string, max = 120) => {
@@ -50,6 +62,14 @@ export default function PhotographerServicePackagesScreen() {
   const { photographer, packages, matchId } = route.params as { photographer: Photographer; packages: any[]; matchId?: string };
   
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { width: windowWidth } = useWindowDimensions();
+  const W = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [scrollWidth, setScrollWidth] = useState<number>(0);
+
+  const cardInnerWidth = scrollWidth || W;
+  const photoSize = Math.floor((cardInnerWidth - 64 - 18) / 4) - 1.5;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -61,7 +81,12 @@ export default function PhotographerServicePackagesScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        onLayout={(e) => {
+          setScrollWidth(e.nativeEvent.layout.width);
+        }}
+        contentContainerStyle={styles.scrollContent}
+      >
         {packages.map((item, i) => {
           const parsed = splitDescriptionSections(item.description || '');
           const tags = splitTags(parsed.tags);
@@ -125,6 +150,12 @@ export default function PhotographerServicePackagesScreen() {
                           <Text style={[styles.metaChipText, { color: THEME.success }]}>Features</Text>
                         </View>
                       )}
+                      {!!parsed.requirements && (
+                        <View style={styles.metaChip}>
+                          <Ionicons name="clipboard-outline" size={13} color={THEME.info} />
+                          <Text style={[styles.metaChipText, { color: THEME.info }]}>Yêu cầu</Text>
+                        </View>
+                      )}
                     </View>
 
                     {/* ── COLLAPSED ── */}
@@ -138,18 +169,33 @@ export default function PhotographerServicePackagesScreen() {
                         {item.media && item.media.length > 1 && (
                           <View style={styles.thumbStrip}>
                             {item.media.slice(1, 5).map((media: any, mi: number) => (
-                              <PortfolioImageCell
+                              <Pressable
                                 key={media.id ?? mi}
-                                uri={media.imageUrl}
-                                borderRadius={10}
-                                style={styles.thumbStripItem}
-                                resizeMode="cover"
-                              />
+                                onPress={() => {
+                                  const urls = item.media.map((m: any) => m.imageUrl);
+                                  setLightboxImages(urls);
+                                  setLightboxIndex(mi + 1);
+                                }}
+                              >
+                                <PortfolioImageCell
+                                  uri={media.imageUrl}
+                                  borderRadius={10}
+                                  style={styles.thumbStripItem}
+                                  resizeMode="cover"
+                                />
+                              </Pressable>
                             ))}
                             {item.media.length > 5 && (
-                              <View style={styles.thumbStripMore}>
+                              <Pressable
+                                style={styles.thumbStripMore}
+                                onPress={() => {
+                                  const urls = item.media.map((m: any) => m.imageUrl);
+                                  setLightboxImages(urls);
+                                  setLightboxIndex(5);
+                                }}
+                              >
                                 <Text style={styles.thumbStripMoreText}>+{item.media.length - 5}</Text>
-                              </View>
+                              </Pressable>
                             )}
                           </View>
                         )}
@@ -175,12 +221,14 @@ export default function PhotographerServicePackagesScreen() {
                               <Text style={[styles.detailSectionTitle, { color: THEME.success }]}>Features</Text>
                             </View>
                             <View style={styles.featureList}>
-                              {featureLines.map((line, li) => (
-                                <View key={li} style={styles.featureItem}>
-                                  <Ionicons name="checkmark-circle" size={14} color={THEME.success} />
-                                  <Text style={styles.featureItemText}>{line}</Text>
-                                </View>
-                              ))}
+                              {featureLines.map((line, li) => {
+                                const cleanLine = line.replace(/^[-\*•✓]\s*/, '');
+                                return (
+                                  <View key={li} style={styles.featureItem}>
+                                    <Text style={styles.featureItemText}>✓ {cleanLine}</Text>
+                                  </View>
+                                );
+                              })}
                             </View>
                           </View>
                         )}
@@ -191,12 +239,14 @@ export default function PhotographerServicePackagesScreen() {
                               <Text style={[styles.detailSectionTitle, { color: THEME.info }]}>Yêu cầu buổi chụp</Text>
                             </View>
                             <View style={styles.featureList}>
-                              {requirementLines.map((line, li) => (
-                                <View key={li} style={styles.featureItem}>
-                                  <Ionicons name="ellipse" size={6} color={THEME.info} style={{ marginTop: 5 }} />
-                                  <Text style={[styles.featureItemText, { color: 'rgba(26,26,15,0.6)' }]}>{line}</Text>
-                                </View>
-                              ))}
+                              {requirementLines.map((line, li) => {
+                                const cleanLine = line.replace(/^[-\*•]\s*/, '');
+                                return (
+                                  <View key={li} style={styles.featureItem}>
+                                    <Text style={[styles.featureItemText, { color: 'rgba(26,26,15,0.6)' }]}>• {cleanLine}</Text>
+                                  </View>
+                                );
+                              })}
                             </View>
                           </View>
                         )}
@@ -208,13 +258,22 @@ export default function PhotographerServicePackagesScreen() {
                             </View>
                             <View style={styles.expandedPhotoGrid}>
                               {item.media.map((media: any, mi: number) => (
-                                <PortfolioImageCell
+                                <Pressable
                                   key={media.id ?? mi}
-                                  uri={media.imageUrl}
-                                  borderRadius={10}
-                                  style={styles.expandedPhotoItem}
-                                  resizeMode="cover"
-                                />
+                                  style={[styles.expandedPhotoItem, { width: photoSize, height: photoSize }]}
+                                  onPress={() => {
+                                    const urls = item.media.map((m: any) => m.imageUrl);
+                                    setLightboxImages(urls);
+                                    setLightboxIndex(mi);
+                                  }}
+                                >
+                                  <PortfolioImageCell
+                                    uri={media.imageUrl}
+                                    borderRadius={10}
+                                    style={{ width: '100%', height: '100%' }}
+                                    resizeMode="cover"
+                                  />
+                                </Pressable>
                               ))}
                             </View>
                           </View>
@@ -256,6 +315,59 @@ export default function PhotographerServicePackagesScreen() {
           <Text style={{ textAlign: 'center', color: 'rgba(26,26,15,0.5)', marginTop: 40 }}>Chưa có gói dịch vụ nào.</Text>
         )}
       </ScrollView>
+
+      {/* ── LIGHTBOX ── */}
+      <Modal
+        visible={lightboxIndex !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLightboxIndex(null)}
+      >
+        <View style={styles.viewerBackground}>
+          <View style={[styles.viewerHeader, { top: insets.top || 20 }]}>
+            <Pressable style={styles.viewerClose} onPress={() => setLightboxIndex(null)}>
+              <Ionicons name="close" size={28} color="#FFFBF0" />
+            </Pressable>
+          </View>
+
+          {lightboxIndex !== null && (
+            <FlatList
+              data={lightboxImages}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              initialScrollIndex={lightboxIndex}
+              getItemLayout={(_, index) => ({
+                length: W,
+                offset: W * index,
+                index,
+              })}
+              onMomentumScrollEnd={e => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / W);
+                setLightboxIndex(idx);
+              }}
+              renderItem={({ item: imgUri }) => (
+                <View
+                  style={{
+                    width: W,
+                    flex: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <PortfolioImageCell
+                    uri={imgUri}
+                    style={{ width: W, height: '88%' }}
+                    borderRadius={0}
+                    resizeMode="contain"
+                  />
+                </View>
+              )}
+              keyExtractor={(img, index) => `${img}-${index}`}
+            />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -338,7 +450,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.08)',
+    borderColor: 'rgba(26,26,15,0.22)',
   },
   metaChipText: { color: THEME.accent, fontSize: 11.5, fontWeight: '600' },
 
@@ -432,4 +544,24 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   floatingBookBtnText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  viewerBackground: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)' },
+  viewerHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    zIndex: 10,
+  },
+  viewerClose: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

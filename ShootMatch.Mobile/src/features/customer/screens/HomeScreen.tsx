@@ -88,7 +88,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <HomeTopBar
-        onSearch={() => goTab('Discover')}
+        onSearch={() => navigation.navigate('Search')}
         onNotifications={() => navigation.navigate('Notifications')}
         onProfile={() => goTab('Profile')}
       />
@@ -107,7 +107,7 @@ export default function HomeScreen() {
         <HomeHero
           coverSource={heroCover}
           onDiscover={() => goTab('Discover')}
-          onSearch={() => goTab('Discover')}
+          onSearch={() => navigation.navigate('Search')}
         />
 
         {loading ? (

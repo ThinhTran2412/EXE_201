@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CustomerTabParamList, CustomerStackParamList } from './types';
 import { colors } from '../theme/colors';
 import { fontSizes } from '../theme/typography';
@@ -16,6 +17,7 @@ import ProfileScreen    from '../../features/customer/screens/ProfileScreen';
 
 // Stack screens (pushed on top of tabs)
 import PhotographerProfileScreen from '../../features/customer/screens/PhotographerProfileScreen';
+import SearchScreen              from '../../features/customer/screens/SearchScreen';
 import PhotographerPortfolioScreen from '../../features/customer/screens/PhotographerPortfolioScreen';
 import PhotographerServicePackagesScreen from '../../features/customer/screens/PhotographerServicePackagesScreen';
 import CheckoutScreen            from '../../features/customer/screens/CheckoutScreen';
@@ -27,6 +29,7 @@ import CustomerFavoritesScreen   from '../../features/customer/screens/CustomerF
 import CustomerSharedMediaScreen from '../../features/customer/screens/CustomerSharedMediaScreen';
 import ChatScreen                from '../../features/chat/screens/ChatScreen';
 import CallScreen                from '../../features/chat/screens/CallScreen';
+import EmergencySearchScreen     from '../../features/customer/screens/EmergencySearchScreen';
 
 const Tab   = createBottomTabNavigator<CustomerTabParamList>();
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -41,13 +44,18 @@ const TAB_CONFIG: Record<keyof CustomerTabParamList, { label: string; icon: Icon
 };
 
 function CustomerTabNavigator() {
+  const insets = useSafeAreaInsets();
+  const isWeb = Platform.OS === 'web';
+  const tabBarHeight = Platform.OS === 'ios' ? 88 : (isWeb ? 60 : 60 + insets.bottom);
+  const tabBarPaddingBottom = Platform.OS === 'ios' ? 24 : (isWeb ? 4 : (insets.bottom > 0 ? insets.bottom : 8));
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => {
         const cfg = TAB_CONFIG[route.name as keyof CustomerTabParamList];
         return {
           headerShown: false,
-          tabBarStyle: styles.tabBar,
+          tabBarStyle: [styles.tabBar, { height: tabBarHeight, paddingBottom: tabBarPaddingBottom, paddingTop: isWeb ? 4 : 8 }],
           tabBarActiveTintColor:   colors.tabActive,
           tabBarInactiveTintColor: colors.tabInactive,
           tabBarLabelStyle: styles.label,
@@ -72,6 +80,8 @@ export default function CustomerTabs() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CustomerRoot"         component={CustomerTabNavigator} />
+      <Stack.Screen name="Search"               component={SearchScreen} />
+      <Stack.Screen name="EmergencySearch"      component={EmergencySearchScreen} />
       <Stack.Screen name="PhotographerProfile"  component={PhotographerProfileScreen} />
       <Stack.Screen name="PhotographerPortfolio" component={PhotographerPortfolioScreen} />
       <Stack.Screen name="PhotographerServicePackages" component={PhotographerServicePackagesScreen} />
@@ -93,10 +103,10 @@ const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: colors.tabBar,
     borderTopWidth: 0,
-    elevation: 20,
+    elevation: Platform.OS === 'web' ? 0 : 20,
     shadowColor: colors.dark,
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: Platform.OS === 'web' ? 0 : 0.08,
     shadowRadius: 16,
     height: Platform.OS === 'ios' ? 88 : 64,
     paddingBottom: Platform.OS === 'ios' ? 24 : 8,

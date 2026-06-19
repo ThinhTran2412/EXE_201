@@ -12,5 +12,7 @@ public sealed class PhotographerMatchCard
     public required string AvatarUrl { get; init; }
     public required double SimilarityScore { get; init; }
     public required double FinalScore { get; init; }
+    public double? CurrentLatitude { get; init; }
+    public double? CurrentLongitude { get; init; }
     public IReadOnlyList<string> PortfolioPhotos { get; init; } = [];
 }

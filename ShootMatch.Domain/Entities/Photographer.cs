@@ -26,9 +26,12 @@ public sealed class Photographer
     public string VerificationStatus { get; init; } = "Unverified";
     public string? PasswordHash { get; init; }
     public string? GoogleId { get; init; }
+    public double? CurrentLatitude { get; init; }
+    public double? CurrentLongitude { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
     public DateTime? DeletedAt { get; init; }
     public IReadOnlyList<float[]> PortfolioEmbeddings { get; init; } = [];
     public List<string> PortfolioPhotos { get; init; } = [];
+    public List<PhotographerEquipment> Equipments { get; init; } = [];
 }

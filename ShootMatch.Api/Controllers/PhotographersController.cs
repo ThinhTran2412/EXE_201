@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ShootMatch.Api.Contracts;
 using ShootMatch.Application.Abstractions;
 using ShootMatch.Domain.Entities;
 using ShootMatch.Domain.Exceptions;
 using ShootMatch.Domain.ValueObjects;
+using ShootMatch.Infrastructure.Persistence;
+using ShootMatch.Infrastructure.Persistence.Entities;
 using System.Security.Claims;
 
 namespace ShootMatch.Api.Controllers;
@@ -35,6 +38,55 @@ public sealed class PhotographersController(
         var id = GetPhotographerIdOrThrow(User);
         var items = await availabilityRepository.GetByPhotographerIdAsync(id, from, to, cancellationToken);
         return Ok(items);
+    }
+
+    [HttpPatch("availability")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetAvailability([FromBody] SetAvailabilityRequest request, CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var existing = await photographerRepository.GetByIdAsync(id, cancellationToken);
+        if (existing is null) return NotFound();
+
+        var updated = new Photographer
+        {
+            Id                            = existing.Id,
+            Phone                         = existing.Phone,
+            Email                         = existing.Email,
+            DisplayName                   = existing.DisplayName,
+            Bio                           = existing.Bio,
+            Quote                         = existing.Quote,
+            NationalId                    = existing.NationalId,
+            Region                        = existing.Region,
+            PersonalAddress               = existing.PersonalAddress,
+            VerificationDocumentFrontUrl  = existing.VerificationDocumentFrontUrl,
+            VerificationDocumentBackUrl   = existing.VerificationDocumentBackUrl,
+            VerificationPortraitUrl       = existing.VerificationPortraitUrl,
+            AvatarUrl                     = existing.AvatarUrl,
+            CoverPhotoUrl                 = existing.CoverPhotoUrl,
+            InstagramUrl                  = existing.InstagramUrl,
+            MinBudget                     = existing.MinBudget,
+            MaxBudget                     = existing.MaxBudget,
+            AcceptsInstantBooking         = existing.AcceptsInstantBooking,
+            Rating                        = existing.Rating,
+            IsPremium                     = existing.IsPremium,
+            IsAvailable                   = request.IsAvailable,
+            VerificationStatus            = existing.VerificationStatus,
+            PasswordHash                  = existing.PasswordHash,
+            GoogleId                      = existing.GoogleId,
+            CurrentLatitude               = existing.CurrentLatitude,
+            CurrentLongitude              = existing.CurrentLongitude,
+            CreatedAt                     = existing.CreatedAt,
+            UpdatedAt                     = DateTime.UtcNow,
+            DeletedAt                     = existing.DeletedAt,
+            PortfolioEmbeddings           = existing.PortfolioEmbeddings,
+            PortfolioPhotos               = existing.PortfolioPhotos,
+            Equipments                    = existing.Equipments
+        };
+
+        await photographerRepository.UpsertAsync(updated, cancellationToken);
+        return NoContent();
     }
 
     [HttpGet("{id:guid}/availability")]
@@ -124,7 +176,9 @@ public sealed class PhotographersController(
                 GoogleId              = existing.GoogleId,
                 CreatedAt             = existing.CreatedAt,
                 UpdatedAt             = DateTime.UtcNow,
-                PortfolioEmbeddings   = existing.PortfolioEmbeddings
+                PortfolioEmbeddings   = existing.PortfolioEmbeddings,
+                PortfolioPhotos       = existing.PortfolioPhotos,
+                Equipments            = existing.Equipments
             };
 
             await photographerRepository.UpsertAsync(updated, cancellationToken);
@@ -191,11 +245,116 @@ public sealed class PhotographersController(
             UpdatedAt                     = DateTime.UtcNow,
             DeletedAt                     = existing.DeletedAt,
             PortfolioEmbeddings           = existing.PortfolioEmbeddings,
-            PortfolioPhotos               = existing.PortfolioPhotos
+            PortfolioPhotos               = existing.PortfolioPhotos,
+            Equipments                    = existing.Equipments
         };
 
         await photographerRepository.UpsertAsync(updated, cancellationToken);
         return Ok(updated);
+    }
+
+    [HttpPut("equipments")]
+    [ProducesResponseType(typeof(Photographer), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateEquipments(
+        [FromBody] UpdateEquipmentsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var existing = await photographerRepository.GetByIdAsync(id, cancellationToken);
+        if (existing is null) return NotFound();
+
+        var updated = new Photographer
+        {
+            Id                            = existing.Id,
+            Phone                         = existing.Phone,
+            Email                         = existing.Email,
+            DisplayName                   = existing.DisplayName,
+            Bio                           = existing.Bio,
+            Quote                         = existing.Quote,
+            NationalId                    = existing.NationalId,
+            Region                        = existing.Region,
+            PersonalAddress               = existing.PersonalAddress,
+            VerificationDocumentFrontUrl  = existing.VerificationDocumentFrontUrl,
+            VerificationDocumentBackUrl   = existing.VerificationDocumentBackUrl,
+            VerificationPortraitUrl       = existing.VerificationPortraitUrl,
+            AvatarUrl                     = existing.AvatarUrl,
+            CoverPhotoUrl                 = existing.CoverPhotoUrl,
+            InstagramUrl                  = existing.InstagramUrl,
+            MinBudget                     = existing.MinBudget,
+            MaxBudget                     = existing.MaxBudget,
+            AcceptsInstantBooking         = existing.AcceptsInstantBooking,
+            Rating                        = existing.Rating,
+            IsPremium                     = existing.IsPremium,
+            IsAvailable                   = existing.IsAvailable,
+            VerificationStatus            = existing.VerificationStatus,
+            PasswordHash                  = existing.PasswordHash,
+            GoogleId                      = existing.GoogleId,
+            CreatedAt                     = existing.CreatedAt,
+            UpdatedAt                     = DateTime.UtcNow,
+            DeletedAt                     = existing.DeletedAt,
+            PortfolioEmbeddings           = existing.PortfolioEmbeddings,
+            PortfolioPhotos               = existing.PortfolioPhotos,
+            Equipments                    = request.Equipments.Select(e => new PhotographerEquipment
+            {
+                Id = e.Id ?? Guid.NewGuid(),
+                PhotographerId = id,
+                Category = (EquipmentCategory)e.Category,
+                Name = e.Name?.Trim() ?? string.Empty,
+                Description = e.Description?.Trim(),
+                IsPrimary = e.IsPrimary
+            }).ToList()
+        };
+
+        await photographerRepository.UpsertAsync(updated, cancellationToken);
+        return Ok(updated);
+    }
+
+    [HttpPut("location")]
+    public async Task<IActionResult> UpdateLocation([FromBody] UpdateLocationRequest request, CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var existing = await photographerRepository.GetByIdAsync(id, cancellationToken);
+        if (existing is null) return NotFound();
+
+        var updated = new Photographer
+        {
+            Id                            = existing.Id,
+            Phone                         = existing.Phone,
+            Email                         = existing.Email,
+            DisplayName                   = existing.DisplayName,
+            Bio                           = existing.Bio,
+            Quote                         = existing.Quote,
+            NationalId                    = existing.NationalId,
+            Region                        = existing.Region,
+            PersonalAddress               = existing.PersonalAddress,
+            VerificationDocumentFrontUrl  = existing.VerificationDocumentFrontUrl,
+            VerificationDocumentBackUrl   = existing.VerificationDocumentBackUrl,
+            VerificationPortraitUrl       = existing.VerificationPortraitUrl,
+            AvatarUrl                     = existing.AvatarUrl,
+            CoverPhotoUrl                 = existing.CoverPhotoUrl,
+            InstagramUrl                  = existing.InstagramUrl,
+            MinBudget                     = existing.MinBudget,
+            MaxBudget                     = existing.MaxBudget,
+            AcceptsInstantBooking         = existing.AcceptsInstantBooking,
+            Rating                        = existing.Rating,
+            IsPremium                     = existing.IsPremium,
+            IsAvailable                   = existing.IsAvailable,
+            VerificationStatus            = existing.VerificationStatus,
+            PasswordHash                  = existing.PasswordHash,
+            GoogleId                      = existing.GoogleId,
+            CurrentLatitude               = request.Latitude,
+            CurrentLongitude              = request.Longitude,
+            CreatedAt                     = existing.CreatedAt,
+            UpdatedAt                     = DateTime.UtcNow,
+            DeletedAt                     = existing.DeletedAt,
+            PortfolioEmbeddings           = existing.PortfolioEmbeddings,
+            PortfolioPhotos               = existing.PortfolioPhotos,
+            Equipments                    = existing.Equipments
+        };
+
+        await photographerRepository.UpsertAsync(updated, cancellationToken);
+        return Ok();
     }
 
     [HttpPost("verify")]
@@ -243,7 +402,8 @@ public sealed class PhotographersController(
             UpdatedAt                     = DateTime.UtcNow,
             DeletedAt                     = existing.DeletedAt,
             PortfolioEmbeddings           = existing.PortfolioEmbeddings,
-            PortfolioPhotos               = existing.PortfolioPhotos
+            PortfolioPhotos               = existing.PortfolioPhotos,
+            Equipments                    = existing.Equipments
         };
 
         await photographerRepository.UpsertAsync(updated, cancellationToken);
@@ -290,6 +450,9 @@ public sealed class PhotographersController(
             request.CallToAction,
             request.Price,
             request.DurationHours,
+            request.LocationType,
+            request.AgeGroup,
+            request.GroupSize,
             request.IsActive,
             request.Media), cancellationToken);
         return Ok(package);
@@ -346,6 +509,9 @@ public sealed class PhotographersController(
             CallToAction = callToAction,
             Price = request.Price,
             DurationHours = request.DurationHours,
+            LocationType = request.LocationType,
+            AgeGroup = request.AgeGroup,
+            GroupSize = request.GroupSize,
             IsActive = request.IsActive,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -391,4 +557,64 @@ public sealed class PhotographersController(
         if (!Guid.TryParse(claim, out var id)) throw new UnauthorizedAccessException("Missing photographer_id claim.");
         return id;
     }
+
+    [HttpPost("styles/propose")]
+    public async Task<IActionResult> ProposeStyle([FromBody] ProposeTagRequest request, [FromServices] ShootMatchDbContext db, CancellationToken ct)
+    {
+        var name = request.Name.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return BadRequest("Name is required.");
+        
+        var photographerId = GetPhotographerIdOrThrow(User);
+        
+        var exists = await db.Styles.AnyAsync(x => x.Name.ToLower() == name.ToLower(), ct);
+        if (exists) return BadRequest("Style name already exists.");
+
+        var style = new StyleRecord
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Description = request.Description?.Trim() ?? string.Empty,
+            Keywords = request.Keywords?.Trim() ?? string.Empty,
+            Status = "Pending",
+            CreatedById = photographerId,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await db.Styles.AddAsync(style, ct);
+        await db.SaveChangesAsync(ct);
+        return Ok(style);
+    }
+
+    [HttpPost("concepts/propose")]
+    public async Task<IActionResult> ProposeConcept([FromBody] ProposeTagRequest request, [FromServices] ShootMatchDbContext db, CancellationToken ct)
+    {
+        var name = request.Name.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return BadRequest("Name is required.");
+        
+        var photographerId = GetPhotographerIdOrThrow(User);
+        
+        var exists = await db.Concepts.AnyAsync(x => x.Name.ToLower() == name.ToLower(), ct);
+        if (exists) return BadRequest("Concept name already exists.");
+
+        var concept = new ConceptRecord
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Description = request.Description?.Trim() ?? string.Empty,
+            Keywords = request.Keywords?.Trim() ?? string.Empty,
+            Status = "Pending",
+            CreatedById = photographerId,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await db.Concepts.AddAsync(concept, ct);
+        await db.SaveChangesAsync(ct);
+        return Ok(concept);
+    }
 }
+
+public record ProposeTagRequest(string Name, string? Description, string? Keywords);
+
+public record UpdateLocationRequest(double Latitude, double Longitude);

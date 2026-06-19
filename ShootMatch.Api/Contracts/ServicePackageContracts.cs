@@ -1,3 +1,5 @@
+using ShootMatch.Domain.Entities;
+
 namespace ShootMatch.Api.Contracts;
 
 public sealed record ServicePackageMediaRequest(
@@ -13,6 +15,9 @@ public sealed record ServicePackageRequest(
     string CallToAction,
     decimal Price,
     int DurationHours,
+    LocationType LocationType,
+    AgeGroup AgeGroup,
+    GroupSize GroupSize,
     bool IsActive,
     IReadOnlyList<ServicePackageMediaRequest> Media);
 
@@ -25,5 +30,8 @@ public sealed record UpdateServicePackageRequest(
     string CallToAction,
     decimal Price,
     int DurationHours,
+    LocationType LocationType,
+    AgeGroup AgeGroup,
+    GroupSize GroupSize,
     bool IsActive,
     IReadOnlyList<ServicePackageMediaRequest> Media);

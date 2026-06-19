@@ -37,8 +37,12 @@ import { radius, spacing } from '../../../app/theme/spacing';
 
 const STATUS_CFG: Record<string, { label: string; color: string; bgColor: string; icon: string }> = {
   Pending:    { label: 'Chờ xác nhận', color: '#b88d14', bgColor: 'rgba(233,196,106,0.15)', icon: 'time-outline' },
+  AwaitingDeposit: { label: 'Chờ cọc', color: '#ea580c', bgColor: 'rgba(234,88,12,0.15)', icon: 'wallet-outline' },
   Processing: { label: 'Đang xử lý',    color: '#b88d14', bgColor: 'rgba(233,196,106,0.15)', icon: 'time-outline' },
   Confirmed:  { label: 'Đã xác nhận', color: '#1d4ed8', bgColor: 'rgba(69,123,157,0.15)',  icon: 'checkmark-circle-outline' },
+  Moving:     { label: 'Đang di chuyển', color: '#8b5cf6', bgColor: 'rgba(139,92,246,0.15)', icon: 'bicycle-outline' },
+  Arrived:    { label: 'Đã đến nơi', color: '#10b981', bgColor: 'rgba(16,185,129,0.15)', icon: 'flag-outline' },
+  InProgress: { label: 'Đang chụp', color: '#3b82f6', bgColor: 'rgba(59,130,246,0.15)', icon: 'camera-outline' },
   Completed:  { label: 'Hoàn thành',  color: '#15803d', bgColor: 'rgba(45,106,79,0.15)',   icon: 'checkmark-done-circle' },
   Cancelled:  { label: 'Đã hủy',      color: '#cf4028', bgColor: 'rgba(207,64,40,0.15)',   icon: 'close-circle-outline' },
   Disputed:   { label: 'Tranh chấp',  color: '#e07b39', bgColor: 'rgba(224,123,57,0.15)',   icon: 'warning-outline' },
@@ -105,7 +109,7 @@ function BookingItem({
   const cfg = STATUS_CFG[booking.status] ?? STATUS_CFG.Pending;
   const concept = getArtisticConcept(booking.id);
   const matchedPkg = booking.servicePackageId
-    ? (packages || []).find((p: any) => p.id === booking.servicePackageId)
+    ? (packages || []).find((p: any) => p.id?.toLowerCase() === booking.servicePackageId?.toLowerCase())
     : null;
 
   const packageTitle = matchedPkg ? matchedPkg.title : concept.title;
@@ -198,7 +202,7 @@ function BookingItem({
                 <Text style={styles.detailBtnText}>Chi tiết</Text>
               </Pressable>
               
-              {(booking.status === 'Pending' || booking.status === 'Confirmed') && (
+              {(booking.status === 'Pending' || booking.status === 'AwaitingDeposit' || booking.status === 'Confirmed') && (
                 <Pressable style={styles.cancelBtn} onPress={onCancel}>
                   <Text style={styles.cancelBtnText}>Hủy</Text>
                 </Pressable>
@@ -312,7 +316,15 @@ export default function MyBookingsScreen() {
     ]);
   }
 
-  const upcomingBookings = bookings.filter((b) => b.status === 'Pending' || b.status === 'Processing' || b.status === 'Confirmed');
+  const upcomingBookings = bookings.filter((b) => 
+    b.status === 'Pending' || 
+    b.status === 'AwaitingDeposit' || 
+    b.status === 'Processing' || 
+    b.status === 'Confirmed' ||
+    b.status === 'Moving' ||
+    b.status === 'Arrived' ||
+    b.status === 'InProgress'
+  );
   const pastBookings = bookings.filter((b) => b.status === 'Completed' || b.status === 'Cancelled' || b.status === 'Disputed');
 
   return (

@@ -3,25 +3,59 @@ import { tokenStorage } from '../../shared/storage/tokenStorage';
 
 const HUB_URL = process.env.EXPO_PUBLIC_SIGNALR_URL ?? 'http://192.168.1.7:5000/hubs/chat';
 
+import { refreshAccessToken } from '../../shared/api/client';
+
 let connection: signalR.HubConnection | null = null;
 
 export async function connect(): Promise<signalR.HubConnection> {
   if (connection?.state === signalR.HubConnectionState.Connected) return connection;
 
-  connection = new signalR.HubConnectionBuilder()
-    .withUrl(HUB_URL, {
-      // WebSocket doesn't support Authorization header — send via query string
-      accessTokenFactory: async () => {
-        const token = await tokenStorage.getAccess();
-        return token ?? '';
-      },
-      transport: signalR.HttpTransportType.WebSockets,
-    })
-    .withAutomaticReconnect()
-    .configureLogging(signalR.LogLevel.Warning)
-    .build();
+  const buildConnection = () => {
+    const conn = new signalR.HubConnectionBuilder()
+      .withUrl(HUB_URL, {
+        // WebSocket doesn't support Authorization header — send via query string
+        accessTokenFactory: async () => {
+          const token = await tokenStorage.getAccess();
+          return token ?? '';
+        },
+        transport: signalR.HttpTransportType.WebSockets,
+        skipNegotiation: true,
+      })
+      .withAutomaticReconnect()
+      .configureLogging(signalR.LogLevel.None)
+      .build();
 
-  await connection.start();
+    conn.onclose((error) => {
+      console.warn('SignalR connection closed:', error);
+    });
+    conn.onreconnecting((error) => {
+      console.warn('SignalR reconnecting:', error);
+    });
+    conn.onreconnected((connectionId) => {
+      console.log('SignalR reconnected:', connectionId);
+    });
+
+    return conn;
+  };
+
+  connection = buildConnection();
+
+  try {
+    await connection.start();
+  } catch (err: any) {
+    if (err?.message?.includes('401') || err?.statusCode === 401) {
+      try {
+        await refreshAccessToken();
+        // Cần build lại connection nếu access token được lưu trong closure
+        connection = buildConnection();
+        await connection.start();
+      } catch (refreshErr) {
+        throw refreshErr; // Refresh failed, give up
+      }
+    } else {
+      throw err;
+    }
+  }
   return connection;
 }
 

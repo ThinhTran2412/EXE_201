@@ -11,6 +11,8 @@ type Props = {
   borderRadius?: number;
   /** Mặc định cover; dùng contain cho xem fullscreen */
   resizeMode?: 'cover' | 'contain';
+  /** Blur cho background layer */
+  blurRadius?: number;
 };
 
 /** Ảnh portfolio: chuẩn hóa URL, loading, lỗi tải → placeholder (tránh ô xám trống). */
@@ -21,6 +23,7 @@ export default function PortfolioImageCell({
   imageStyle,
   borderRadius = 12,
   resizeMode = 'cover',
+  blurRadius,
 }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -36,7 +39,7 @@ export default function PortfolioImageCell({
   }
 
   const wrap = (
-    <View style={[styles.wrap, { borderRadius }, style]}>
+    <View style={[styles.wrap, { borderRadius }, onPress ? { width: '100%', height: '100%' } : style]}>
       {loading && !error ? (
         <View style={styles.center}>
           <ActivityIndicator size="small" color="rgba(255,247,225,0.35)" />
@@ -52,6 +55,7 @@ export default function PortfolioImageCell({
           style={[StyleSheet.absoluteFillObject, { borderRadius }, imageStyle]}
           resizeMode={resizeMode}
           resizeMethod="resize"
+          blurRadius={blurRadius}
           onLoadEnd={() => setLoading(false)}
           onError={() => {
             setError(true);
@@ -63,7 +67,7 @@ export default function PortfolioImageCell({
   );
 
   if (onPress) {
-    return <Pressable onPress={onPress} style={({ pressed }) => [pressed && { opacity: 0.92 }]}>{wrap}</Pressable>;
+    return <Pressable onPress={onPress} style={({ pressed }) => [style, pressed && { opacity: 0.92 }]}>{wrap}</Pressable>;
   }
   return wrap;
 }

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import { apiClient } from '../../shared/api/client';
 import { tokenStorage } from '../../shared/storage/tokenStorage';
 import { getUserIdFromAccessToken } from '../../shared/auth/currentUser';
@@ -38,6 +39,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession({ accessToken: access, role, userId });
       }
     })().finally(() => setInitializing(false));
+
+    const sub = DeviceEventEmitter.addListener('onSessionExpired', () => {
+      logout();
+    });
+
+    return () => {
+      sub.remove();
+    };
   }, []);
 
   // ── Phone OTP ──────────────────────────────────────────────────────────────

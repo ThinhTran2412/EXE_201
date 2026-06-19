@@ -1,6 +1,7 @@
 import { apiClient } from '../../shared/api/client';
 import { gql } from '../../shared/api/graphql';
 import { tokenStorage } from '../../shared/storage/tokenStorage';
+import { appendFileToFormData } from '../../shared/api/uploadHelper';
 
 export interface AvailabilitySlot {
   specificDate: string;
@@ -21,6 +22,8 @@ export interface PhotographerCard {
   similarityScore: number;
   finalScore:     number;
   avatarUrl?:     string;
+  currentLatitude?: number;
+  currentLongitude?: number;
   portfolioPhotos?: string[];
 }
 
@@ -42,6 +45,7 @@ export interface Photographer {
   isAvailable:        boolean;
   verificationStatus: string;
   portfolioPhotos?:   string[];
+  equipments?:        any[];
 }
 
 export interface Match {
@@ -74,8 +78,12 @@ function normalizeStatus(status: string): string {
   if (!status) return 'Pending';
   const s = status.toUpperCase();
   if (s === 'PENDING') return 'Pending';
+  if (s === 'AWAITINGDEPOSIT' || s === 'AWAITING_DEPOSIT') return 'AwaitingDeposit';
   if (s === 'PROCESSING') return 'Processing';
   if (s === 'CONFIRMED') return 'Confirmed';
+  if (s === 'MOVING') return 'Moving';
+  if (s === 'ARRIVED') return 'Arrived';
+  if (s === 'INPROGRESS' || s === 'IN_PROGRESS') return 'InProgress';
   if (s === 'COMPLETED') return 'Completed';
   if (s === 'CANCELLED') return 'Cancelled';
   if (s === 'DISPUTED') return 'Disputed';
@@ -122,6 +130,8 @@ export interface Review {
   rating:              number;
   comment:             string;
   createdAt:           string;
+  authorName?:         string;
+  authorAvatarUrl?:    string;
 }
 
 export interface PhotographerAvailabilitySlot {
@@ -268,11 +278,7 @@ export async function updateCustomerProfile(payload: Partial<Pick<CustomerProfil
 export async function uploadCustomerRollPreviewPhoto(uri: string, mimeType: string) {
   const filename = uri.split('/').pop() ?? `roll_preview_${Date.now()}.jpg`;
   const form = new FormData();
-  form.append('file', {
-    uri,
-    name: filename,
-    type: mimeType ?? 'image/jpeg',
-  } as any);
+  await appendFileToFormData(form, 'file', uri, filename, mimeType ?? 'image/jpeg');
 
   const { data } = await apiClient.post<{ photoUrl: string }>('/api/customers/profile/roll-preview/upload', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -292,11 +298,7 @@ const UPLOAD_ENDPOINTS: Record<CustomerPhotoSlot, string> = {
 export async function uploadCustomerProfileImage(uri: string, mimeType: string, kind: CustomerPhotoSlot) {
   const filename = uri.split('/').pop() ?? `${kind}_${Date.now()}.jpg`;
   const form = new FormData();
-  form.append('file', {
-    uri,
-    name: filename,
-    type: mimeType ?? 'image/jpeg',
-  } as any);
+  await appendFileToFormData(form, 'file', uri, filename, mimeType ?? 'image/jpeg');
 
   const endpoint = UPLOAD_ENDPOINTS[kind];
 
@@ -333,12 +335,65 @@ export async function getPhotographers(): Promise<Photographer[]> {
   return data.photographers ?? [];
 }
 
+export async function searchPhotographers(params: {
+  query?: string;
+  region?: string;
+  minBudget?: number;
+  maxBudget?: number;
+  durationHours?: number;
+  styles?: string[];
+  isEmergency?: boolean;
+  locationType?: string | null;
+  ageGroup?: string | null;
+  groupSize?: string | null;
+  colorTone?: string;
+}): Promise<PhotographerCard[]> {
+  const data = await gql<{ searchPhotographers: PhotographerCard[] }>(`
+    query SearchPhotographers(
+      $query: String
+      $region: String
+      $minBudget: Decimal
+      $maxBudget: Decimal
+      $durationHours: Int
+      $styles: [String!]
+      $isEmergency: Boolean
+      $locationType: LocationType
+      $ageGroup: AgeGroup
+      $groupSize: GroupSize
+      $colorTone: String
+    ) {
+      searchPhotographers(
+        query: $query
+        region: $region
+        minBudget: $minBudget
+        maxBudget: $maxBudget
+        durationHours: $durationHours
+        styles: $styles
+        isEmergency: $isEmergency
+        locationType: $locationType
+        ageGroup: $ageGroup
+        groupSize: $groupSize
+        colorTone: $colorTone
+      ) {
+        photographerId displayName region avatarUrl portfolioPhotos
+        minBudget maxBudget rating isPremium similarityScore finalScore
+        currentLatitude currentLongitude
+      }
+    }
+  `, params);
+  return data.searchPhotographers ?? [];
+}
+
+
 export async function getPhotographer(id: string): Promise<Photographer | null> {
   const data = await gql<{ photographer: Photographer | null }>(`
     query GetPhotographer($id: UUID!) {
       photographer(id: $id) {
         id displayName region bio quote avatarUrl coverPhotoUrl instagramUrl portfolioPhotos
         minBudget maxBudget rating isPremium isAvailable verificationStatus
+        equipments {
+          id category name description isPrimary
+        }
       }
     }
   `, { id });
@@ -398,8 +453,25 @@ export async function createBooking(payload: {
   return data.bookingId;
 }
 
+export async function createPaymentLink(bookingId: string): Promise<string> {
+  const { data } = await apiClient.post(`/api/bookings/${bookingId}/create-payment-link`);
+  return data.checkoutUrl;
+}
+
 export async function cancelBooking(id: string, reason: string) {
   await apiClient.post(`/api/bookings/${id}/cancel`, { reason });
+}
+
+export async function confirmBooking(id: string) {
+  await apiClient.post(`/api/bookings/${id}/confirm`);
+}
+
+export async function completeBooking(id: string) {
+  await apiClient.post(`/api/bookings/${id}/complete`);
+}
+
+export async function updateBookingSessionStatus(id: string, status: 'Moving' | 'Arrived' | 'InProgress') {
+  await apiClient.put(`/api/bookings/${id}/session-status`, { status });
 }
 
 // ── Reviews ───────────────────────────────────────────────────────────────────
@@ -416,6 +488,17 @@ export async function submitReview(payload: {
   comment:   string;
 }) {
   await apiClient.post('/api/reviews', payload);
+}
+
+export async function getPhotographerReviews(photographerId: string): Promise<Review[]> {
+  const data = await gql<{ photographerReviews: Review[] }>(`
+    query GetPhotographerReviews($photographerId: UUID!) {
+      photographerReviews(photographerId: $photographerId) {
+        id bookingId rating comment createdAt authorName authorAvatarUrl
+      }
+    }
+  `, { photographerId });
+  return data.photographerReviews ?? [];
 }
 
 // ── Conversations ─────────────────────────────────────────────────────────────

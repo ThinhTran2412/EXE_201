@@ -80,7 +80,7 @@ const MasonryTile = memo(function MasonryTile({
     <Pressable onPress={onPress} style={[styles.tile, { width, height }]}>
       <Image
         source={resolveImageSource(source)!}
-        style={styles.tileImage}
+        style={StyleSheet.absoluteFillObject}
         resizeMode="cover"
         resizeMethod="resize"
       />
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   tile: {
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#2a2636',
+    backgroundColor: 'rgba(26,26,15,0.05)',
   },
   tileImage: { width: '100%', height: '100%' },
 });

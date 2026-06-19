@@ -1,5 +1,6 @@
 import { apiClient } from '../../shared/api/client';
 import { gql } from '../../shared/api/graphql';
+import { appendFileToFormData } from '../../shared/api/uploadHelper';
 
 export interface PhotographerAvailabilitySlot {
   id?: string;
@@ -7,6 +8,25 @@ export interface PhotographerAvailabilitySlot {
   startTime: string;
   endTime: string;
   slotType: 'Blocked' | 'Available';
+}
+
+export enum EquipmentCategory {
+  Camera = 0,
+  Lens = 1,
+  Lighting = 2,
+  Drone = 3,
+  Gimbal = 4,
+  Audio = 5,
+  Other = 6
+}
+
+export interface PhotographerEquipment {
+  id: string;
+  photographerId: string;
+  category: EquipmentCategory;
+  name: string;
+  description?: string;
+  isPrimary: boolean;
 }
 
 export interface PhotographerProfile {
@@ -33,11 +53,13 @@ export interface PhotographerProfile {
   verificationStatus: string;
   portfolioPhotos:    string[];
   acceptsInstantBooking: boolean;
+  equipments: PhotographerEquipment[];
 }
 
 export interface PBooking {
   id:             string;
   customerId:     string;
+  photographerId: string;
   matchId:        string;
   status:         string;
   agreedPrice:    number;
@@ -50,6 +72,10 @@ export interface PBooking {
   note?:          string;
   requirements?:  string;
   servicePackageId?: string | null;
+  customerName?:  string;
+  customerAvatarUrl?: string;
+  servicePackageName?: string;
+  servicePackageImageUrl?: string;
 }
 
 export async function getPhotographerProfile(): Promise<PhotographerProfile | null> {
@@ -60,13 +86,42 @@ export async function getPhotographerProfile(): Promise<PhotographerProfile | nu
       verificationDocumentFrontUrl verificationDocumentBackUrl verificationPortraitUrl
       bio quote avatarUrl coverPhotoUrl instagramUrl
       minBudget maxBudget rating isPremium isAvailable verificationStatus portfolioPhotos acceptsInstantBooking
+      equipments {
+        id
+        category
+        name
+        description
+        isPrimary
+      }
     }}
   `);
   return data.photographerProfile;
 }
 
+export async function getPhotographersFeed(): Promise<PhotographerProfile[]> {
+  const data = await gql<{ photographers: PhotographerProfile[] }>(`
+    query { photographers {
+      id displayName phone email region
+      bio quote avatarUrl coverPhotoUrl instagramUrl
+      minBudget maxBudget rating isPremium isAvailable verificationStatus portfolioPhotos acceptsInstantBooking
+      equipments {
+        id
+        category
+        name
+        description
+        isPrimary
+      }
+    }}
+  `);
+  return data.photographers ?? [];
+}
+
 export async function updateProfile(payload: Partial<PhotographerProfile>) {
   await apiClient.put('/api/photographers/profile', payload);
+}
+
+export async function updateEquipments(equipments: Omit<PhotographerEquipment, 'photographerId'>[]) {
+  await apiClient.put('/api/photographers/equipments', { equipments });
 }
 
 export async function updatePersonalInfo(payload: {
@@ -90,11 +145,7 @@ export async function uploadProfileImage(uri: string, mimeType: string, kind: 'a
   }
 
   const form = new FormData();
-  form.append('file', {
-    uri,
-    name: filename,
-    type: mimeType ?? 'image/jpeg',
-  } as any);
+  await appendFileToFormData(form, 'file', uri, filename, mimeType ?? 'image/jpeg');
 
   const endpoint = kind === 'avatar'
     ? '/api/photographers/profile/avatar/upload'
@@ -109,6 +160,10 @@ export async function uploadProfileImage(uri: string, mimeType: string, kind: 'a
 
 export async function setAvailability(isAvailable: boolean) {
   await apiClient.patch('/api/photographers/availability', { isAvailable });
+}
+
+export async function updateLiveLocation(latitude: number, longitude: number) {
+  await apiClient.put('/api/photographers/location', { latitude, longitude });
 }
 
 export async function getAvailability(): Promise<PhotographerAvailabilitySlot[]> {
@@ -144,8 +199,12 @@ function normalizeStatus(status: string): string {
   if (!status) return 'Pending';
   const s = status.toUpperCase();
   if (s === 'PENDING') return 'Pending';
+  if (s === 'AWAITINGDEPOSIT' || s === 'AWAITING_DEPOSIT') return 'AwaitingDeposit';
   if (s === 'PROCESSING') return 'Processing';
   if (s === 'CONFIRMED') return 'Confirmed';
+  if (s === 'MOVING') return 'Moving';
+  if (s === 'ARRIVED') return 'Arrived';
+  if (s === 'INPROGRESS' || s === 'IN_PROGRESS') return 'InProgress';
   if (s === 'COMPLETED') return 'Completed';
   if (s === 'CANCELLED') return 'Cancelled';
   if (s === 'DISPUTED') return 'Disputed';
@@ -155,7 +214,7 @@ function normalizeStatus(status: string): string {
 export async function getMyBookingsAsPhotographer(): Promise<PBooking[]> {
   const data = await gql<{ myBookingsAsPhotographer: PBooking[] }>(`
     query { myBookingsAsPhotographer {
-      id customerId matchId status agreedPrice commission scheduledAt createdAt phone location note requirements servicePackageId
+      id customerId photographerId matchId status agreedPrice commission scheduledAt createdAt phone location note requirements servicePackageId customerName customerAvatarUrl servicePackageName servicePackageImageUrl
     }}
   `);
   return (data.myBookingsAsPhotographer ?? []).map((b) => ({
@@ -176,6 +235,10 @@ export async function cancelBooking(id: string, reason: string) {
   await apiClient.post(`/api/bookings/${id}/cancel`, { reason });
 }
 
+export async function updateBookingSessionStatus(id: string, status: 'Moving' | 'Arrived' | 'InProgress') {
+  await apiClient.put(`/api/bookings/${id}/session-status`, { status });
+}
+
 export async function submitVerification() {
   await apiClient.post('/api/photographers/verify');
 }
@@ -194,11 +257,7 @@ export async function uploadPortfolioPhoto(uri: string, mimeType: string): Promi
   }
 
   const form = new FormData();
-  form.append('file', {
-    uri,
-    name: filename,
-    type: mimeType ?? 'image/jpeg',
-  } as any);
+  await appendFileToFormData(form, 'file', uri, filename, mimeType ?? 'image/jpeg');
 
   const { data } = await apiClient.post<{ photoUrl: string }>(
     '/api/photographers/portfolio/upload',
@@ -216,11 +275,7 @@ export async function uploadServicePackageMedia(uri: string, mimeType: string): 
   }
 
   const form = new FormData();
-  form.append('file', {
-    uri,
-    name: filename,
-    type: mimeType ?? 'image/jpeg',
-  } as any);
+  await appendFileToFormData(form, 'file', uri, filename, mimeType ?? 'image/jpeg');
 
   const { data } = await apiClient.post<{ photoUrl: string }>(
     '/api/photographers/service-packages/media/upload',
@@ -281,3 +336,128 @@ export async function saveServicePackage(payload: any): Promise<ServicePackage> 
 export async function deleteServicePackage(id: string): Promise<void> {
   await apiClient.delete(`/api/photographers/service-packages/${id}`);
 }
+
+export async function getMyReviewsReceived(): Promise<any[]> {
+  const data = await gql<{ myReviewsReceived: any[] }>(`
+    query { myReviewsReceived {
+      id bookingId rating comment createdAt authorName authorAvatarUrl
+    }}
+  `);
+  return data.myReviewsReceived ?? [];
+}
+
+export async function proposeStyle(name: string, description: string, keywords: string): Promise<any> {
+  const { data } = await apiClient.post('/api/photographers/styles/propose', {
+    name,
+    description,
+    keywords,
+  });
+  return data;
+}
+
+export async function proposeConcept(name: string, description: string, keywords: string): Promise<any> {
+  const { data } = await apiClient.post('/api/photographers/concepts/propose', {
+    name,
+    description,
+    keywords,
+  });
+  return data;
+}
+
+export interface Style {
+  id: string;
+  name: string;
+  description: string;
+  keywords: string;
+  status: string;
+}
+
+export interface Concept {
+  id: string;
+  name: string;
+  description: string;
+  keywords: string;
+  status: string;
+}
+
+export interface DetailedPortfolioPhoto {
+  id: string;
+  photographerId: string;
+  imageUrl: string;
+  thumbnailUrl: string;
+  displayOrder: number;
+  isIndexed: boolean;
+  dominantColors: string;
+  createdAt: string;
+  styles: Style[];
+  concepts: Concept[];
+}
+
+export async function getMyDetailedPortfolioPhotos(): Promise<DetailedPortfolioPhoto[]> {
+  const data = await gql<{ myPortfolioPhotos: DetailedPortfolioPhoto[] }>(`
+    query {
+      myPortfolioPhotos {
+        id
+        photographerId
+        imageUrl
+        thumbnailUrl
+        displayOrder
+        isIndexed
+        dominantColors
+        createdAt
+        styles {
+          id
+          name
+          description
+          keywords
+          status
+        }
+        concepts {
+          id
+          name
+          description
+          keywords
+          status
+        }
+      }
+    }
+  `);
+  return data.myPortfolioPhotos ?? [];
+}
+
+export async function getActiveStylesAndConcepts(): Promise<{ styles: Style[]; concepts: Concept[] }> {
+  const data = await gql<{ styles: Style[]; concepts: Concept[] }>(`
+    query {
+      styles(status: "Approved") {
+        id
+        name
+        description
+        keywords
+        status
+      }
+      concepts(status: "Approved") {
+        id
+        name
+        description
+        keywords
+        status
+      }
+    }
+  `);
+  return {
+    styles: data.styles ?? [],
+    concepts: data.concepts ?? [],
+  };
+}
+
+export async function updatePortfolioPhotoTags(
+  photoId: string,
+  styleIds: string[],
+  conceptIds: string[]
+): Promise<void> {
+  await apiClient.put(`/api/photographers/portfolio/photos/${photoId}/tags`, {
+    styleIds,
+    conceptIds,
+  });
+}
+

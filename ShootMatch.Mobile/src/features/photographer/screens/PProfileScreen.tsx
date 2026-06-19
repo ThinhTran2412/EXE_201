@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   ScrollView, StyleSheet, Text, View, Pressable, Image, ActivityIndicator,
-  Dimensions, TextInput, Alert, Modal, KeyboardAvoidingView, Platform,
+  Dimensions, TextInput, Alert, Modal, KeyboardAvoidingView, Platform, Switch,
+  useWindowDimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -10,23 +11,16 @@ import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getPhotographerProfile, updateProfile, updatePersonalInfo, uploadProfileImage, submitVerification } from '../api';
+import { getPhotographerProfile, updateProfile, updatePersonalInfo, uploadProfileImage, submitVerification, getMyReviewsReceived, proposeStyle, proposeConcept } from '../api';
 import { formatRegion } from '../../../shared/constants/regions';
-import { colors } from '../../../app/theme/colors';
 import { spacing } from '../../../app/theme/spacing';
 import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
+import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
+import { usePhotographerTheme } from '../PhotographerThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const formatPhotoUrl = (url: string) => {
-  if (!url) return '';
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL || '';
-  const ipMatch = apiUrl.match(/http:\/\/((\d+\.){3}\d+)/);
-  if (ipMatch && (url.includes('localhost') || url.includes('127.0.0.1'))) {
-    return url.replace(/localhost|127\.0\.0\.1/, ipMatch[1]);
-  }
-  return url;
-};
+
 
 async function prepareImage(uri: string, kind: 'avatar' | 'cover') {
   const actions = kind === 'avatar'
@@ -42,7 +36,12 @@ async function prepareImage(uri: string, kind: 'avatar' | 'cover') {
 }
 
 export default function PProfileScreen() {
-  const photoSize = Math.floor((SCREEN_WIDTH - spacing[5] * 2 - spacing[2] * 2) / 3);
+  const { colors, isDark, toggleTheme } = usePhotographerTheme();
+  const styles = getStyles(colors, isDark);
+
+  const { width: windowWidth } = useWindowDimensions();
+  const containerWidth = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
+  const photoSize = Math.floor((containerWidth - spacing[5] * 2 - spacing[2] * 2) / 3);
   const gridGap = spacing[2];
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -62,13 +61,24 @@ export default function PProfileScreen() {
     personalAddress: '',
     nationalId: '',
   });
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  
+  const [proposeModalVisible, setProposeModalVisible] = useState(false);
+  const [proposeType, setProposeType] = useState<'style' | 'concept'>('style');
+  const [proposeForm, setProposeForm] = useState({ name: '', description: '', keywords: '' });
+  const [proposing, setProposing] = useState(false);
 
   const loadProfile = React.useCallback(async (showSpinner = false) => {
     if (showSpinner) {
       setLoading(true);
+      setReviewsLoading(true);
     }
     try {
-      const p = await getPhotographerProfile();
+      const [p, revs] = await Promise.all([
+        getPhotographerProfile(),
+        getMyReviewsReceived().catch(() => [])
+      ]);
       if (p) {
         setProfile(p);
         setEditForm({ displayName: p.displayName || '', bio: p.bio || '', quote: p.quote || '' });
@@ -80,10 +90,12 @@ export default function PProfileScreen() {
           nationalId: p.nationalId || '',
         });
       }
+      setReviews(revs);
     } catch (err) {
-      console.error('Load profile error:', err);
+      console.log('Load profile error:', err);
     } finally {
       setLoading(false);
+      setReviewsLoading(false);
     }
   }, []);
 
@@ -169,6 +181,37 @@ export default function PProfileScreen() {
     }
   }
 
+  async function handleProposeTag() {
+    const name = proposeForm.name.trim();
+    if (!name) {
+      Alert.alert('Lỗi', 'Tên phong cách/chủ đề không được để trống.');
+      return;
+    }
+
+    try {
+      setProposing(true);
+      if (proposeType === 'style') {
+        await proposeStyle(name, proposeForm.description, proposeForm.keywords);
+      } else {
+        await proposeConcept(name, proposeForm.description, proposeForm.keywords);
+      }
+      
+      Alert.alert(
+        'Thành công',
+        `Yêu cầu đề xuất ${proposeType === 'style' ? 'phong cách' : 'concept'} "${name}" đã được gửi và đang chờ phê duyệt.`
+      );
+      
+      setProposeForm({ name: '', description: '', keywords: '' });
+      setProposeModalVisible(false);
+    } catch (err: any) {
+      console.error('Propose tag failed:', err?.response?.status, err?.response?.data ?? err);
+      const message = err?.response?.data?.message || err?.response?.data || err?.message || 'Có lỗi xảy ra khi gửi đề xuất.';
+      Alert.alert('Lỗi', typeof message === 'string' ? message : 'Có lỗi xảy ra khi gửi đề xuất.');
+    } finally {
+      setProposing(false);
+    }
+  }
+
   const verificationLabel = profile?.verificationStatus === 'Verified'
     ? 'Đã xác minh'
     : profile?.verificationStatus === 'Pending'
@@ -176,10 +219,10 @@ export default function PProfileScreen() {
       : 'Chưa xác minh';
 
   const verificationColor = profile?.verificationStatus === 'Verified'
-    ? '#2ECC71'
+    ? (isDark ? '#2ECC71' : '#27ae60')
     : profile?.verificationStatus === 'Pending'
-      ? '#F1C40F'
-      : '#E74C3C';
+      ? (isDark ? '#F1C40F' : '#d48806')
+      : (isDark ? '#E74C3C' : '#c0392b');
 
   if (loading) {
     return (
@@ -190,18 +233,30 @@ export default function PProfileScreen() {
   }
 
   const photos = profile?.portfolioPhotos || [];
-  const coverUrl = formatPhotoUrl(profile?.coverPhotoUrl) || 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4';
-  const avatarUrl = formatPhotoUrl(profile?.avatarUrl) || 'https://i.pravatar.cc/150';
+  const coverUrl = formatImageUrl(profile?.coverPhotoUrl) || 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4';
+  const avatarUrl = formatImageUrl(profile?.avatarUrl) || 'https://i.pravatar.cc/150';
   const canVerify = profile?.verificationStatus !== 'Verified' && profile?.verificationStatus !== 'Pending';
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
         <View style={styles.coverContainer}>
           <Animated.View entering={FadeIn.duration(800)} style={StyleSheet.absoluteFillObject}>
             <Image source={{ uri: coverUrl }} style={styles.cover} />
             <LinearGradient pointerEvents="none" colors={['rgba(13,11,20,0.02)', 'rgba(13,11,20,0.18)', 'rgba(13,11,20,0.42)']} style={StyleSheet.absoluteFillObject} />
           </Animated.View>
+
+          <View style={[styles.topActions, { top: Math.max(insets.top, 16) }]}> 
+            <Pressable style={styles.iconBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="chevron-back" size={24} color="#FFFBF0" />
+            </Pressable>
+            <Pressable style={styles.iconBtn} onPress={() => setEditModalVisible(true)}>
+              <Ionicons name="pencil" size={20} color="#FFFBF0" />
+            </Pressable>
+          </View>
 
           <Pressable
             style={styles.coverActionOverlay}
@@ -212,18 +267,10 @@ export default function PProfileScreen() {
             <Ionicons name="image-outline" size={18} color="#FFFBF0" />
             <Text style={styles.coverActionText}>{savingImage === 'cover' ? 'Đang tải...' : 'Đổi ảnh bìa'}</Text>
           </Pressable>
-
-          <View style={[styles.topActions, { top: Math.max(insets.top, 16) }]}> 
-            <Pressable style={styles.iconBtn} onPress={() => navigation.goBack()}>
-              <Ionicons name="chevron-back" size={24} color="#FFFBF0" />
-            </Pressable>
-            <Pressable style={styles.iconBtn} onPress={() => setEditModalVisible(true)}>
-              <Ionicons name="pencil" size={20} color="#FFFBF0" />
-            </Pressable>
-          </View>
         </View>
 
         <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.profileHeader}>
+
           <View style={styles.avatarWrapper}>
             <Image source={{ uri: avatarUrl }} style={styles.avatar} />
             <Pressable style={styles.avatarEditBtn} onPress={() => pickAndUploadImage('avatar')}>
@@ -251,7 +298,7 @@ export default function PProfileScreen() {
 
           <View style={styles.badgeRow}>
             <View style={styles.regionBadge}>
-              <Ionicons name="location" size={12} color="#FFFBF0" />
+              <Ionicons name="location" size={12} color={colors.accent} />
               <Text style={styles.regionText}>{formatRegion(profile?.region) || 'Chưa cập nhật'}</Text>
             </View>
             <View style={styles.ratingBadge}>
@@ -264,8 +311,9 @@ export default function PProfileScreen() {
             <Text style={styles.quoteSectionLabel}>Quote cá nhân</Text>
             {profile?.quote ? (
               <View style={styles.quoteWrapper}>
-                <Ionicons name="chatbox-ellipses-outline" size={24} color={colors.primary} style={styles.quoteIconLeft} />
+                <Text style={styles.quoteMarkLeft}>“</Text>
                 <Text style={styles.quoteText}>{profile.quote}</Text>
+                <Text style={styles.quoteMarkRight}>”</Text>
               </View>
             ) : (
               <View style={styles.quoteEmptyState}>
@@ -277,7 +325,7 @@ export default function PProfileScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(400).duration(600)} style={styles.content}>
-          <LinearGradient colors={['#1e1c26', '#141121']} style={styles.statsBar}>
+          <LinearGradient colors={isDark ? ['#1e1c26', '#141121'] : [colors.surface, colors.surfaceStrong]} style={styles.statsBar}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{photos.length}</Text>
               <Text style={styles.statLabel}>Tác phẩm</Text>
@@ -310,10 +358,10 @@ export default function PProfileScreen() {
                   onPress={() => setPersonalInfoVisible(v => !v)}
                   accessibilityLabel={personalInfoVisible ? 'Ẩn thông tin cá nhân' : 'Hiện thông tin cá nhân'}
                 >
-                  <Ionicons name={personalInfoVisible ? 'eye-off-outline' : 'eye-outline'} size={16} color="#F7E7D2" />
+                  <Ionicons name={personalInfoVisible ? 'eye-off-outline' : 'eye-outline'} size={16} color={isDark ? '#F5DEB3' : colors.accent} />
                 </Pressable>
                 <Pressable style={styles.personalEditBtn} onPress={() => navigation.navigate('PersonalInfo')}>
-                  <Ionicons name="create-outline" size={16} color="#F7E7D2" />
+                  <Ionicons name="create-outline" size={16} color={isDark ? '#F5DEB3' : colors.accent} />
                 </Pressable>
               </View>
             </View>
@@ -327,6 +375,30 @@ export default function PProfileScreen() {
               <View style={styles.personalInfoHidden}>
                 <Ionicons name="lock-closed-outline" size={16} color="rgba(255,251,240,0.45)" />
                 <Text style={styles.personalInfoHiddenText}>Thông tin cá nhân đang được ẩn</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Thiết bị sử dụng</Text>
+              <View style={styles.personalActions}>
+                <Pressable style={styles.personalEditBtn} onPress={() => navigation.navigate('ManageEquipment')}>
+                  <Ionicons name="create-outline" size={16} color={isDark ? '#F5DEB3' : colors.accent} />
+                </Pressable>
+              </View>
+            </View>
+            
+            {profile?.equipments && profile.equipments.length > 0 ? (
+              <View style={styles.personalInfoCard}>
+                {profile.equipments.slice(0, 4).map((eq: any) => (
+                  <EquipmentRow key={eq.id} equipment={eq} />
+                ))}
+              </View>
+            ) : (
+              <View style={styles.personalInfoHidden}>
+                <Ionicons name="camera-outline" size={16} color="rgba(255,251,240,0.45)" />
+                <Text style={styles.personalInfoHiddenText}>Chưa cập nhật thiết bị nào</Text>
               </View>
             )}
           </View>
@@ -382,11 +454,68 @@ export default function PProfileScreen() {
             </View>
           </View>
 
+          {/* ── REVIEWS RECEIVED ── */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Đánh giá nhận được ({reviews.length})</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="star" size={14} color="#FFD700" />
+                <Text style={{ color: '#FFD700', fontSize: 14, fontWeight: '700' }}>
+                  {profile?.rating ? profile.rating.toFixed(1) : '0.0'}
+                </Text>
+              </View>
+            </View>
+            <View style={{ gap: 12 }}>
+              {reviewsLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : reviews.length === 0 ? (
+                <View style={styles.reviewEmptyState}>
+                  <Ionicons name="star-outline" size={18} color="rgba(255,251,240,0.3)" />
+                  <Text style={styles.reviewEmptyText}>Bạn chưa nhận được đánh giá nào.</Text>
+                </View>
+              ) : (
+                reviews.map((r, i) => (
+                  <View key={r.id || i} style={styles.reviewCard}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {r.authorAvatarUrl ? (
+                          <PortfolioImageCell 
+                            uri={r.authorAvatarUrl} 
+                            style={styles.reviewAvatarImage} 
+                            borderRadius={16} 
+                            resizeMode="cover" 
+                          />
+                        ) : (
+                          <View style={styles.reviewAvatar}>
+                            <Text style={{ fontSize: 11, fontWeight: 'bold', color: colors.text }}>
+                              {r.authorName ? r.authorName.split(' ').map((n: string)=>n[0]).join('').substring(0,2) : 'KH'}
+                            </Text>
+                          </View>
+                        )}
+                        <View>
+                          <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{r.authorName || 'Khách hàng'}</Text>
+                          <Text style={{ fontSize: 10, opacity: 0.6, color: colors.textMuted }}>
+                            {new Date(r.createdAt).toLocaleDateString('vi-VN')}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={{ color: '#FFD700', fontSize: 10 }}>{'★'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}</Text>
+                    </View>
+                    <Text style={{ fontSize: 12, lineHeight: 18, opacity: 0.9, color: colors.text }}>"{r.comment}"</Text>
+                  </View>
+                ))
+              )}
+            </View>
+          </View>
+
           <View style={styles.menu}>
             <MenuLink icon="card-outline" label="Quản lý dịch vụ & giá" onPress={() => navigation.navigate('ServiceManagement')} />
+            <MenuLink icon="camera-outline" label="Quản lý thiết bị" onPress={() => navigation.navigate('ManageEquipment')} />
             <MenuLink icon="calendar-outline" label="Lịch hẹn dạng lịch" onPress={() => navigation.navigate('BookingCalendar')} />
+            <ThemeSwitchLink />
+            <MenuLink icon="pricetags-outline" label="Đề xuất Style / Concept mới" onPress={() => { setProposeForm({ name: '', description: '', keywords: '' }); setProposeModalVisible(true); }} />
             <MenuLink icon="shield-checkmark-outline" label="Xác minh danh tính" onPress={handleSubmitVerification} />
-            <MenuLink icon="notifications-outline" label="Cài đặt thông báo" onPress={() => { }} />
+            <MenuLink icon="notifications-outline" label="Cài đặt thông báo" onPress={() => navigation.navigate('Notifications')} />
           </View>
         </Animated.View>
       </ScrollView>
@@ -397,7 +526,7 @@ export default function PProfileScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Chỉnh sửa hồ sơ</Text>
               <Pressable onPress={() => setEditModalVisible(false)} style={styles.closeBtn}>
-                <Ionicons name="close" size={24} color="#FFFBF0" />
+                <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
@@ -423,7 +552,7 @@ export default function PProfileScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Cập nhật thông tin cá nhân</Text>
               <Pressable onPress={() => setPersonalInfoModalVisible(false)} style={styles.closeBtn}>
-                <Ionicons name="close" size={24} color="#FFFBF0" />
+                <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
@@ -459,29 +588,138 @@ export default function PProfileScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <Modal visible={proposeModalVisible} animationType="slide" transparent>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalWrapper}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Đề xuất Tag mới</Text>
+              <Pressable onPress={() => setProposeModalVisible(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+              <Text style={styles.inputLabel}>Loại đề xuất</Text>
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 4, marginBottom: 10 }}>
+                <Pressable
+                  style={{
+                    flex: 1,
+                    backgroundColor: proposeType === 'style' ? colors.primary : colors.surface,
+                    padding: 12,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: proposeType === 'style' ? colors.primary : colors.border,
+                  }}
+                  onPress={() => setProposeType('style')}
+                >
+                  <Text style={{ color: proposeType === 'style' ? colors.textInverse : colors.text, fontWeight: 'bold', fontSize: 13 }}>Style (Phong cách)</Text>
+                </Pressable>
+                <Pressable
+                  style={{
+                    flex: 1,
+                    backgroundColor: proposeType === 'concept' ? colors.primary : colors.surface,
+                    padding: 12,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: proposeType === 'concept' ? colors.primary : colors.border,
+                  }}
+                  onPress={() => setProposeType('concept')}
+                >
+                  <Text style={{ color: proposeType === 'concept' ? colors.textInverse : colors.text, fontWeight: 'bold', fontSize: 13 }}>Concept (Chủ đề)</Text>
+                </Pressable>
+              </View>
+
+              <Text style={styles.inputLabel}>Tên phong cách/chủ đề</Text>
+              <TextInput
+                style={styles.inputField}
+                value={proposeForm.name}
+                onChangeText={(t) => setProposeForm(prev => ({ ...prev, name: t }))}
+                placeholder="Ví dụ: Cyberpunk, Indie Film..."
+                placeholderTextColor={colors.textMuted}
+              />
+
+              <Text style={styles.inputLabel}>Từ khóa liên quan (cách nhau bằng dấu phẩy)</Text>
+              <TextInput
+                style={styles.inputField}
+                value={proposeForm.keywords}
+                onChangeText={(t) => setProposeForm(prev => ({ ...prev, keywords: t }))}
+                placeholder="Ví dụ: neon, tối, tương lai..."
+                placeholderTextColor={colors.textMuted}
+              />
+
+              <Text style={styles.inputLabel}>Mô tả ngắn</Text>
+              <TextInput
+                style={[styles.inputField, styles.textArea]}
+                value={proposeForm.description}
+                onChangeText={(t) => setProposeForm(prev => ({ ...prev, description: t }))}
+                placeholder="Mô tả phong cách hoặc concept này..."
+                placeholderTextColor={colors.textMuted}
+                multiline
+              />
+
+              <Pressable style={styles.saveBtn} onPress={handleProposeTag} disabled={proposing}>
+                <LinearGradient colors={[colors.primary, '#E67E22']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveBtnGradient}>
+                  {proposing ? (
+                    <ActivityIndicator size="small" color={colors.textInverse} />
+                  ) : (
+                    <Text style={styles.saveBtnText}>Gửi đề xuất</Text>
+                  )}
+                </LinearGradient>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </View>
+  );
+}
+
+function ThemeSwitchLink() {
+  const { isDark, toggleTheme, colors } = usePhotographerTheme();
+  const styles = getStyles(colors, isDark);
+  return (
+    <View style={styles.menuLink}>
+      <View style={styles.menuLinkLeft}>
+        <View style={[styles.menuIconWrapper, { backgroundColor: isDark ? 'rgba(230, 126, 34, 0.15)' : 'rgba(230, 126, 34, 0.08)' }]}>
+          <Ionicons name="sunny-outline" size={20} color={isDark ? '#E67E22' : colors.accent} />
+        </View>
+        <Text style={styles.menuLinkLabel}>Giao diện sáng / tối</Text>
+      </View>
+      <Switch
+        value={isDark}
+        onValueChange={toggleTheme}
+        trackColor={{ false: 'rgba(0,0,0,0.1)', true: 'rgba(230, 126, 34, 0.4)' }}
+        thumbColor={isDark ? '#E67E22' : 'rgba(0,0,0,0.2)'}
+      />
     </View>
   );
 }
 
 function MenuLink({ icon, label, onPress }: any) {
+  const { colors, isDark } = usePhotographerTheme();
+  const styles = getStyles(colors, isDark);
   return (
     <Pressable style={({ pressed }) => [styles.menuLink, pressed && { opacity: 0.7 }]} onPress={onPress}>
       <View style={styles.menuLinkLeft}>
         <View style={styles.menuIconWrapper}>
-          <Ionicons name={icon} size={20} color={colors.primary} />
+          <Ionicons name={icon} size={20} color={colors.accent} />
         </View>
         <Text style={styles.menuLinkLabel}>{label}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
+      <Ionicons name="chevron-forward" size={20} color={colors.textLight} />
     </Pressable>
   );
 }
 
 function PersonalInfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+  const { colors, isDark } = usePhotographerTheme();
+  const styles = getStyles(colors, isDark);
   return (
     <View style={styles.personalRow}>
       <View style={styles.personalRowIcon}>
-        <Ionicons name={icon as any} size={16} color="#F7E7D2" />
+        <Ionicons name={icon as any} size={16} color={isDark ? '#F5DEB3' : colors.accent} />
       </View>
       <View style={styles.personalRowBody}>
         <Text style={styles.personalRowLabel}>{label}</Text>
@@ -491,77 +729,124 @@ function PersonalInfoRow({ icon, label, value }: { icon: string; label: string; 
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0b14' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0d0b14' },
+function EquipmentRow({ equipment }: { equipment: any }) {
+  const { colors, isDark } = usePhotographerTheme();
+  const styles = getStyles(colors, isDark);
+  let iconName = 'camera-outline';
+  if (equipment.category === 'Lens') iconName = 'aperture-outline';
+  else if (equipment.category === 'Lighting') iconName = 'flash-outline';
+  else if (equipment.category === 'Drone') iconName = 'airplane-outline';
+  else if (equipment.category === 'Other') iconName = 'cube-outline';
+
+  const categoryColors: Record<string, string> = {
+    Camera: '#cf4028',
+    Lens: '#3498db',
+    Lighting: '#f1c40f',
+    Drone: '#2ecc71',
+    Other: '#95a5a6',
+  };
+  const catColor = categoryColors[equipment.category] || '#95a5a6';
+
+  return (
+    <View style={styles.personalRow}>
+      <View style={[styles.personalRowIcon, { backgroundColor: `${catColor}15` }]}>
+        <Ionicons name={iconName as any} size={16} color={catColor} />
+      </View>
+      <View style={styles.personalRowBody}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={[styles.personalRowLabel, { color: catColor }]}>{equipment.category}</Text>
+          {equipment.isPrimary && (
+            <View style={{ backgroundColor: 'rgba(230, 126, 34, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(230, 126, 34, 0.3)' }}>
+              <Text style={{ fontSize: 8, color: '#E67E22', fontWeight: 'bold' }}>CHÍNH</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.personalRowValue}>{equipment.name}</Text>
+        {equipment.description ? (
+          <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{equipment.description}</Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   coverContainer: { width: '100%', aspectRatio: 16 / 9, maxHeight: 260, position: 'relative' },
   cover: { width: '100%', height: '100%', resizeMode: 'cover' },
-  coverActionOverlay: { position: 'absolute', bottom: 18, right: 16, zIndex: 9999, elevation: 9999, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.22)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 22 },
+  coverActionOverlay: { position: 'absolute', bottom: 72, right: 16, zIndex: 9999, elevation: 9999, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.22)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 22 },
   coverActionText: { color: '#FFFBF0', fontSize: 13, fontWeight: '600' },
   topActions: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', zIndex: 10 },
   iconBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
   profileHeader: { alignItems: 'center', marginTop: -60, paddingHorizontal: 24, zIndex: 5 },
   avatarWrapper: { position: 'relative', marginBottom: 12 },
-  avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 4, borderColor: '#0d0b14' },
-  avatarEditBtn: { position: 'absolute', right: 2, bottom: 2, width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#0d0b14' },
+  avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 4, borderColor: colors.background },
+  avatarEditBtn: { position: 'absolute', right: 2, bottom: 2, width: 32, height: 32, borderRadius: 16, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.background },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontSize: 28, fontWeight: '800', color: '#FFFBF0', marginBottom: 8, letterSpacing: 0.5 },
+  name: { fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: 8, letterSpacing: 0.5 },
   verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, marginBottom: 10 },
   verifiedText: { fontSize: 13, fontWeight: '700' },
   verifyBtn: { marginBottom: 12, borderRadius: 14, overflow: 'hidden' },
   verifyBtnGradient: { paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
   verifyBtnText: { color: '#fff', fontWeight: '700' },
   badgeRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  regionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0, 0, 0, 0.35)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.12)' },
-  regionText: { color: '#FFFBF0', fontSize: 13, fontWeight: '600' },
+  regionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surfaceStrong, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: colors.border },
+  regionText: { color: colors.text, fontSize: 13, fontWeight: '600' },
   personalActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  personalInfoHidden: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(30, 28, 38, 0.55)', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' },
-  personalInfoHiddenText: { color: 'rgba(255,251,240,0.55)', fontSize: 13, fontWeight: '600' },
-  ratingBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255, 215, 0, 0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  ratingText: { color: '#FFD700', fontSize: 13, fontWeight: '600' },
+  personalInfoHidden: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surfaceStrong, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border },
+  personalInfoHiddenText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  ratingBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: isDark ? 'rgba(255, 215, 0, 0.15)' : 'rgba(212, 175, 55, 0.12)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: isDark ? 'rgba(255, 215, 0, 0.3)' : 'rgba(212, 175, 55, 0.25)' },
+  ratingText: { color: isDark ? '#FFD700' : '#B4781A', fontSize: 13, fontWeight: '600' },
   quoteSection: { width: '100%', marginBottom: 6 },
-  quoteSectionLabel: { color: 'rgba(255,251,240,0.55)', fontSize: 12, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10, alignSelf: 'flex-start' },
-  quoteWrapper: { position: 'relative', paddingHorizontal: 20, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', width: '100%', backgroundColor: 'rgba(230, 126, 34, 0.08)', borderRadius: 18, borderWidth: 1, borderColor: 'rgba(230, 126, 34, 0.14)' },
-  quoteIconLeft: { position: 'absolute', top: 14, left: 14, opacity: 0.22 },
-  quoteText: { fontSize: 16, fontStyle: 'italic', color: 'rgba(255,251,240,0.95)', textAlign: 'center', lineHeight: 24, fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', paddingHorizontal: 18, flexShrink: 1, width: '100%' },
-  quoteEmptyState: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  quoteEmptyText: { flex: 1, color: 'rgba(255,251,240,0.6)', fontSize: 14, lineHeight: 20 },
+  quoteSectionLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10, alignSelf: 'flex-start' },
+  quoteWrapper: { position: 'relative', paddingHorizontal: 20, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', width: '100%', backgroundColor: isDark ? 'rgba(245, 222, 179, 0.06)' : 'rgba(230, 126, 34, 0.08)', borderRadius: 18, borderWidth: 1, borderColor: isDark ? 'rgba(245, 222, 179, 0.12)' : 'rgba(230, 126, 34, 0.14)' },
+  quoteMarkLeft: { position: 'absolute', top: 4, left: 12, fontSize: 36, fontWeight: 'bold', color: isDark ? '#F5DEB3' : colors.accent, opacity: 0.25 },
+  quoteMarkRight: { position: 'absolute', bottom: -8, right: 12, fontSize: 36, fontWeight: 'bold', color: isDark ? '#F5DEB3' : colors.accent, opacity: 0.25 },
+  quoteText: { fontSize: 16, fontStyle: 'italic', color: colors.text, textAlign: 'center', lineHeight: 24, fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', paddingHorizontal: 18, flexShrink: 1, width: '100%' },
+  quoteEmptyState: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 18, backgroundColor: colors.surfaceStrong, borderWidth: 1, borderColor: colors.border },
+  quoteEmptyText: { flex: 1, color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   content: { paddingHorizontal: 20, paddingTop: 10 },
-  statsBar: { flexDirection: 'row', borderRadius: 20, padding: 20, marginBottom: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
+  statsBar: { flexDirection: 'row', borderRadius: 20, padding: 20, marginBottom: 30, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10, backgroundColor: colors.surface },
   statItem: { flex: 1, alignItems: 'center', gap: 4 },
-  statDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 4 },
-  statValue: { fontSize: 22, fontWeight: 'bold', color: '#FFFBF0' },
+  statDivider: { width: 1, backgroundColor: colors.border, marginVertical: 4 },
+  statValue: { fontSize: 22, fontWeight: 'bold', color: colors.text },
   statLabel: { fontSize: 12, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 1 },
   section: { marginBottom: 32 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#FFFBF0', letterSpacing: 0.5 },
-  seeAllBtn: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text, letterSpacing: 0.5 },
+  seeAllBtn: { color: colors.accent, fontSize: 14, fontWeight: '600' },
   personalEditBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(243,192,139,0.12)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(243,192,139,0.12)' },
-  bioContainer: { backgroundColor: 'rgba(30, 28, 38, 0.5)', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
-  bioText: { color: 'rgba(255, 251, 240, 0.75)', lineHeight: 24, fontSize: 15 },
-  personalInfoCard: { backgroundColor: 'rgba(30, 28, 38, 0.55)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)', gap: 10 },
+  bioContainer: { backgroundColor: colors.surfaceStrong, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: colors.border },
+  bioText: { color: colors.textMuted, lineHeight: 24, fontSize: 15 },
+  personalInfoCard: { backgroundColor: colors.surfaceStrong, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: colors.border, gap: 10 },
   personalRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   personalRowIcon: { width: 26, height: 26, borderRadius: 8, backgroundColor: 'rgba(243,192,139,0.12)', justifyContent: 'center', alignItems: 'center', marginTop: 1 },
   personalRowBody: { flex: 1 },
-  personalRowLabel: { color: 'rgba(255,251,240,0.55)', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  personalRowValue: { color: '#FFFBF0', fontSize: 13, fontWeight: '600', lineHeight: 18, marginTop: 2 },
+  personalRowLabel: { color: colors.textLight, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  personalRowValue: { color: colors.text, fontSize: 13, fontWeight: '600', lineHeight: 18, marginTop: 2 },
   photoGrid: { alignItems: 'flex-start' },
-  gridPhoto: { borderRadius: 12, backgroundColor: '#2a2636' },
+  gridPhoto: { borderRadius: 12, backgroundColor: colors.surfaceStrong },
   addPhotoPlaceholder: { borderRadius: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(230, 126, 34, 0.3)', justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: 'rgba(230, 126, 34, 0.05)' },
-  addPhotoText: { color: colors.primary, fontSize: 12, fontWeight: '600' },
+  addPhotoText: { color: colors.accent, fontSize: 12, fontWeight: '600' },
   menu: { gap: 12, marginTop: 10 },
-  menuLink: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1e1c26', padding: 16, borderRadius: 16 },
+  reviewCard: { backgroundColor: colors.surfaceStrong, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 16, marginBottom: 12 },
+  reviewAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
+  reviewAvatarImage: { width: 32, height: 32, borderRadius: 16 },
+  reviewEmptyState: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16, backgroundColor: colors.surfaceStrong, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+  reviewEmptyText: { fontSize: 12, opacity: 0.5, color: colors.text },
+  menuLink: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.surfaceStrong, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
   menuLinkLeft: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   menuIconWrapper: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(230, 126, 34, 0.1)', justifyContent: 'center', alignItems: 'center' },
-  menuLinkLabel: { color: '#FFFBF0', fontSize: 16, fontWeight: '500' },
-  modalWrapper: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' },
-  modalContent: { backgroundColor: '#141121', borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '90%', paddingBottom: Platform.OS === 'ios' ? 20 : 0 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFFBF0' },
-  closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+  menuLinkLabel: { color: colors.text, fontSize: 16, fontWeight: '500' },
+  modalWrapper: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay },
+  modalContent: { backgroundColor: colors.surfaceStrong, borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '90%', paddingBottom: Platform.OS === 'ios' ? 20 : 0, borderWidth: 1, borderColor: colors.border },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text },
+  closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' },
   modalScroll: { padding: 24, gap: 20 },
-  inputLabel: { color: 'rgba(255,251,240,0.6)', fontSize: 14, fontWeight: '600', marginBottom: -10, marginLeft: 4 },
-  inputField: { backgroundColor: '#1e1c26', borderRadius: 16, padding: 16, color: '#FFFBF0', fontSize: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  inputLabel: { color: colors.textMuted, fontSize: 14, fontWeight: '600', marginBottom: -10, marginLeft: 4 },
+  inputField: { backgroundColor: colors.surface, borderRadius: 16, padding: 16, color: colors.text, fontSize: 16, borderWidth: 1, borderColor: colors.border },
   textArea: { minHeight: 120, textAlignVertical: 'top' },
   saveBtn: { marginTop: 10, marginBottom: 40, borderRadius: 16, overflow: 'hidden' },
   saveBtnGradient: { padding: 18, alignItems: 'center', justifyContent: 'center' },

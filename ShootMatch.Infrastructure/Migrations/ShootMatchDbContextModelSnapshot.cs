@@ -22,6 +22,57 @@ namespace ShootMatch.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.AppNotificationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActionType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RecipientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecipientRole")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipientId", "RecipientRole", "CreatedAt");
+
+                    b.HasIndex("RecipientId", "RecipientRole", "ReadAt");
+
+                    b.ToTable("app_notifications", (string)null);
+                });
+
             modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.AuthSessionRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -94,16 +145,41 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal>("DepositAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("DepositRate")
+                        .HasColumnType("numeric");
+
                     b.Property<string>("EscrowStatus")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("Location")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("MatchId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
+
+                    b.Property<long?>("PayOsOrderCode")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("PhotographerId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Requirements")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("ScheduledAt")
                         .HasColumnType("timestamp with time zone");
@@ -115,6 +191,9 @@ namespace ShootMatch.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("numeric");
 
                     b.HasKey("Id");
 
@@ -181,6 +260,69 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.HasIndex("ConversationId", "Status");
 
                     b.ToTable("call_sessions", (string)null);
+                });
+
+            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ConceptRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ApprovedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Keywords")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("concepts", (string)null);
+                });
+
+            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ConceptStyleRelationRecord", b =>
+                {
+                    b.Property<Guid>("ConceptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StyleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Weight")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("ConceptId", "StyleId");
+
+                    b.HasIndex("StyleId");
+
+                    b.ToTable("concept_style_relations", (string)null);
                 });
 
             modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ConversationRecord", b =>
@@ -480,6 +622,37 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.ToTable("photographer_availabilities", (string)null);
                 });
 
+            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.PhotographerEquipmentRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("PhotographerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PhotographerId");
+
+                    b.ToTable("photographer_equipments", (string)null);
+                });
+
             modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.PhotographerRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -506,6 +679,12 @@ namespace ShootMatch.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("CurrentLatitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("CurrentLongitude")
+                        .HasColumnType("double precision");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
@@ -631,6 +810,13 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
 
+                    b.Property<string>("DominantColors")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasDefaultValue("");
+
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(1024)
@@ -734,11 +920,45 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.ToTable("search_sessions", (string)null);
                 });
 
+            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ServicePackageMediaRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<Guid>("ServicePackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServicePackageId", "SortOrder");
+
+                    b.ToTable("service_package_media", (string)null);
+                });
+
             modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ServicePackageRecord", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<int>("AgeGroup")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(4);
+
+                    b.Property<string>("CallToAction")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -751,8 +971,28 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.Property<int>("DurationHours")
                         .HasColumnType("integer");
 
+                    b.Property<int>("GroupSize")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<string>("HeroSubtitle")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("HeroTitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("LocationType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(4);
 
                     b.Property<Guid>("PhotographerId")
                         .HasColumnType("uuid");
@@ -760,16 +1000,135 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<string>("Subtitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
                     b.HasIndex("PhotographerId");
 
                     b.ToTable("service_packages", (string)null);
+                });
+
+            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.StaffRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApprovalStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("GoogleId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email");
+
+                    b.HasIndex("GoogleId");
+
+                    b.HasIndex("Phone");
+
+                    b.ToTable("staffs", (string)null);
+                });
+
+            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.StyleRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ApprovedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Keywords")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("styles", (string)null);
                 });
 
             modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.SwipeActionRecord", b =>
@@ -850,6 +1209,96 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.ToTable("verification_requests", (string)null);
                 });
 
+            modelBuilder.Entity("customer_preferred_concepts", b =>
+                {
+                    b.Property<Guid>("concept_id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("customer_id")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("concept_id", "customer_id");
+
+                    b.HasIndex("customer_id");
+
+                    b.ToTable("customer_preferred_concepts");
+                });
+
+            modelBuilder.Entity("customer_preferred_styles", b =>
+                {
+                    b.Property<Guid>("customer_id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("style_id")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("customer_id", "style_id");
+
+                    b.HasIndex("style_id");
+
+                    b.ToTable("customer_preferred_styles");
+                });
+
+            modelBuilder.Entity("photo_concepts", b =>
+                {
+                    b.Property<Guid>("concept_id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("portfolio_photo_id")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("concept_id", "portfolio_photo_id");
+
+                    b.HasIndex("portfolio_photo_id");
+
+                    b.ToTable("photo_concepts");
+                });
+
+            modelBuilder.Entity("photo_styles", b =>
+                {
+                    b.Property<Guid>("portfolio_photo_id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("style_id")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("portfolio_photo_id", "style_id");
+
+                    b.HasIndex("style_id");
+
+                    b.ToTable("photo_styles");
+                });
+
+            modelBuilder.Entity("photographer_concepts", b =>
+                {
+                    b.Property<Guid>("concept_id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("photographer_id")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("concept_id", "photographer_id");
+
+                    b.HasIndex("photographer_id");
+
+                    b.ToTable("photographer_concepts");
+                });
+
+            modelBuilder.Entity("photographer_styles", b =>
+                {
+                    b.Property<Guid>("photographer_id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("style_id")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("photographer_id", "style_id");
+
+                    b.HasIndex("style_id");
+
+                    b.ToTable("photographer_styles");
+                });
+
             modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.CallSessionRecord", b =>
                 {
                     b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.ConversationRecord", "Conversation")
@@ -859,6 +1308,25 @@ namespace ShootMatch.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Conversation");
+                });
+
+            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ConceptStyleRelationRecord", b =>
+                {
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.ConceptRecord", "Concept")
+                        .WithMany()
+                        .HasForeignKey("ConceptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.StyleRecord", "Style")
+                        .WithMany()
+                        .HasForeignKey("StyleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Concept");
+
+                    b.Navigation("Style");
                 });
 
             modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.MessageRecord", b =>
@@ -876,6 +1344,17 @@ namespace ShootMatch.Infrastructure.Migrations
                 {
                     b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.PhotographerRecord", "Photographer")
                         .WithMany("Availabilities")
+                        .HasForeignKey("PhotographerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Photographer");
+                });
+
+            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.PhotographerEquipmentRecord", b =>
+                {
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.PhotographerRecord", "Photographer")
+                        .WithMany("Equipments")
                         .HasForeignKey("PhotographerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -905,6 +1384,17 @@ namespace ShootMatch.Infrastructure.Migrations
                     b.Navigation("Photographer");
                 });
 
+            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ServicePackageMediaRecord", b =>
+                {
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.ServicePackageRecord", "ServicePackage")
+                        .WithMany("Media")
+                        .HasForeignKey("ServicePackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ServicePackage");
+                });
+
             modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ServicePackageRecord", b =>
                 {
                     b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.PhotographerRecord", "Photographer")
@@ -914,6 +1404,96 @@ namespace ShootMatch.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Photographer");
+                });
+
+            modelBuilder.Entity("customer_preferred_concepts", b =>
+                {
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.ConceptRecord", null)
+                        .WithMany()
+                        .HasForeignKey("concept_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.CustomerRecord", null)
+                        .WithMany()
+                        .HasForeignKey("customer_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("customer_preferred_styles", b =>
+                {
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.CustomerRecord", null)
+                        .WithMany()
+                        .HasForeignKey("customer_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.StyleRecord", null)
+                        .WithMany()
+                        .HasForeignKey("style_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("photo_concepts", b =>
+                {
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.ConceptRecord", null)
+                        .WithMany()
+                        .HasForeignKey("concept_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.PortfolioPhotoRecord", null)
+                        .WithMany()
+                        .HasForeignKey("portfolio_photo_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("photo_styles", b =>
+                {
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.PortfolioPhotoRecord", null)
+                        .WithMany()
+                        .HasForeignKey("portfolio_photo_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.StyleRecord", null)
+                        .WithMany()
+                        .HasForeignKey("style_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("photographer_concepts", b =>
+                {
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.ConceptRecord", null)
+                        .WithMany()
+                        .HasForeignKey("concept_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.PhotographerRecord", null)
+                        .WithMany()
+                        .HasForeignKey("photographer_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("photographer_styles", b =>
+                {
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.PhotographerRecord", null)
+                        .WithMany()
+                        .HasForeignKey("photographer_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ShootMatch.Infrastructure.Persistence.Entities.StyleRecord", null)
+                        .WithMany()
+                        .HasForeignKey("style_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ConversationRecord", b =>
@@ -927,11 +1507,18 @@ namespace ShootMatch.Infrastructure.Migrations
                 {
                     b.Navigation("Availabilities");
 
+                    b.Navigation("Equipments");
+
                     b.Navigation("PortfolioEmbeddings");
 
                     b.Navigation("PortfolioPhotos");
 
                     b.Navigation("ServicePackages");
+                });
+
+            modelBuilder.Entity("ShootMatch.Infrastructure.Persistence.Entities.ServicePackageRecord", b =>
+                {
+                    b.Navigation("Media");
                 });
 #pragma warning restore 612, 618
         }

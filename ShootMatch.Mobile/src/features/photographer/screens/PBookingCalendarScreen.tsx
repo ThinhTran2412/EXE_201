@@ -7,13 +7,15 @@ import {
   StyleSheet,
   Text,
   View,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../../../app/theme/colors';
+import { usePhotographerTheme } from '../PhotographerThemeContext';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { radius, spacing, shadows } from '../../../app/theme/spacing';
 import {
@@ -51,8 +53,6 @@ type TimeSlot = {
 
 type ShiftKey = TimeSlot['shift'];
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CELL = Math.floor((SCREEN_WIDTH - spacing[6] * 2 - 12 * 6) / 7);
 const MONTH_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 const TIME_SLOTS: TimeSlot[] = [
@@ -126,6 +126,13 @@ function getMonthGrid(year: number, month: number) {
 
 export default function PBookingCalendarScreen() {
   const navigation = useNavigation<any>();
+  const { colors, isDark } = usePhotographerTheme();
+
+  const { width: windowWidth } = useWindowDimensions();
+  const SCREEN_WIDTH = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
+  const CELL = Math.floor((SCREEN_WIDTH - spacing[6] * 2 - 12 * 6) / 7);
+  const styles = React.useMemo(() => getStyles(colors, CELL), [colors, CELL]);
+
   const [selected, setSelected] = useState(new Date());
   const [events, setEvents] = useState<BookingEvent[]>(INITIAL_EVENTS);
   const [availabilitySlots, setAvailabilitySlots] = useState<PhotographerAvailabilitySlot[]>([]);
@@ -359,7 +366,7 @@ export default function PBookingCalendarScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <LinearGradient colors={['#ffffff', '#fffcf5']} style={styles.hero}>
+        <LinearGradient colors={isDark ? [colors.surface, colors.surfaceStrong] : ['#ffffff', '#fffcf5']} style={styles.hero}>
           <View style={styles.heroTop}>
             <View>
               <Text style={styles.kicker}>LỊCH LÀM VIỆC</Text>
@@ -388,12 +395,12 @@ export default function PBookingCalendarScreen() {
 
         <View style={styles.panel}>
           <View style={styles.monthRow}>
-            <Pressable style={styles.monthBtn} onPress={() => changeMonth(-1)}><Ionicons name="chevron-back" size={18} color={colors.dark} /></Pressable>
+            <Pressable style={styles.monthBtn} onPress={() => changeMonth(-1)}><Ionicons name="chevron-back" size={18} color={colors.text} /></Pressable>
             <View style={{ flex: 1 }}>
               <Text style={styles.monthTitle}>{monthLabel}</Text>
               <Text style={styles.monthSub}>Lịch theo ngày của photographer</Text>
             </View>
-            <Pressable style={styles.monthBtn} onPress={() => changeMonth(1)}><Ionicons name="chevron-forward" size={18} color={colors.dark} /></Pressable>
+            <Pressable style={styles.monthBtn} onPress={() => changeMonth(1)}><Ionicons name="chevron-forward" size={18} color={colors.text} /></Pressable>
           </View>
 
           <View style={styles.legendRow}>
@@ -417,11 +424,11 @@ export default function PBookingCalendarScreen() {
               const hasBusyFromApi = availabilitySlots.some((slot) => slot.specificDate === key && slot.slotType === 'Blocked');
               const hasBusy = dayEvents.some((e) => e.status === 'Busy') || hasBusyFromApi;
               const dotColor = hasBusy ? '#94a3b8' : hasConfirmed ? '#4ade80' : hasPending ? '#fbbf24' : 'transparent';
-              const textColor = '#000000';
+              const textColor = colors.text;
 
               return (
-                <Pressable key={key} style={[styles.cell, { width: CELL, height: CELL }, isSelected && styles.selectedCell]} onPress={() => setSelected(date)}>
-                  <Text style={[styles.cellText, { color: isSelected ? colors.background : textColor }]}>{date.getDate()}</Text>
+                <Pressable key={key} style={[styles.cell, { width: CELL, height: CELL }, isSelected && (isDark ? { backgroundColor: '#ffffff', borderColor: '#ffffff' } : styles.selectedCell)]} onPress={() => setSelected(date)}>
+                  <Text style={[styles.cellText, { color: isSelected ? (isDark ? '#000000' : '#ffffff') : textColor }]}>{date.getDate()}</Text>
                   {dotColor !== 'transparent' && <View style={[styles.dot, { backgroundColor: dotColor }]} />}
                 </Pressable>
               );
@@ -702,6 +709,8 @@ export default function PBookingCalendarScreen() {
 }
 
 function Legend({ color, label }: { color: string; label: string }) {
+  const { colors } = usePhotographerTheme();
+  const styles = getStyles(colors, 0);
   return (
     <View style={styles.legendItem}>
       <View style={[styles.legendDot, { backgroundColor: color }]} />
@@ -710,7 +719,7 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, CELL: number) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing[4], gap: spacing[4], backgroundColor: colors.background },
   hero: {
@@ -719,7 +728,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.border,
-    ...shadows.card,
   },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   kicker: { color: colors.textLight, fontSize: fontSizes.xs, fontWeight: fontWeights.bold, textTransform: 'uppercase', letterSpacing: 1.4 },
@@ -736,7 +744,7 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: spacing[2.5], marginTop: spacing[4] },
   statCard: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     paddingVertical: spacing[3],
     alignItems: 'center',
@@ -746,25 +754,25 @@ const styles = StyleSheet.create({
   statValue: { color: colors.accent, fontSize: fontSizes.lg, fontWeight: fontWeights.bold },
   statLabel: { color: colors.textMuted, fontSize: fontSizes.xs - 1, fontWeight: fontWeights.semibold, textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 4 },
 
-  panel: { backgroundColor: '#ffffff', borderRadius: 26, padding: spacing[4], borderWidth: 1, borderColor: 'rgba(15,23,42,0.06)', gap: spacing[3], shadowColor: '#cbd5e1', shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 2 },
+  panel: { backgroundColor: colors.surface, borderRadius: 26, padding: spacing[4], borderWidth: 1, borderColor: colors.border, gap: spacing[3], shadowColor: colors.borderStrong, shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 2 },
   monthRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
-  monthBtn: { width: 38, height: 38, borderRadius: radius.full, backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(15,23,42,0.08)' },
-  monthTitle: { color: '#000000', fontSize: 18, fontWeight: fontWeights.bold, textTransform: 'capitalize' },
-  monthSub: { color: '#000000', fontSize: 11, marginTop: 4 },
+  monthBtn: { width: 38, height: 38, borderRadius: radius.full, backgroundColor: colors.surfaceStrong, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
+  monthTitle: { color: colors.text, fontSize: 18, fontWeight: fontWeights.bold, textTransform: 'capitalize' },
+  monthSub: { color: colors.textMuted, fontSize: 11, marginTop: 4 },
   legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f8fafc', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(15,23,42,0.05)' },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surfaceStrong, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: colors.border },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { color: '#000000', fontSize: 12 },
+  legendText: { color: colors.text, fontSize: 12 },
   weekRow: { flexDirection: 'row' },
-  weekLabel: { width: CELL, textAlign: 'center', color: '#000000', fontSize: 11, fontWeight: fontWeights.bold },
+  weekLabel: { width: CELL, textAlign: 'center', color: colors.textMuted, fontSize: 11, fontWeight: fontWeights.bold },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  cell: { borderRadius: 18, backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#cbd5e1', shadowColor: '#cbd5e1', shadowOpacity: 0.04, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 0 },
-  selectedCell: { backgroundColor: colors.primary, borderColor: colors.primary },
-  cellText: { fontSize: 16, fontWeight: fontWeights.bold, color: '#000000' },
+  cell: { borderRadius: 18, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.borderStrong, shadowColor: colors.border, shadowOpacity: 0.04, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 0 },
+  selectedCell: { backgroundColor: colors.accent, borderColor: colors.accent },
+  cellText: { fontSize: 16, fontWeight: fontWeights.bold, color: colors.text },
   dot: { position: 'absolute', bottom: 8, width: 6, height: 6, borderRadius: 3 },
 
   detailCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: radius.xl,
     padding: spacing[4],
     borderWidth: 1,
@@ -803,7 +811,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.accent,
   },
@@ -831,7 +839,7 @@ const styles = StyleSheet.create({
   slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing[1] },
   slotCard: {
     width: '23%',
-    backgroundColor: colors.white,
+    backgroundColor: colors.surfaceStrong,
     borderRadius: radius.md,
     paddingVertical: spacing[2.5],
     alignItems: 'center',
@@ -868,7 +876,7 @@ const styles = StyleSheet.create({
   eventCard: {
     flexDirection: 'row',
     gap: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surfaceStrong,
     borderRadius: radius.lg,
     padding: 14,
     alignItems: 'stretch',
@@ -893,7 +901,7 @@ const styles = StyleSheet.create({
 
   actionsCol: { gap: 8, justifyContent: 'center', borderLeftWidth: 1, borderColor: colors.border, paddingLeft: 12 },
   acceptBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.success, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.full },
-  acceptBtnText: { color: colors.white, fontWeight: fontWeights.bold, fontSize: fontSizes.xs - 1 },
-  rejectBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.full, backgroundColor: colors.white },
+  acceptBtnText: { color: '#ffffff', fontWeight: fontWeights.bold, fontSize: fontSizes.xs - 1 },
+  rejectBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.full, backgroundColor: colors.surfaceStrong },
   rejectBtnText: { color: colors.accent, fontWeight: fontWeights.semibold, fontSize: fontSizes.xs - 1 },
 });

@@ -26,6 +26,8 @@ export type PhotographerTabParamList = {
 
 export type CustomerStackParamList = {
   CustomerRoot: undefined;
+  Search: undefined;
+  EmergencySearch: undefined;
   PhotographerProfile: { id: string };
   PhotographerPortfolio: { photographerId: string; initialIndex?: number };
   PhotographerServicePackages: { photographer: any; packages: any[] };
@@ -62,8 +64,10 @@ export type PhotographerStackParamList = {
   Chat: { conversationId: string; name: string };
   ServiceManagement: undefined;
   BookingCalendar: undefined;
+  ManageEquipment: undefined;
   PersonalInfo: undefined;
   CustomerProfile: { customerId: string; customerName?: string };
+  BookingDetail: { booking: any };
   Call: {
     conversationId: string;
     callSessionId?: string;
@@ -72,5 +76,7 @@ export type PhotographerStackParamList = {
     name: string;
     avatarUrl?: string;
   };
+  Notifications: undefined;
+  PhotographerPortfolio: { photographer: any };
 };
 

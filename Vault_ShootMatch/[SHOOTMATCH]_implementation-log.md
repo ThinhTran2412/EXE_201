@@ -1,8 +1,8 @@
 # SHOOTMATCH — Implementation Log
 
 ## Snapshot
-- **Ngày cập nhật**: 2026-04-20
-- **Mục tiêu phiên này**: chạy PostgreSQL Migration, tách command/query, và lập danh mục đầy đủ Domain/Entity + nghiệp vụ đã triển khai.
+- **Ngày cập nhật**: 2026-06-15
+- **Mục tiêu phiên này**: Tối ưu Live Map (Android/iOS), hoàn thiện UI Booking Detail, đồng bộ Vault.
 
 ## 1) Những gì đã triển khai (full list)
 
@@ -514,3 +514,97 @@
   - pgvector thực tế cho PreferredStyles và portfolio embeddings.
   - Chuyển đổi các repo in-memory còn lại (`SearchSession`, `SwipeAction`, `Otp`).
 
+## Session 2026-06-06 → 2026-06-08 — Web landing page, booking polish, discovery/search filters
+- Goal: bám theo lịch sử commit thực tế trước 2026-06-10 để ghi lại các thay đổi đã diễn ra trong web, booking và discovery.
+- Changes:
+  - [Web] `0d5aade` — `feat(web): add WebExperience page with framer-motion and update LandingPage`
+    - thêm trải nghiệm web landing/experience bằng Framer Motion.
+    - cập nhật `LandingPage.tsx` theo hướng cinematic, scroll-driven.
+  - [Web] `aaf0349` + `d6d1c08` — redesign landing page và tinh chỉnh spacing text.
+    - làm lại hero và các section landing.
+    - chỉnh spacing/typography để UI gọn và rõ hơn.
+  - [Mobile] `71c3890` — `feat : Update booking Screen , detail booking and checkout Screen`
+    - cập nhật Booking Screen, Booking Detail và Checkout Screen.
+    - siết lại luồng đặt lịch và thanh toán trên mobile.
+  - [Backend] `6894525` — `feat: normalize Style/Concept entities with approval workflow and advanced search filters`
+    - chuẩn hóa `Style/Concept` entities.
+    - thêm approval workflow và filter search nâng cao.
+  - [Mobile] `7b90e6c` — `feat: complete discovery search feed with real data and lookbook styling`
+    - hoàn thiện discovery/search feed với dữ liệu thật.
+    - áp lookbook styling cho trải nghiệm tìm kiếm.
+  - [Backend] `244dbdf`, `b3f3980`, `e0a9433` — fix upload/profile/service packages.
+    - cover image swap, file extension upload, silent refresh profile.
+    - giữ portfolio photos khi update photographer profile.
+    - hoàn thiện mapping PostgreSQL cho `ServicePackageMediaRecord` và finalize service packages.
+- Notes:
+  - Đây là các mốc lịch sử trước hôm nay, ghi lại theo commit date thật thay vì dùng ngày hiện tại.
+  - Nếu cần audit sâu hơn, nên tách tiếp từng ngày 2026-06-06 / 2026-06-07 / 2026-06-08.
+- Risks/Next:
+  - Cần cập nhật thêm các file Vault theo ngày tương ứng để không dồn toàn bộ lịch sử vào một mục.
+
+## Session 2026-06-08 → 2026-06-10 — Web Landing Page Redesign & System Updates
+- Goal: Thiết kế lại toàn bộ trang Landing Page Web, cập nhật Logo nhận diện mới và bổ sung hệ thống thông báo (Notifications).
+- Changes:
+  - [Web] Đại tu `LandingPage.tsx` theo hướng Cinematic scroll-driven, loại bỏ page `WebExperience.tsx` thừa.
+  - [Web] Cập nhật bộ Logo PicKic (Original, Black, Cream, Orange) chất lượng cao.
+  - [Web] Bổ sung cấu hình type-safe cho `social-links.ts` và gắn vào UI web.
+  - [Mobile/Backend] Cập nhật các flow liên quan đến hệ thống Push Notifications (bao gồm `NotificationService`, `NotificationsScreen`, `SharedNotificationsScreen`).
+  - [Vault] Thêm 3 tài liệu quy hoạch thông báo: `_notification-plan.md`, `_notification-flow-overview.md`, `_notification-backend-checklist.md`.
+- Notes:
+  - Có khá nhiều script hỗ trợ AI từ `.cursor/skills/impeccable` được đưa vào để tự động hóa kiểm tra UI/UX web.
+
+## Session 2026-06-11 — Cập nhật Lịch & UI Màn hình Booking (Photographer)
+- Goal: Thiết kế lại trải nghiệm xem lịch hẹn và quản lý booking cho Photographer theo chuẩn premium, đồng bộ UI bên Customer, thêm hỗ trợ GraphQL cho Booking.
+- Changes:
+  - [Mobile] `PBookingsScreen.tsx`: Đại tu toàn bộ UI/UX (Màu vàng gold/Charcoal đậm), gộp Lịch trực tiếp vào màn hình này để không phải chuyển trang. Thêm các widget thời tiết, tỷ lệ lấp đầy, bộ lọc trạng thái và hiển thị giá nổi bật.
+  - [Mobile] `BookingCalendarScreen.tsx`: Đã xóa do tích hợp Lịch vào PBookingsScreen.
+  - [Mobile] `BookingDetailScreen.tsx`: Cập nhật chi tiết UI để đồng bộ với phía Photographer.
+  - [Mobile] `PhotographerTabs.tsx` & `types.ts`: Cập nhật cấu trúc điều hướng (xóa BookingCalendarScreen).
+  - [Mobile] `api.ts`: Mở rộng query `myBookingsAsPhotographer` để gọi thêm các fields mới (`customerName`, `customerAvatarUrl`, `servicePackageName`, `servicePackageImageUrl`).
+  - [API] `BookingExtensions.cs`: Thêm GraphQL Type Extension cho `BookingAggregate`, khai báo 4 resolvers mới dùng EF Core (`GetCustomerName`, `GetCustomerAvatarUrl`, `GetServicePackageName`, `GetServicePackageImageUrl`) giúp join và trả về thông tin chi tiết mà không làm nặng Booking table.
+  - [API] `Program.cs`: Đăng ký `.AddTypeExtension<BookingExtensions>()` vào GraphQL pipeline.
+- Risks/Next:
+  - Kiểm tra lại các query GraphQL mới trên UI để đảm bảo load dữ liệu đúng cho bộ lịch hẹn và booking card.
+
+## Session 2026-06-12 — Photographer Theme & Equipment Management
+- Goal: Tích hợp Dark/Light Theme cá nhân hóa dành riêng cho Photographer, đồng thời phát triển tính năng Quản lý thiết bị nhiếp ảnh (Equipment Management).
+- Changes:
+  - [Domain/Entities] Thêm `EquipmentCategory.cs`, `PhotographerEquipment.cs` và `PhotographerEquipmentRecord.cs` (có thêm thuộc tính `IsHidden`).
+  - [Infrastructure/Migrations] Thêm migration `20260612184723_AddPhotographerEquipment`.
+  - [API/Controllers] Cập nhật `PhotographerRequests.cs` và `PhotographersController.cs` để hỗ trợ CRUD thiết bị nhiếp ảnh.
+  - [Mobile] Thêm `PhotographerThemeContext.tsx` để quản lý Dark/Light Theme riêng biệt cho role Photographer (mặc định sáng).
+  - [Mobile] Cập nhật giao diện Dark Theme cho hàng loạt các màn hình của Photographer:
+    - `DashboardScreen.tsx` (Bảo lưu Hero background mặc định, sửa lỗi tệp màu nút, nút Đang nhận job/Đăng xuất rõ nét).
+    - `PProfileScreen.tsx` (Chỉnh lại màu nền quote không bị đỏ, icon sáng be, fix các badge địa chỉ, số sao, xác minh bị tệp màu).
+    - `PBookingsScreen.tsx` & `PBookingCalendarScreen.tsx` (Xử lý lỗi trắng bảng lịch tháng/ngày, chữ bị chìm trên ô lịch, đổi nút next tháng).
+    - `BookingDetailScreen.tsx` (Sửa lỗi màu text, thêm border viền trắng cho khối Photographer detail card trên nền đen, badge xác nhận đồng bộ, layout trong suốt không lỗi).
+    - `ServiceManagementScreen.tsx` (Chỉnh màu các nút Tác vụ, text tạo gói trắng trên trắng được đổi lại, fix chi tiết gói bị chìm màu).
+    - Khung chat (`PChatScreen.tsx`, `ChatScreen.tsx`) (Chỉnh sửa bubble color, header name, status để phân tách rõ không giống hình chữ nhật liền mạch).
+  - [Mobile] Thêm tính năng `ManageEquipmentScreen.tsx`: Cho phép thêm/sửa/xóa/ẩn thiết bị nhiếp ảnh gia với UI Modal cải tiến nghệ thuật, khắc phục triệt để lỗi màn hình bị mờ khi mở form.
+- Notes:
+  - Theme của Customer và Photographer được tách biệt độc lập để không ảnh hưởng lẫn nhau.
+
+## Session 2026-06-14 & 15 — PayOS Deposit Payment & Live Map Optimizations
+- Goal: Tích hợp thanh toán tiền cọc (Deposit Payment) qua cổng PayOS và tối ưu hóa trải nghiệm theo dõi vị trí (Live Map) trên ứng dụng.
+- Changes:
+  - **PayOS Deposit Integration:**
+    - [Infrastructure/Migrations] Khởi tạo migration `20260614095059_AddPayOSFieldsToBooking` thêm cột `DepositAmount`, `DepositRate`, `TotalAmount`, `PaymentStatus` vào `BookingRecord`. Cập nhật `BookingAggregate`.
+    - [Application/Infrastructure] Thêm `IPaymentService` và triển khai `PayOsPaymentService` để gọi API tạo link thanh toán từ PayOS.
+    - [API/Controllers] Thêm `PaymentsController` cung cấp `POST /api/payments/create-payment-link` và xử lý webhook `POST /api/payments/webhook`.
+    - [API/Hubs] Triển khai `RealtimeNotificationPublisher` và sử dụng `LocationHub` để push thông báo thành công thời gian thực về Mobile App khi nhận được webhook từ PayOS.
+    - [Mobile] Tạo component `PayOsCheckoutModal.tsx` để hiển thị cổng thanh toán/mã QR qua WebView.
+    - [Mobile] Lắng nghe sự kiện từ SignalR (`LocationHub.ts` & `NotificationContext`) để tự động đóng modal và đổi trạng thái booking thành "Đã cọc" lập tức.
+    - [Test] Khởi tạo thư mục `ScratchPayOs` với project Console App độc lập để test thử luồng API PayOS.
+  - **Live Map Optimizations:**
+    - [Mobile] `BookingDetailScreen.tsx`:
+      - **Performance:** Removed continuous `requestAnimationFrame` loops for the map sonar wave which caused Android native render thread freezes.
+      - **Platform Specific:**
+        - Android: Implemented static concentric rings (10m, 18m, 26m) for stable layout without re-render stutter.
+        - iOS: Implemented a simplified, ultra-slow pulsing outer ring (6m to 12m over 6 seconds) and a static 10m soft blue zone for a smooth, premium aesthetic.
+      - **Data Flow:** Added dynamic "Preview Fallback" (3-second timeout) to draw markers even if SignalR location updates haven't arrived yet, preventing the map from appearing empty/broken.
+      - **API Integration:** Integrated `getMyBookingsAsPhotographer` to handle data fetching when the current user is a Photographer.
+      - **Type Safety:** Resolved TypeScript build errors (implicit `any` in array finders, missing imports).
+- Notes:
+  - Hoàn thành phần thiết kế "Thanh toán tiền cọc" (Deposit Payment) trong plan `[SHOOTMATCH]_deposit-gps-session-plan.md`.
+  - Addressed user feedback regarding UI performance (lag/stuttering) specifically on the map screen when tracking the photographer.
+  - Ensured the UI feels "nhỏ gọn" (compact) and "siêu chậm" (ultra-slow) per user preference.

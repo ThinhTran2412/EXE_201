@@ -1,8 +1,8 @@
 # ShootMatch Mobile — UI Progress
 
-> Cập nhật: **2026-05-20**  
+> Cập nhật: **2026-06-15**  
 > Stack: React Native + Expo (SDK 54), TypeScript  
-> Design: PicKic (cream `#fff7e1`, dark `#1a1a0f`, orange `#ff4200`)
+> Design: PicKic (cream `#fff7e1`, dark `#1a1a0f`, orange `#ff4200`, Photographer Theme)
 
 ---
 
@@ -31,6 +31,17 @@
 
 **Data:** GraphQL `customerHomeFeed` + fallback `picture/` local.
 
+## Web Landing Page (`ShootMatch.Web`) — ✅ 2026-06-10
+
+| Area | Component / Behavior | Trạng thái |
+|------|----------------------|------------|
+| Hero landing | `LandingPage.tsx` | ✅ |
+| CTA phụ | Social dock cạnh phải | ✅ mặc định ẩn, mở rộng khi cần |
+| Social links | `src/config/social-links.ts` | ✅ type-safe config |
+| UI polish | Glow viền, nháy nhẹ, không đè footer | ✅ |
+
+**Data:** link social lấy từ config TS, không hardcode trực tiếp trong JSX.
+
 ---
 
 ## Screens — Customer
@@ -42,7 +53,7 @@
 | Chat list | `chat/screens/AllChatScreen.tsx` | 🟡 |
 | Chat room | `chat/screens/ChatScreen.tsx` | 🟡 SignalR |
 | Bookings | `MyBookingsScreen.tsx` | 🟡 |
-| Booking detail | `BookingDetailScreen.tsx` | 🟡 |
+| Booking detail | `BookingDetailScreen.tsx` | ✅ Đồng bộ UI |
 | Checkout | `CheckoutScreen.tsx` | 🟡 |
 | Profile | `ProfileScreen.tsx` | ✅ Viewfinder Hero, Polaroid, Roll |
 | Edit profile | `EditProfileScreen.tsx` | ✅ Darkroom view, 3-frame, style pills |
@@ -61,11 +72,12 @@
 | Dashboard | `DashboardScreen.tsx` | ✅ Mosaic portfolio |
 | PProfile | `PProfileScreen.tsx` | ✅ Quote, ẩn/hiện personal info |
 | Personal info | `PersonalInfoScreen.tsx` | ✅ API personal-info |
-| Upload portfolio | `UploadPortfolioScreen.tsx` | ✅ Masonry + multi upload |
-| Service management | `ServiceManagementScreen.tsx` | ✅ UI redesign |
-| PBookings | `PBookingsScreen.tsx` | 🟡 |
-| Booking calendar | `BookingCalendarScreen.tsx` | 🟡 |
-| PChat / PAllChat | `PChatScreen`, `PAllChatScreen` | 🟡 |
+| Upload portfolio | `UploadPortfolioScreen.tsx` | ✅ Masonry + multi upload (hỗ trợ Dark Theme) |
+| Service management | `ServiceManagementScreen.tsx` | ✅ UI redesign (hỗ trợ Dark Theme) |
+| PBookings | `PBookingsScreen.tsx` | ✅ Đã gộp lịch, UI redesign premium (hỗ trợ Dark Theme) |
+| Manage equipment | `ManageEquipmentScreen.tsx` | ✅ Quản lý thiết bị nhiếp ảnh (Dark/Light Theme) |
+| Booking calendar | `BookingCalendarScreen.tsx` | ❌ Đã xóa |
+| PChat / PAllChat | `PChatScreen`, `PAllChatScreen` | 🟡 (hỗ trợ Dark Theme) |
 
 ---
 

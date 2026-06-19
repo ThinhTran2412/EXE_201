@@ -1,4 +1,5 @@
 using ShootMatch.Application.Abstractions;
+using ShootMatch.Application.Services;
 using ShootMatch.Domain.Abstractions;
 using ShootMatch.Domain.Entities;
 using ShootMatch.Domain.Events;
@@ -13,7 +14,9 @@ namespace ShootMatch.Application.Commands;
 /// 
 /// Idempotent: if a Conversation already exists for this MatchId (duplicate dispatch), skip.
 /// </summary>
-public sealed class MatchCreatedHandler(IConversationRepository conversationRepository)
+public sealed class MatchCreatedHandler(
+    IConversationRepository conversationRepository,
+    NotificationService notificationService)
     : IDomainEventHandler<MatchCreated>
 {
     public async Task HandleAsync(
@@ -37,5 +40,11 @@ public sealed class MatchCreatedHandler(IConversationRepository conversationRepo
         };
 
         await conversationRepository.SaveConversationAsync(conversation, cancellationToken);
+
+        await notificationService.NotifyMatchCreatedAsync(
+            domainEvent.CustomerId,
+            domainEvent.PhotographerId,
+            domainEvent.MatchId,
+            cancellationToken);
     }
 }

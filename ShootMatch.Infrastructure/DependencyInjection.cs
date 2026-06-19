@@ -59,16 +59,10 @@ public static class DependencyInjection
         services.AddSingleton<IAuthTokenService, JwtTokenService>();
         services.AddScoped<IPasswordHasher,      BcryptPasswordHasher>();
         services.AddScoped<IGoogleAuthService,   GoogleAuthService>();
+        services.AddSingleton<IPaymentService,   Services.PayOsPaymentService>();
 
-        // ── Storage (Supabase if configured, otherwise local disk) ───────────
-        var supabaseKey = configuration["Supabase:ServiceKey"];
-        var hasSupabase = !string.IsNullOrWhiteSpace(configuration["Supabase:Url"])
-            && !string.IsNullOrWhiteSpace(supabaseKey)
-            && !supabaseKey.Contains("SUPABASE_SERVICE_KEY_HERE", StringComparison.OrdinalIgnoreCase);
-        if (hasSupabase)
-            services.AddScoped<IStorageService, SupabaseStorageService>();
-        else
-            services.AddScoped<IStorageService, LocalDiskStorageService>();
+        // ── Storage (Always Local disk as requested) ───────────
+        services.AddScoped<IStorageService, LocalDiskStorageService>();
 
         return services;
     }

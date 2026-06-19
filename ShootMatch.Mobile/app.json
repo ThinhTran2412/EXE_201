@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "ShootMatch",
+    "name": "PicKic",
     "slug": "shootmatch-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/cream_original_square.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -14,7 +14,11 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.shootmatch.mobile"
+      "bundleIdentifier": "com.shootmatch.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Cho phép ShootMatch truy cập vị trí của bạn để theo dõi tiến trình di chuyển của buổi chụp ảnh.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Cho phép ShootMatch truy cập vị trí của bạn để theo dõi tiến trình di chuyển của buổi chụp ảnh."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,10 +26,19 @@
         "backgroundColor": "#fff7e1"
       },
       "package": "com.shootmatch.mobile",
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/images/cream_original_square.png",
+      "shortName": "PicKic",
+      "themeColor": "#fff7e1",
+      "backgroundColor": "#fff7e1",
+      "display": "standalone",
+      "startUrl": "."
     },
     "experiments": {
       "tsconfigPaths": true

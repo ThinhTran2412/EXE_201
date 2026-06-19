@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { getPhotographer, Photographer, getMyConversations, getMyMatches, recordSwipe, getPhotographerAvailability, type PhotographerAvailabilitySlot, getPhotographerServicePackages } from '../api';
+import { getPhotographer, Photographer, getMyConversations, getMyMatches, recordSwipe, getPhotographerAvailability, type PhotographerAvailabilitySlot, getPhotographerServicePackages, getPhotographerReviews, type Review } from '../api';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { addFavorite, removeFavorite, isFavorite } from '../utils/favorites';
 import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
@@ -68,12 +68,26 @@ const TIME_SLOTS: TimeSlot[] = [
   { start: '21:30', end: '22:00' },
 ];
 
-// ── Dummy Data ──
-const DUMMY_EQUIPMENT = [
-  { icon: 'camera-outline', name: 'Sony A7R V', desc: '61MP Full Frame Mirrorless' },
-  { icon: 'settings-outline', name: '35mm f/1.4 Summilux', desc: 'Leica Prime Lens' },
-  { icon: 'bulb-outline', name: 'Profoto B10 Plus', desc: '500Ws Studio Flash' },
-];
+// ── Consts ──
+const CATEGORY_LABELS: Record<number, string> = {
+  0: 'Máy ảnh',
+  1: 'Ống kính',
+  2: 'Đèn / Flash',
+  3: 'Flycam',
+  4: 'Gimbal',
+  5: 'Thu âm',
+  6: 'Khác',
+};
+
+const CATEGORY_ICONS: Record<number, any> = {
+  0: 'camera-outline',
+  1: 'aperture-outline',
+  2: 'flashlight-outline',
+  3: 'airplane-outline',
+  4: 'videocam-outline',
+  5: 'mic-outline',
+  6: 'cube-outline',
+};
 
 const DUMMY_REVIEWS = [
   { name: 'Trân Ngọc', date: '15/01/2026', rating: 5, text: 'Chụp ảnh cực kỳ chuyên nghiệp và tận tâm. Ảnh ra đẹp hơn mong đợi nhiều lần!' },
@@ -98,6 +112,8 @@ export default function PhotographerProfileScreen() {
   const [scheduleExpanded, setScheduleExpanded] = useState(false);
   const [selectedScheduleDate, setSelectedScheduleDate] = useState(new Date());
   const [selectedShift, setSelectedShift] = useState<'Sáng' | 'Trưa' | 'Chiều'>('Sáng');
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
   // State for Lightbox
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
@@ -111,13 +127,15 @@ export default function PhotographerProfileScreen() {
       getMyConversations().catch(() => []),
       getPhotographerAvailability(photographerId).catch(() => []),
       getPhotographerServicePackages(photographerId).catch(() => []),
+      getPhotographerReviews(photographerId).catch(() => []),
     ])
-      .then(([data, favoriteStatus, matches, convs, availability, packages]) => {
+      .then(([data, favoriteStatus, matches, convs, availability, packages, photographerReviews]) => {
         if (!mounted) return;
         setP(data);
         setFav(favoriteStatus);
         setAvailabilitySlots(availability);
         setServicePackages(packages);
+        setReviews(photographerReviews);
 
         const existingMatch = matches.find((m: any) => m.photographerId === photographerId);
         if (existingMatch) setMatchId(existingMatch.id);
@@ -133,6 +151,7 @@ export default function PhotographerProfileScreen() {
         if (!mounted) return;
         setLoading(false);
         setScheduleLoading(false);
+        setReviewsLoading(false);
       });
 
     return () => {
@@ -456,20 +475,31 @@ export default function PhotographerProfileScreen() {
         )}
 
         {/* ── EQUIPMENT ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thiết Bị</Text>
-          <View style={{ gap: 8 }}>
-            {DUMMY_EQUIPMENT.map((eq, i) => (
-              <View key={i} style={styles.equipItem}>
-                <Ionicons name={eq.icon as any} size={20} color="rgba(26,26,15,0.5)" />
-                <View>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.accent }}>{eq.name}</Text>
-                  <Text style={{ fontSize: 11, opacity: 0.5, color: THEME.accent }}>{eq.desc}</Text>
+        {p.equipments && p.equipments.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Thiết Bị</Text>
+            <View style={{ gap: 8 }}>
+              {p.equipments.map((eq, i) => (
+                <View key={eq.id || i} style={styles.equipItem}>
+                  <Ionicons name={CATEGORY_ICONS[eq.category] || 'cube-outline'} size={20} color="rgba(26,26,15,0.5)" />
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.accent }}>{eq.name}</Text>
+                      {eq.isPrimary && (
+                        <View style={{ backgroundColor: 'rgba(239,68,68,0.1)', paddingHorizontal: 4, borderRadius: 4 }}>
+                          <Text style={{ fontSize: 9, color: THEME.danger, fontWeight: 'bold' }}>Chính</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={{ fontSize: 11, opacity: 0.5, color: THEME.accent }}>
+                      {CATEGORY_LABELS[eq.category] || 'Khác'}{eq.description ? ` · ${eq.description}` : ''}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* ── SERVICES & PRICING ── */}
         {servicePackages.length > 0 && (
@@ -620,30 +650,56 @@ export default function PhotographerProfileScreen() {
         {/* ── REVIEWS ── */}
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <Text style={styles.sectionTitle}>Đánh Giá</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={{ color: '#fbbf24', fontSize: 10 }}>★★★★★</Text>
-              <Text style={{ fontSize: 11, fontWeight: '600', opacity: 0.6 }}>4.9</Text>
+            <Text style={styles.sectionTitle}>Đánh Giá ({reviews.length})</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ color: '#fbbf24', fontSize: 12 }}>
+                {'★'.repeat(Math.round(p.rating || 0)) + '☆'.repeat(5 - Math.round(p.rating || 0))}
+              </Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.accent }}>
+                {p.rating ? p.rating.toFixed(1) : '0.0'}
+              </Text>
             </View>
           </View>
           <View style={{ gap: 12 }}>
-            {DUMMY_REVIEWS.map((r, i) => (
-              <View key={i} style={styles.reviewCard}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <View style={styles.reviewAvatar}>
-                      <Text style={{ fontSize: 11, fontWeight: 'bold' }}>{r.name.split(' ').map(n=>n[0]).join('').substring(0,2)}</Text>
-                    </View>
-                    <View>
-                      <Text style={{ fontSize: 13, fontWeight: '600' }}>{r.name}</Text>
-                      <Text style={{ fontSize: 10, opacity: 0.4 }}>{r.date}</Text>
-                    </View>
-                  </View>
-                  <Text style={{ color: '#fbbf24', fontSize: 10 }}>{'★'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}</Text>
-                </View>
-                <Text style={{ fontSize: 11, lineHeight: 18, opacity: 0.7 }}>"{r.text}"</Text>
+            {reviewsLoading ? (
+              <ActivityIndicator size="small" color={THEME.accent} />
+            ) : reviews.length === 0 ? (
+              <View style={styles.reviewEmptyState}>
+                <Ionicons name="star-outline" size={18} color="rgba(26,26,15,0.4)" />
+                <Text style={styles.reviewEmptyText}>Chưa có đánh giá nào cho nhiếp ảnh gia này.</Text>
               </View>
-            ))}
+            ) : (
+              reviews.map((r, i) => (
+                <View key={r.id || i} style={styles.reviewCard}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      {r.authorAvatarUrl ? (
+                        <PortfolioImageCell 
+                          uri={r.authorAvatarUrl} 
+                          style={styles.reviewAvatarImage} 
+                          borderRadius={16} 
+                          resizeMode="cover" 
+                        />
+                      ) : (
+                        <View style={styles.reviewAvatar}>
+                          <Text style={{ fontSize: 11, fontWeight: 'bold', color: THEME.accent }}>
+                            {r.authorName ? r.authorName.split(' ').map(n=>n[0]).join('').substring(0,2) : 'KH'}
+                          </Text>
+                        </View>
+                      )}
+                      <View>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.accent }}>{r.authorName || 'Khách hàng'}</Text>
+                        <Text style={{ fontSize: 10, opacity: 0.4, color: THEME.accent }}>
+                          {new Date(r.createdAt).toLocaleDateString('vi-VN')}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={{ color: '#fbbf24', fontSize: 10 }}>{'★'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}</Text>
+                  </View>
+                  <Text style={{ fontSize: 12, lineHeight: 18, opacity: 0.7, color: THEME.accent }}>"{r.comment}"</Text>
+                </View>
+              ))
+            )}
           </View>
         </View>
 
@@ -756,6 +812,9 @@ const styles = StyleSheet.create({
 
   reviewCard: { backgroundColor: 'rgba(26,26,15,0.03)', borderWidth: 1, borderColor: 'rgba(26,26,15,0.06)', borderRadius: 16, padding: 16 },
   reviewAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(26,26,15,0.1)', alignItems: 'center', justifyContent: 'center' },
+  reviewAvatarImage: { width: 32, height: 32, borderRadius: 16 },
+  reviewEmptyState: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16, backgroundColor: 'rgba(26,26,15,0.03)', borderRadius: 12 },
+  reviewEmptyText: { fontSize: 12, opacity: 0.5, color: THEME.accent },
 
   ctaBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(248,248,217,0.95)', borderTopWidth: 1, borderTopColor: 'rgba(26,26,15,0.06)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingTop: 16, gap: 12 },
   iconBtn: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(26,26,15,0.15)', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },

@@ -1,4 +1,5 @@
 using ShootMatch.Application.Abstractions;
+using ShootMatch.Application.Services;
 using ShootMatch.Domain.Entities;
 using ShootMatch.Domain.Exceptions;
 
@@ -12,7 +13,9 @@ namespace ShootMatch.Application.Commands;
 ///  - Conversation must exist and be Active.
 ///  - Sender must be a participant (CustomerId or PhotographerId).
 /// </summary>
-public sealed class SendMessageCommandHandler(IConversationRepository conversationRepository)
+public sealed class SendMessageCommandHandler(
+    IConversationRepository conversationRepository,
+    NotificationService notificationService)
 {
     public async Task<Message> HandleAsync(
         SendMessageCommand command,
@@ -45,6 +48,13 @@ public sealed class SendMessageCommandHandler(IConversationRepository conversati
         await conversationRepository.SaveMessageAsync(message, cancellationToken);
         await conversationRepository.TouchLastMessageAtAsync(
             command.ConversationId, message.SentAt, cancellationToken);
+
+        var senderDisplayName = command.SenderRole == "customer" ? "Khách hàng" : "Nhiếp ảnh gia";
+        var notification = await notificationService.NotifyNewMessageAsync(
+            conversation,
+            message,
+            senderDisplayName,
+            cancellationToken);
 
         return message;
     }

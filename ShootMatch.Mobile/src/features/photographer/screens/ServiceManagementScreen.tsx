@@ -10,13 +10,16 @@ import {
   Alert,
   Image,
   ImageBackground,
+  Platform,
+  useWindowDimensions,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { colors } from '../../../app/theme/colors';
+import { usePhotographerTheme } from '../PhotographerThemeContext';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { spacing } from '../../../app/theme/spacing';
 import { radius } from '../../../app/theme/spacing';
@@ -98,6 +101,8 @@ function splitDescriptionSections(text: string) {
 
 function renderSection(label: string, value?: string) {
   if (!value) return null;
+  const { colors } = usePhotographerTheme();
+  const styles = getStyles(colors);
   return (
     <View style={styles.sectionBlock}>
       <Text style={styles.sectionBlockLabel}>{label}</Text>
@@ -107,6 +112,8 @@ function renderSection(label: string, value?: string) {
 }
 
 export default function ServiceManagementScreen() {
+  const { colors, isDark } = usePhotographerTheme();
+  const styles = getStyles(colors);
   const insets = useSafeAreaInsets();
   const [services, setServices] = useState<ServicePackage[]>([]);
   const [editorVisible, setEditorVisible] = useState(false);
@@ -116,6 +123,14 @@ export default function ServiceManagementScreen() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<ServiceForm>(DEFAULT_FORM);
   const [tagInput, setTagInput] = useState('');
+  const { width: windowWidth } = useWindowDimensions();
+  const W = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [scrollWidth, setScrollWidth] = useState<number>(0);
+
+  const cardInnerWidth = scrollWidth || W;
+  const photoSize = Math.floor((cardInnerWidth - 64 - 18) / 4) - 1.5;
 
   useEffect(() => {
     let mounted = true;
@@ -304,7 +319,13 @@ export default function ServiceManagementScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        onLayout={(e) => {
+          setScrollWidth(e.nativeEvent.layout.width);
+        }}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         <Animated.View entering={FadeInUp.duration(700)} style={styles.hero}>
           <View style={styles.heroGlow} />
           <View style={styles.heroTopRow}>
@@ -467,18 +488,33 @@ export default function ServiceManagementScreen() {
                       {item.media.length > 1 && (
                         <View style={styles.thumbStrip}>
                           {item.media.slice(1, 5).map((media: ServicePackageMedia, mi: number) => (
-                            <PortfolioImageCell
+                            <Pressable
                               key={media.id ?? mi}
-                              uri={media.imageUrl}
-                              borderRadius={10}
-                              style={styles.thumbStripItem}
-                              resizeMode="cover"
-                            />
+                              onPress={() => {
+                                const urls = item.media.map(m => m.imageUrl);
+                                setLightboxImages(urls);
+                                setLightboxIndex(mi + 1);
+                              }}
+                            >
+                              <PortfolioImageCell
+                                uri={media.imageUrl}
+                                borderRadius={10}
+                                style={styles.thumbStripItem}
+                                resizeMode="cover"
+                              />
+                            </Pressable>
                           ))}
                           {item.media.length > 5 && (
-                            <View style={styles.thumbStripMore}>
+                            <Pressable
+                              style={styles.thumbStripMore}
+                              onPress={() => {
+                                const urls = item.media.map(m => m.imageUrl);
+                                setLightboxImages(urls);
+                                setLightboxIndex(5);
+                              }}
+                            >
                               <Text style={styles.thumbStripMoreText}>+{item.media.length - 5}</Text>
-                            </View>
+                            </Pressable>
                           )}
                         </View>
                       )}
@@ -507,12 +543,14 @@ export default function ServiceManagementScreen() {
                             <Text style={[styles.detailSectionTitle, { color: colors.success }]}>Features</Text>
                           </View>
                           <View style={styles.featureList}>
-                            {featureLines.map((line, li) => (
-                              <View key={li} style={styles.featureItem}>
-                                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-                                <Text style={styles.featureItemText}>{line}</Text>
-                              </View>
-                            ))}
+                            {featureLines.map((line, li) => {
+                              const cleanLine = line.replace(/^[-\*•✓]\s*/, '');
+                              return (
+                                <View key={li} style={styles.featureItem}>
+                                  <Text style={styles.featureItemText}>✓ {cleanLine}</Text>
+                                </View>
+                              );
+                            })}
                           </View>
                         </View>
                       )}
@@ -525,12 +563,14 @@ export default function ServiceManagementScreen() {
                             <Text style={[styles.detailSectionTitle, { color: colors.info }]}>Yêu cầu buổi chụp</Text>
                           </View>
                           <View style={styles.featureList}>
-                            {requirementLines.map((line, li) => (
-                              <View key={li} style={styles.featureItem}>
-                                <Ionicons name="ellipse" size={6} color={colors.info} style={{ marginTop: 5 }} />
-                                <Text style={[styles.featureItemText, { color: colors.textMuted }]}>{line}</Text>
-                              </View>
-                            ))}
+                            {requirementLines.map((line, li) => {
+                              const cleanLine = line.replace(/^[-\*•]\s*/, '');
+                              return (
+                                <View key={li} style={styles.featureItem}>
+                                  <Text style={[styles.featureItemText, { color: colors.textMuted }]}>• {cleanLine}</Text>
+                                </View>
+                              );
+                            })}
                           </View>
                         </View>
                       )}
@@ -544,13 +584,22 @@ export default function ServiceManagementScreen() {
                           </View>
                           <View style={styles.expandedPhotoGrid}>
                             {item.media.map((media: ServicePackageMedia, mi: number) => (
-                              <PortfolioImageCell
+                              <Pressable
                                 key={media.id ?? mi}
-                                uri={media.imageUrl}
-                                borderRadius={10}
-                                style={styles.expandedPhotoItem}
-                                resizeMode="cover"
-                              />
+                                style={[styles.expandedPhotoItem, { width: photoSize, height: photoSize }]}
+                                onPress={() => {
+                                  const urls = item.media.map(m => m.imageUrl);
+                                  setLightboxImages(urls);
+                                  setLightboxIndex(mi);
+                                }}
+                              >
+                                <PortfolioImageCell
+                                  uri={media.imageUrl}
+                                  borderRadius={10}
+                                  style={{ width: '100%', height: '100%' }}
+                                  resizeMode="cover"
+                                />
+                              </Pressable>
                             ))}
                           </View>
                         </View>
@@ -611,14 +660,14 @@ export default function ServiceManagementScreen() {
                   <Text style={styles.modalSub}>Nhập thông tin cơ bản rồi lưu.</Text>
                 </View>
                 <Pressable onPress={() => setEditorVisible(false)} style={styles.closeBtn}>
-                  <Ionicons name="close" size={22} color="#fff" />
+                  <Ionicons name="close" size={22} color={colors.text} />
                 </Pressable>
               </View>
 
               <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.formGroup}>
                   <Text style={styles.fieldLabel}>Tiêu đề chính</Text>
-                  <TextInput style={styles.input} placeholder="Ví dụ: Gói chụp cưới ngoại cảnh" placeholderTextColor="rgba(255,255,255,0.35)" value={form.title} onChangeText={(t) => setForm((prev) => ({ ...prev, title: t }))} />
+                  <TextInput style={styles.input} placeholder="Ví dụ: Gói chụp cưới ngoại cảnh" placeholderTextColor={colors.textLight} value={form.title} onChangeText={(t) => setForm((prev) => ({ ...prev, title: t }))} />
                 </View>
 
                 <View style={styles.formGroup}>
@@ -637,7 +686,7 @@ export default function ServiceManagementScreen() {
                     <TextInput
                       style={{ flex: 1, minWidth: 100, color: colors.text, padding: 0 }}
                       placeholder={form.tags ? "" : "Ví dụ: cưới, ngoại cảnh..."}
-                      placeholderTextColor="rgba(255,255,255,0.35)"
+                      placeholderTextColor={colors.textLight}
                       value={tagInput}
                       onChangeText={(t) => {
                         if (t.includes(',')) {
@@ -672,27 +721,27 @@ export default function ServiceManagementScreen() {
 
                 <View style={styles.formGroup}>
                   <Text style={styles.fieldLabel}>Mô tả chi tiết</Text>
-                  <TextInput style={[styles.input, styles.textArea]} placeholder="Mô tả phong cách, điểm mạnh của gói..." placeholderTextColor="rgba(255,255,255,0.35)" value={form.description} multiline onChangeText={(t) => setForm((prev) => ({ ...prev, description: t }))} />
+                  <TextInput style={[styles.input, styles.textArea]} placeholder="Mô tả phong cách, điểm mạnh của gói..." placeholderTextColor={colors.textLight} value={form.description} multiline onChangeText={(t) => setForm((prev) => ({ ...prev, description: t }))} />
                 </View>
 
                 <View style={styles.formGroup}>
                   <Text style={styles.fieldLabel}>Features của gói</Text>
-                  <TextInput style={[styles.input, styles.textArea]} placeholder="Ví dụ: 1 photographer, chỉnh màu, 1 album..." placeholderTextColor="rgba(255,255,255,0.35)" value={form.features} multiline onChangeText={(t) => setForm((prev) => ({ ...prev, features: t }))} />
+                  <TextInput style={[styles.input, styles.textArea]} placeholder="Ví dụ: 1 photographer, chỉnh màu, 1 album..." placeholderTextColor={colors.textLight} value={form.features} multiline onChangeText={(t) => setForm((prev) => ({ ...prev, features: t }))} />
                 </View>
 
                 <View style={styles.formGroup}>
                   <Text style={styles.fieldLabel}>Yêu cầu buổi chụp</Text>
-                  <TextInput style={[styles.input, styles.textArea]} placeholder="Ví dụ: có mặt đúng giờ, chuẩn bị trang phục..." placeholderTextColor="rgba(255,255,255,0.35)" value={form.requirements} multiline onChangeText={(t) => setForm((prev) => ({ ...prev, requirements: t }))} />
+                  <TextInput style={[styles.input, styles.textArea]} placeholder="Ví dụ: có mặt đúng giờ, chuẩn bị trang phục..." placeholderTextColor={colors.textLight} value={form.requirements} multiline onChangeText={(t) => setForm((prev) => ({ ...prev, requirements: t }))} />
                 </View>
 
                 <View style={styles.rowTwo}>
                   <View style={[styles.formGroup, styles.flex1]}>
                     <Text style={styles.fieldLabel}>Giá</Text>
-                    <TextInput style={styles.input} placeholder="4500000" placeholderTextColor="rgba(255,255,255,0.35)" keyboardType="numeric" value={form.price} onChangeText={(t) => setForm((prev) => ({ ...prev, price: t }))} />
+                    <TextInput style={styles.input} placeholder="4500000" placeholderTextColor={colors.textLight} keyboardType="numeric" value={form.price} onChangeText={(t) => setForm((prev) => ({ ...prev, price: t }))} />
                   </View>
                   <View style={[styles.formGroup, styles.flex1]}>
                     <Text style={styles.fieldLabel}>Thời lượng (giờ)</Text>
-                    <TextInput style={styles.input} placeholder="4" placeholderTextColor="rgba(255,255,255,0.35)" keyboardType="numeric" value={form.durationHours} onChangeText={(t) => setForm((prev) => ({ ...prev, durationHours: t }))} />
+                    <TextInput style={styles.input} placeholder="4" placeholderTextColor={colors.textLight} keyboardType="numeric" value={form.durationHours} onChangeText={(t) => setForm((prev) => ({ ...prev, durationHours: t }))} />
                   </View>
                 </View>
 
@@ -798,11 +847,65 @@ export default function ServiceManagementScreen() {
           </SafeAreaView>
         </View>
       </Modal>
+      {/* ── LIGHTBOX ── */}
+      <Modal
+        visible={lightboxIndex !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLightboxIndex(null)}
+      >
+        <View style={styles.viewerBackground}>
+          <View style={[styles.viewerHeader, { top: insets.top || 20 }]}>
+            <Pressable style={styles.viewerClose} onPress={() => setLightboxIndex(null)}>
+              <Ionicons name="close" size={28} color="#FFFBF0" />
+            </Pressable>
+          </View>
+
+          {lightboxIndex !== null && (
+            <FlatList
+              data={lightboxImages}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              initialScrollIndex={lightboxIndex}
+              getItemLayout={(_: any, index: number) => ({
+                length: W,
+                offset: W * index,
+                index,
+              })}
+              onMomentumScrollEnd={(e: any) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / W);
+                setLightboxIndex(idx);
+              }}
+              renderItem={({ item: imgUri }: { item: string }) => (
+                <View
+                  style={{
+                    width: W,
+                    flex: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <PortfolioImageCell
+                    uri={imgUri}
+                    style={{ width: W, height: '88%' }}
+                    borderRadius={0}
+                    resizeMode="contain"
+                  />
+                </View>
+              )}
+              keyExtractor={(img: string, index: number) => `${img}-${index}`}
+            />
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 function LinearButtonLabel({ label }: { label: string }) {
+  const { colors } = usePhotographerTheme();
+  const styles = getStyles(colors);
   return (
     <View style={styles.saveBtnInner}>
       <Ionicons name="sparkles" size={16} color="#fff" />
@@ -811,18 +914,18 @@ function LinearButtonLabel({ label }: { label: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f7f3ee' },
+const getStyles = (colors: any) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
   scroll: { paddingBottom: 36 },
   hero: {
     margin: 16,
     borderRadius: 28,
     padding: 16,
-    backgroundColor: '#fffaf4',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(207,64,40,0.08)',
+    borderColor: colors.border,
     overflow: 'hidden',
-    shadowColor: '#d6c2b0',
+    shadowColor: colors.borderStrong,
     shadowOpacity: 0.18,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
@@ -844,9 +947,9 @@ const styles = StyleSheet.create({
   heroPillMutedText: { color: colors.success, fontSize: 12, fontWeight: '600' },
   title: { color: colors.text, fontSize: 24, fontWeight: '900', letterSpacing: 0.2, maxWidth: 280, lineHeight: 30 },
   sub: { color: colors.textMuted, marginTop: 8, lineHeight: 21, fontSize: 13 },
-  heroStats: { flexDirection: 'row', alignItems: 'stretch', marginTop: 16, backgroundColor: '#fff', borderRadius: 20, padding: 12, borderWidth: 1, borderColor: colors.border },
+  heroStats: { flexDirection: 'row', alignItems: 'stretch', marginTop: 16, backgroundColor: colors.surfaceStrong, borderRadius: 20, padding: 12, borderWidth: 1, borderColor: colors.border },
   heroCreateBtn: { marginTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: 16, paddingVertical: 14 },
-  heroCreateBtnText: { color: '#fff', fontWeight: '900', letterSpacing: 0.4 },
+  heroCreateBtnText: { color: colors.background, fontWeight: '900', letterSpacing: 0.4 },
   statCard: { flex: 1, alignItems: 'center' },
   moneyRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center' },
   moneyValue: { color: colors.text, fontSize: 16, fontWeight: '900', lineHeight: 18, includeFontPadding: false, textAlignVertical: 'center' },
@@ -859,18 +962,18 @@ const styles = StyleSheet.create({
   sectionTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
   sectionSub: { color: colors.textMuted, marginTop: 6, lineHeight: 20, paddingRight: 12, flexShrink: 1 },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 16 },
-  addBtnText: { color: '#fff', fontWeight: '800' },
+  addBtnText: { color: colors.background, fontWeight: '800' },
 
   content: { paddingHorizontal: 16, gap: 16 },
 
   // ── Card ──
   card: {
-    backgroundColor: '#fffaf4',
+    backgroundColor: colors.surface,
     borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.09)',
-    shadowColor: '#b8a98a',
+    borderColor: colors.border,
+    shadowColor: colors.borderStrong,
     shadowOpacity: 0.22,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
@@ -976,12 +1079,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#fff7e1',
+    backgroundColor: 'rgba(255, 247, 225, 0.08)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.08)',
+    borderColor: 'rgba(255, 247, 225, 0.45)',
   },
   metaChipText: { color: colors.text, fontSize: 11.5, fontWeight: '600' },
 
@@ -992,9 +1095,9 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 10,
-    backgroundColor: 'rgba(26,26,15,0.08)',
+    backgroundColor: colors.surfaceStrong,
     borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.1)',
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1045,14 +1148,14 @@ const styles = StyleSheet.create({
   actionIconWrapEdit: { width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(207,64,40,0.16)', justifyContent: 'center', alignItems: 'center' },
   actionIconWrapDanger: { width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,138,138,0.16)', justifyContent: 'center', alignItems: 'center' },
 
-  emptyState: { marginTop: 10, borderRadius: 22, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed', backgroundColor: '#fff', padding: 24, alignItems: 'center', gap: 10 },
+  emptyState: { marginTop: 10, borderRadius: 22, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed', backgroundColor: colors.surface, padding: 24, alignItems: 'center', gap: 10 },
   emptyTitle: { color: colors.text, fontWeight: '800', fontSize: 16 },
   emptyText: { color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
 
-  modalWrap: { flex: 1, backgroundColor: 'rgba(17,13,8,0.35)' },
+  modalWrap: { flex: 1, backgroundColor: colors.overlay },
   modalBackdrop: { ...StyleSheet.absoluteFillObject },
   modalSafe: { flex: 1, justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: '#fffaf4', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, paddingBottom: 28, gap: 12, borderTopWidth: 1, borderColor: 'rgba(207,64,40,0.08)', maxHeight: '94%', shadowColor: '#d6c2b0', shadowOpacity: 0.2, shadowRadius: 18, shadowOffset: { width: 0, height: -4 }, elevation: 8 },
+  modalCard: { backgroundColor: colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, paddingBottom: 28, gap: 12, borderTopWidth: 1, borderColor: colors.border, maxHeight: '94%', shadowColor: colors.borderStrong, shadowOpacity: 0.2, shadowRadius: 18, shadowOffset: { width: 0, height: -4 }, elevation: 8 },
   modalHeaderText: { flex: 1, paddingRight: 8 },
   modalScroll: { flexGrow: 0, maxHeight: '82%' },
   modalScrollContent: { paddingBottom: 8, gap: 12 },
@@ -1060,7 +1163,7 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
   modalTitle: { color: colors.text, fontSize: 22, fontWeight: '900' },
   modalSub: { color: colors.textMuted, marginTop: 4, lineHeight: 20, maxWidth: 270 },
-  closeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  closeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surfaceStrong, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   formGroup: { gap: 8 },
   rowTwo: { flexDirection: 'row', gap: 12 },
   flex1: { flex: 1 },
@@ -1070,7 +1173,7 @@ const styles = StyleSheet.create({
   togglePillText: { color: colors.text, fontWeight: '700', fontSize: 12 },
   mediaHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   mediaAddBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
-  mediaAddText: { color: '#fff', fontWeight: '800', fontSize: 12 },
+  mediaAddText: { color: colors.background, fontWeight: '800', fontSize: 12 },
   mediaStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   mediaThumb: { width: 92, height: 92, borderRadius: 14 },
   mediaEditor: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
@@ -1080,10 +1183,10 @@ const styles = StyleSheet.create({
   mediaPreviewImage: { width: 48, height: 48, borderRadius: 12 },
 
   mediaItemText: { color: colors.text, fontWeight: '700' },
-  inputField: { backgroundColor: '#1e1c26', borderRadius: 16, padding: 16, color: '#FFFBF0', fontSize: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  inputField: { backgroundColor: colors.surfaceStrong, borderRadius: 16, padding: 16, color: colors.text, fontSize: 16, borderWidth: 1, borderColor: colors.border },
   tagPreviewChip: { backgroundColor: 'rgba(207,64,40,0.1)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(207,64,40,0.2)' },
   tagPreviewText: { color: colors.accent, fontSize: 12, fontWeight: '700' },
-  input: { backgroundColor: '#fff', borderRadius: 16, padding: 14, color: colors.text, borderWidth: 1, borderColor: colors.border },
+  input: { backgroundColor: colors.surfaceStrong, borderRadius: 16, padding: 14, color: colors.text, borderWidth: 1, borderColor: colors.border },
   textArea: { minHeight: 100, textAlignVertical: 'top' },
   saveBtn: { backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 16, alignItems: 'center', marginTop: 6, marginBottom: 8 },
   saveBtnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -1166,7 +1269,7 @@ const styles = StyleSheet.create({
 
   // ── Save button text ──
   saveBtnText: {
-    color: '#fff',
+    color: colors.background,
     fontWeight: '800',
     fontSize: 15,
     letterSpacing: 0.3,
@@ -1215,5 +1318,25 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '700',
+  },
+  viewerBackground: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)' },
+  viewerHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    zIndex: 10,
+  },
+  viewerClose: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

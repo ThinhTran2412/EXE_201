@@ -1,3 +1,5 @@
+using ShootMatch.Domain.Entities;
+
 namespace ShootMatch.Infrastructure.Persistence.Entities;
 
 public sealed class ServicePackageRecord
@@ -12,6 +14,9 @@ public sealed class ServicePackageRecord
     public string CallToAction { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public int DurationHours { get; set; }
+    public LocationType LocationType { get; set; } = LocationType.Flexible;
+    public AgeGroup AgeGroup { get; set; } = AgeGroup.Adults;
+    public GroupSize GroupSize { get; set; } = GroupSize.Solo;
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

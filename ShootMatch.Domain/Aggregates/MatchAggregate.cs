@@ -79,8 +79,8 @@ public sealed class MatchAggregate : AggregateRoot
     /// </summary>
     public void MarkBookingCreated()
     {
-        if (Status != MatchStatus.Active)
-            throw new DomainException($"Cannot create a booking from a match that is {Status}. Match must be Active.");
+        if (Status != MatchStatus.Active && Status != MatchStatus.BookingCreated)
+            throw new DomainException($"Cannot create a booking from a match that is {Status}. Match must be Active or BookingCreated.");
 
         Status = MatchStatus.BookingCreated;
     }

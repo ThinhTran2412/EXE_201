@@ -8,6 +8,7 @@
 
 | Loại | Tên | Mô tả |
 |------|-----|--------|
+| GraphQL | `BookingExtensions` | Bổ sung các queries/mutations liên quan đến Booking cho màn hình lịch hẹn |
 | GraphQL | `customerHomeFeed` | Featured photographers + latest portfolio photos |
 | REST | `GET /api/customers/me` | Lấy profile cá nhân của khách hàng |
 | REST | `POST /api/customers/profile` | Tạo hoặc cập nhật thông tin cá nhân khách hàng (hỗ trợ merge/fallback thông minh) |
@@ -538,6 +539,7 @@ query { myMatchesAsPhotographer { id customerId status createdAt } }
 query {
   myBookingsAsPhotographer {
     id matchId status scheduledAt agreedPrice createdAt
+    customerName customerAvatarUrl servicePackageName servicePackageImageUrl
   }
 }
 
@@ -647,6 +649,10 @@ interface Booking {
   agreedPrice?: number;
   cancellationReason?: string;
   createdAt: string;
+  customerName?: string;
+  customerAvatarUrl?: string;
+  servicePackageName?: string;
+  servicePackageImageUrl?: string;
 }
 
 interface MatchAggregate {

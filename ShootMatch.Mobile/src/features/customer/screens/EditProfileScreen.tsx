@@ -1249,17 +1249,16 @@ const styles = StyleSheet.create({
   rollGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
   },
   rollSlot: {
-    width: Math.floor((W - spacing[5] * 2 - spacing[4] * 2 - 8 * 3) / 4),
+    width: '23.5%',
     position: 'relative',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   rollSlotInner: {
     width: '100%',
-    height: Math.round(Math.floor((W - spacing[5] * 2 - spacing[4] * 2 - 8 * 3) / 4) * 1.3),
+    aspectRatio: 0.77,
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#1a1a0f',
