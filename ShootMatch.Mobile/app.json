@@ -6,12 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/images/cream_original_square.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#fff7e1"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.shootmatch.mobile",
@@ -26,7 +20,6 @@
         "backgroundColor": "#fff7e1"
       },
       "package": "com.shootmatch.mobile",
-      "edgeToEdgeEnabled": true,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION"
