@@ -37,3 +37,9 @@ Thumbs.db
 .vscode/
 !.vscode/settings.json
 !.vscode/extensions.json
+
+# Local uploads/Pictures
+Pictures/
+
+# Large media assets
+*.mp4

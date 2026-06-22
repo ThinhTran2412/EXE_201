@@ -3,7 +3,11 @@ import type { InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "../store/useAuthStore";
 import { resolveTokenRole } from "./jwt";
 
-const baseURL = "http://localhost:5062/api";
+const baseURL =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname.includes("192.168."))
+    ? "http://localhost:5062/api"
+    : "https://api.pickic.io.vn/api";
 
 export const api = axios.create({
   baseURL,

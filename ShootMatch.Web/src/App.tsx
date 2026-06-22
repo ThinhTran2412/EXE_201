@@ -12,6 +12,7 @@ import PhotographerAuth from "./pages/auth/PhotographerAuth";
 import StaffAuth from "./pages/auth/StaffAuth";
 import StaffLogin from "./pages/auth/StaffLogin";
 import StaffRegister from "./pages/auth/StaffRegister";
+import InstallPage from "./pages/InstallPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import CustomerHome from "./pages/customer/CustomerHome";
 import PhotographerHome from "./pages/photographer/PhotographerHome";
@@ -22,6 +23,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/install" element={<InstallPage />} />
 
         {/* Authentication */}
         <Route path="/auth" element={<AuthHub />} />

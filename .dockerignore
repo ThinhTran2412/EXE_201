@@ -1,0 +1,13 @@
+.git
+.github
+**/bin
+**/obj
+**/node_modules
+**/out
+**/.vs
+**/.vscode
+**/.idea
+.expo
+web-build
+dist
+build

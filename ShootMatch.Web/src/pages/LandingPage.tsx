@@ -5,7 +5,7 @@ import logoCreamHorizontal from "../assets/Logo Pickic/cream_horizontal.png";
 import logoCreamOriginalSquare from "../assets/Logo Pickic/cream_original_square.png";
 import { socialLinks as socialLinksData } from "../config/social-links";
 
-const VIDEO_URL = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260521_064421_279656fd-e76f-40a0-8fed-7456d4f7715a.mp4";
+const VIDEO_URL = "/video/Background_Landing.mp4";
 
 function Reveal({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   return <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay }} className={className}>{children}</motion.div>;
@@ -71,22 +71,29 @@ export default function LandingPage() {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-
-    // Thiết lập tốc độ phát chậm hơn (35% tốc độ bình thường)
-    video.playbackRate = 0.35;
+    video.muted = true;
 
     const onReady = () => {
+      video.playbackRate = 0.5;
       setIsLoaded(true);
       video.play().catch((err) => console.log("Autoplay block:", err));
     };
 
-    if (video.readyState >= 3) {
+    if (video.readyState >= 2) {
       onReady();
     } else {
-      video.addEventListener("canplaythrough", onReady);
+      video.addEventListener("loadeddata", onReady);
     }
 
-    return () => video.removeEventListener("canplaythrough", onReady);
+    // Fallback: hide loading screen after 2.5s
+    const fallbackTimeout = setTimeout(() => {
+      setIsLoaded(true);
+    }, 2500);
+
+    return () => {
+      video.removeEventListener("loadeddata", onReady);
+      clearTimeout(fallbackTimeout);
+    };
   }, []);
 
   useEffect(() => {
@@ -175,6 +182,7 @@ export default function LandingPage() {
         </a>
         <div className="hidden lg:flex items-stretch bg-[#0a0a06]/20 backdrop-blur-[40px] border border-[#fff7e1]/[0.05] rounded-full overflow-hidden p-[2px]">
           <nav className="flex items-center justify-center px-5 font-mono text-[10px] tracking-[-0.01em]">
+            <a href="/install"><NavItem text="TẢI ỨNG DỤNG" /></a>
             <NavItem text="NHIẾP ẢNH GIA" />
           </nav>
           <button className="bg-[#fff7e1] text-[#0a0a06] px-5 py-2 font-mono text-[10px] leading-4 font-bold tracking-[-0.01em] hover:bg-[#ffe8c0] transition-colors rounded-full">
@@ -198,6 +206,9 @@ export default function LandingPage() {
             className="fixed inset-x-0 top-20 z-40 mx-auto w-[90%] bg-black/95 border border-white/10 backdrop-blur-2xl rounded-2xl p-6 flex flex-col gap-5 lg:hidden"
           >
             <div className="flex flex-col gap-3">
+              <a href="/install" className="font-mono text-sm tracking-widest text-white/80 py-2 border-b border-white/5">
+                TẢI ỨNG DỤNG
+              </a>
               <a href="#" className="font-mono text-sm tracking-widest text-white/80 py-2 border-b border-white/5">
                 NHIẾP ẢNH GIA
               </a>
@@ -510,6 +521,127 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Redesigned App Switch Showcase Section */}
+        <section className="w-[90%] max-w-[1100px] mx-auto py-28 md:py-36 border-t border-[#fff7e1]/[0.06] pointer-events-auto">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-16 items-center">
+            
+            {/* Left Content Column */}
+            <div className="md:col-span-7 flex flex-col items-start text-left">
+              <Reveal delay={0.1}>
+                <span className="block h-[2px] w-16 bg-[#ff4200] rounded-full mb-6" aria-hidden />
+                <p className="font-mono text-xs font-bold tracking-[0.25em] text-[#ff4200] uppercase mb-4">
+                  ỨNG DỤNG DI ĐỘNG
+                </p>
+                <h2 className="font-anton text-3xl md:text-5xl text-[#fff7e1] tracking-wide mb-8 leading-snug">
+                  Pickic luôn bên bạn <br />
+                  trên mọi thiết bị
+                </h2>
+                <p className="text-sm md:text-base text-[#fff7e1]/60 font-light max-w-[540px] mb-8 leading-relaxed">
+                  Trải nghiệm nền tảng nhiếp ảnh hàng đầu được tối ưu hóa riêng cho thiết bị di động. Nhẹ hơn, nhanh hơn và tích hợp sâu với hệ điều hành của bạn.
+                </p>
+              </Reveal>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full mb-10">
+                <Reveal delay={0.2} className="p-6 rounded-xl border border-[#fff7e1]/[0.05] bg-white/[0.02] backdrop-blur-sm hover:border-[#ff4200]/30 transition-all duration-300">
+                  <h3 className="font-mono text-xs font-bold tracking-wider text-[#fff7e1] uppercase mb-2 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#ff4200]" /> iOS PWA
+                  </h3>
+                  <p className="text-xs text-[#fff7e1]/50 font-light leading-relaxed">
+                    Cài đặt trực tiếp qua Safari mà không cần thông qua App Store. Tiết kiệm dung lượng tối đa.
+                  </p>
+                </Reveal>
+
+                <Reveal delay={0.3} className="p-6 rounded-xl border border-[#fff7e1]/[0.05] bg-white/[0.02] backdrop-blur-sm hover:border-[#ff4200]/30 transition-all duration-300">
+                  <h3 className="font-mono text-xs font-bold tracking-wider text-[#fff7e1] uppercase mb-2 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#ff4200]" /> Android APK
+                  </h3>
+                  <p className="text-xs text-[#fff7e1]/50 font-light leading-relaxed">
+                    Phiên bản Native hiệu năng cao dành cho các thiết bị Android, cài đặt dễ dàng bằng tệp APK trực tiếp.
+                  </p>
+                </Reveal>
+              </div>
+
+              <Reveal delay={0.5}>
+                <a href="/install" className="inline-flex items-center gap-3 px-8 py-4 bg-[#ff4200] hover:bg-[#e63b00] text-[#fff7e1] rounded-full font-mono text-xs tracking-widest uppercase transition-all duration-300 hover:shadow-[0_0_30px_rgba(255,66,0,0.3)]">
+                  Cài đặt ứng dụng ngay
+                </a>
+              </Reveal>
+            </div>
+
+            {/* Right Interactive Mockup Column */}
+            <div className="md:col-span-5 flex justify-center items-center relative">
+              <Reveal delay={0.3} className="relative w-full max-w-[320px]">
+                {/* Decorative Glowing Orbs behind the phone */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-[#ff4200]/20 to-[#3617cf]/30 rounded-[40px] filter blur-2xl z-0 scale-95 pointer-events-none" />
+                
+                {/* CSS Phone Frame */}
+                <div className="relative z-10 w-full aspect-[18/37] rounded-[42px] border-[6px] border-[#fff7e1]/20 bg-[#0a0a06] shadow-[0_25px_60px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col p-3">
+                  
+                  {/* Phone Notch/Dynamic Island */}
+                  <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-24 h-5 rounded-full bg-black z-30 flex items-center justify-between px-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-900/30" />
+                    <span className="w-3.5 h-1 bg-neutral-900 rounded-full" />
+                  </div>
+
+                  {/* Phone Screen Mock Content */}
+                  <div className="w-full h-full rounded-[32px] bg-[#0c0c08] border border-white/5 overflow-hidden flex flex-col pt-6 pb-2 px-3 justify-between relative">
+                    
+                    {/* Mock Header */}
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                      <span className="font-anton text-xs text-[#fff7e1]">PICKIC APP</span>
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    </div>
+
+                    {/* Mock Cards Body */}
+                    <div className="flex-1 flex flex-col gap-2.5 py-4 overflow-hidden justify-center">
+                      
+                      {/* Mini Photographer Card Mock */}
+                      <div className="p-3 rounded-xl border border-white/10 bg-white/[0.02] flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#ff4200]/20 border border-[#ff4200]/30 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="h-2 bg-[#fff7e1]/40 rounded w-16 mb-1.5" />
+                          <div className="h-1.5 bg-[#fff7e1]/20 rounded w-24" />
+                        </div>
+                      </div>
+
+                      {/* Mock UI Element - Status */}
+                      <div className="p-3 rounded-xl border border-[#ff4200]/20 bg-[#ff4200]/5 flex items-center justify-between">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-mono text-[7px] text-[#ff4200] uppercase tracking-widest">ĐANG ĐỒNG BỘ API</span>
+                          <span className="text-[10px] text-[#fff7e1] font-semibold">api.pickic.io.vn</span>
+                        </div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#ff4200]" />
+                      </div>
+
+                      {/* Mock UI Element - System Grid */}
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <div className="p-2.5 rounded-lg border border-white/5 bg-white/[0.01] flex flex-col items-center justify-center text-center">
+                          <span className="font-anton text-xs text-[#fff7e1]">iOS</span>
+                          <span className="text-[8px] text-[#fff7e1]/40 uppercase tracking-widest mt-1">PWA</span>
+                        </div>
+                        <div className="p-2.5 rounded-lg border border-white/5 bg-white/[0.01] flex flex-col items-center justify-center text-center">
+                          <span className="font-anton text-xs text-[#fff7e1]">ANDROID</span>
+                          <span className="text-[8px] text-[#fff7e1]/40 uppercase tracking-widest mt-1">APK</span>
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* Mock Action Footer */}
+                    <div className="w-full flex flex-col gap-2 pt-2 border-t border-white/5">
+                      <div className="h-8 rounded-xl bg-[#ff4200] flex items-center justify-center text-center font-mono text-[9px] font-bold text-white uppercase tracking-wider">
+                        INSTALL NOW
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+
+          </div>
+        </section>
+
         <section ref={screen3Ref} className="w-full pb-28 pointer-events-auto">
           <div
             className="w-[80%] mx-auto"
@@ -684,7 +816,25 @@ export default function LandingPage() {
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             className="fixed right-0 top-1/2 z-20 -translate-y-1/2 pointer-events-auto"
           >
-            <div className="group flex items-center">
+            <div className="group flex flex-col items-end gap-3">
+              {/* Floating Install Button styled matching the Social dock */}
+              <a
+                href="/install"
+                aria-label="Cài đặt ứng dụng Pickic"
+                className="group relative flex h-[92px] w-[40px] -translate-x-[1px] items-center justify-center overflow-hidden rounded-l-[20px] border border-r-0 border-[#fff7e1]/10 bg-[#0a0a06]/88 text-[#fff7e1] shadow-[0_0_28px_rgba(255,66,0,0.34),0_0_70px_rgba(255,66,0,0.18),0_18px_52px_rgba(0,0,0,0.38)] backdrop-blur-xl transition-transform duration-300 hover:-translate-x-[4px] hover:bg-[#12110d] hover:shadow-[0_0_42px_rgba(255,66,0,0.58),0_0_110px_rgba(255,66,0,0.36),0_18px_52px_rgba(0,0,0,0.38)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff4200]/70"
+              >
+                <span className="absolute inset-0 rounded-l-[20px] shadow-[inset_0_0_0_1px_rgba(255,66,0,0.28),0_0_30px_rgba(255,66,0,0.35)] transition-shadow duration-300 group-hover:shadow-[inset_0_0_0_1px_rgba(255,66,0,0.42),0_0_48px_rgba(255,66,0,0.55)]" aria-hidden />
+                <span className="absolute inset-y-3 right-1.5 w-px bg-gradient-to-b from-transparent via-[#ff4200]/60 to-transparent animate-pulse" aria-hidden />
+                <span className="absolute inset-0 rounded-l-[20px] bg-[radial-gradient(circle_at_50%_50%,rgba(255,66,0,0.18),transparent_60%)] opacity-70 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
+                <span className="relative flex flex-col items-center">
+                  <span className="font-mono text-[9px] font-bold uppercase tracking-[0.28em] text-[#fff7e1]/78 [writing-mode:vertical-rl] rotate-180">
+                    Install
+                  </span>
+                </span>
+              </a>
+
+              {/* Social Dock */}
+              <div className="flex items-center">
               <button
                 type="button"
                 onClick={() => setSocialDockExpanded((v) => !v)}
@@ -733,6 +883,7 @@ export default function LandingPage() {
                   </div>
                 </div>
               </motion.div>
+              </div>
             </div>
           </motion.aside>
         )}

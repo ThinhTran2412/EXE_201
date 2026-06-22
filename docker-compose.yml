@@ -1,0 +1,43 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ShootMatch.Api/Dockerfile
+    container_name: pickic-api
+    ports:
+      - "5062:5062"
+    volumes:
+      - ./Pictures:/data/Pictures
+    restart: always
+
+  web:
+    build:
+      context: ./ShootMatch.Web
+    container_name: pickic-landing
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./ShootMatch.Web:/app
+      - /app/node_modules
+    restart: always
+
+  mobile:
+    build:
+      context: ./ShootMatch.Mobile
+    container_name: pickic-pwa
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./ShootMatch.Mobile:/app
+      - /app/node_modules
+    restart: always
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: pickic-tunnel
+    network_mode: host
+    user: "1000:1000"
+    volumes:
+      - /home/thai-thinh/.cloudflared:/home/thai-thinh/.cloudflared
+    command: tunnel --config /home/thai-thinh/.cloudflared/config.yml run pickic
+    restart: always

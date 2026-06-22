@@ -1,67 +1,30 @@
 #!/bin/bash
 
 # =============================================
-#  ShootMatch – Khởi động toàn bộ hệ thống
-#  Backend | Mobile Web | Cloudflare Tunnel
+#  ShootMatch – Khởi động hệ thống qua Docker Compose
 # =============================================
 
 echo ""
-echo "🚀  ShootMatch – Đang khởi động hệ thống..."
+echo "🚀  ShootMatch – Đang khởi động hệ thống qua Docker Compose..."
 echo ""
 
-if command -v gnome-terminal &> /dev/null; then
+# Dừng các container cũ nếu có
+docker compose down --remove-orphans
 
-  # Mở 3 cửa sổ terminal riêng biệt
-  gnome-terminal --title="🟢 Backend API" \
-    -- bash -c "cd /data/EXE201/ShootMatch.Api && dotnet run --launch-profile production; exec bash" &
+# Khởi động và build các dịch vụ
+docker compose up -d --build
 
-  sleep 0.5
+echo ""
+echo "✅  Các dịch vụ đã được khởi chạy trong Docker:"
+echo "   🟢 Backend API      → http://localhost:5062"
+echo "   📱 PWA App          → http://localhost:8081"
+echo "   🌐 Landing Page     → http://localhost:5173"
+echo "   ☁️  Cloudflare Tunnel → tunnel: pickic (app.pickic.io.vn)"
+echo ""
+echo "👉 Bạn có thể quản lý các container trực quan bằng phần mềm Docker Desktop vừa cài đặt."
+echo "👉 Theo dõi log hệ thống: docker compose logs -f"
+echo "👉 Dừng hệ thống: docker compose down"
+echo ""
 
-  gnome-terminal --title="🌐 Mobile Web" \
-    -- bash -c "cd /data/EXE201/ShootMatch.Mobile && npm run web; exec bash" &
-
-  sleep 0.5
-
-  gnome-terminal --title="☁️ Cloudflare Tunnel" \
-    -- bash -c "cd /data/EXE201 && /usr/local/bin/cloudflared tunnel run pickic; echo 'Tunnel exited.'; read -p 'Press Enter...'; exec bash" &
-
-  echo "✅  Đã mở 3 cửa sổ terminal riêng biệt:"
-  echo "   🟢 Backend API      → http://localhost:5062"
-  echo "   🌐 Mobile Web       → http://localhost:8081"
-  echo "   ☁️  Cloudflare       → tunnel: pickic"
-  echo ""
-  echo "   (Nhìn Taskbar để thấy 3 cửa sổ)"
-  sleep 2
-
-elif command -v tmux &> /dev/null; then
-
-  SESSION="shootmatch"
-  tmux has-session -t $SESSION 2>/dev/null && tmux kill-session -t $SESSION
-
-  tmux new-session  -d -s $SESSION -n "Backend"   "cd /data/EXE201/ShootMatch.Api && dotnet run --launch-profile production"
-  tmux new-window      -t $SESSION -n "Web"        "cd /data/EXE201/ShootMatch.Mobile && npm run web"
-  tmux new-window      -t $SESSION -n "Cloudflare" "/usr/local/bin/cloudflared tunnel run pickic"
-  tmux select-window   -t $SESSION:Backend
-
-  echo "✅  Đã tạo tmux session '$SESSION' với 3 windows:"
-  echo "   Ctrl+B + 0  → Backend"
-  echo "   Ctrl+B + 1  → Mobile Web"
-  echo "   Ctrl+B + 2  → Cloudflare"
-  echo ""
-  tmux attach -t $SESSION
-
-else
-
-  echo "⚠️  Không tìm thấy gnome-terminal hay tmux. Chạy nền..."
-  LOG_DIR="/tmp"
-
-  (cd /data/EXE201/ShootMatch.Api    && dotnet run --launch-profile production) > "$LOG_DIR/sm-backend.log"    2>&1 &
-  (cd /data/EXE201/ShootMatch.Mobile && npm run web)                            > "$LOG_DIR/sm-web.log"         2>&1 &
-  /usr/local/bin/cloudflared tunnel run pickic		                                        > "$LOG_DIR/sm-cloudflare.log"  2>&1 &
-
-  PIDS="$! "
-  echo "✅  Đang chạy nền. Log tại /tmp/sm-*.log"
-  trap "kill $(jobs -p) 2>/dev/null; exit" INT
-  wait
-
-fi
+# Tự động theo dõi logs
+docker compose logs -f
