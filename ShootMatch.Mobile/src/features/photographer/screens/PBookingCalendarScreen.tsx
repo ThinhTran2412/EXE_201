@@ -10,7 +10,7 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -104,13 +104,7 @@ function normalizeTime(time: string) {
 }
 
 const INITIAL_EVENTS = (): BookingEvent[] => {
-  const todayStr = toKey(new Date());
-  return [
-    { id: '1', date: todayStr, time: '09:15', title: 'Chụp cưới ngoại cảnh', customer: 'Lâm Minh Anh', shootType: 'Wedding (Chụp Cưới)', city: 'Đà Lạt', status: 'Confirmed', location: 'Hồ Tuyền Lâm, Đà Lạt', price: 4500000 },
-    { id: '2', date: todayStr, time: '14:30', title: 'Chụp chân dung cá nhân', customer: 'Nguyễn Hồng Nhung', shootType: 'Portrait (Chân Dung)', city: 'TP.HCM', status: 'Pending', location: 'Phố đi bộ Nguyễn Huệ, Quận 1', price: 1200000 },
-    { id: '3', date: '2026-05-12', time: '18:00', title: 'Sự kiện khai trương', customer: 'Công ty Cổ phần ABC', shootType: 'Event (Sự Kiện)', city: 'TP.HCM', status: 'Confirmed', location: 'Gigamall Phạm Văn Đồng, Thủ Đức', price: 2800000 },
-    { id: '4', date: '2026-05-21', time: '10:45', title: 'Chụp ảnh gia đình ngoại cảnh', customer: 'Gia đình anh Huy', shootType: 'Family (Gia Đình)', city: 'TP.HCM', status: 'Completed', location: 'Công viên Gia Định, Phú Nhuận', price: 2200000 },
-  ];
+  return [];
 };
 
 function getMonthGrid(year: number, month: number) {
@@ -127,10 +121,11 @@ function getMonthGrid(year: number, month: number) {
 export default function PBookingCalendarScreen() {
   const navigation = useNavigation<any>();
   const { colors, isDark } = usePhotographerTheme();
+  const insets = useSafeAreaInsets();
 
   const { width: windowWidth } = useWindowDimensions();
   const SCREEN_WIDTH = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
-  const CELL = Math.floor((SCREEN_WIDTH - spacing[6] * 2 - 12 * 6) / 7);
+  const CELL = Math.floor((SCREEN_WIDTH - 64 - 12 * 6) / 7);
   const styles = React.useMemo(() => getStyles(colors, CELL), [colors, CELL]);
 
   const [selected, setSelected] = useState(new Date());
@@ -140,9 +135,9 @@ export default function PBookingCalendarScreen() {
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [selectionEnabled, setSelectionEnabled] = useState(false);
   const [collapsedShifts, setCollapsedShifts] = useState<Record<ShiftKey, boolean>>({
-    morning: false,
-    afternoon: false,
-    evening: false,
+    morning: true,
+    afternoon: true,
+    evening: true,
   });
 
   const year = selected.getFullYear();
@@ -365,6 +360,15 @@ export default function PBookingCalendarScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) }]}>
+        <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Tùy biến lịch</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <LinearGradient colors={isDark ? [colors.surface, colors.surfaceStrong] : ['#ffffff', '#fffcf5']} style={styles.hero}>
           <View style={styles.heroTop}>
@@ -606,7 +610,7 @@ export default function PBookingCalendarScreen() {
 
           <View style={styles.sectionHead}>
             <View>
-              <Text style={styles.sectionEyebrow}>Lịch trong ngày</Text>
+              <Text style={styles.sectionEyebrow}>Lịch hẹn</Text>
               <Text style={styles.sectionHeading}>Chi tiết Booking & Trạng thái</Text>
             </View>
           </View>
@@ -721,6 +725,26 @@ function Legend({ color, label }: { color: string; label: string }) {
 
 const getStyles = (colors: any, CELL: number) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(230, 126, 34, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+  },
   content: { padding: spacing[4], gap: spacing[4], backgroundColor: colors.background },
   hero: {
     borderRadius: radius.xl,
@@ -763,7 +787,7 @@ const getStyles = (colors: any, CELL: number) => StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surfaceStrong, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: colors.border },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { color: colors.text, fontSize: 12 },
-  weekRow: { flexDirection: 'row' },
+  weekRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },
   weekLabel: { width: CELL, textAlign: 'center', color: colors.textMuted, fontSize: 11, fontWeight: fontWeights.bold },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   cell: { borderRadius: 18, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.borderStrong, shadowColor: colors.border, shadowOpacity: 0.04, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 0 },

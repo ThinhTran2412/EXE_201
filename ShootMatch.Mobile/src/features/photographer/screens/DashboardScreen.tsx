@@ -52,6 +52,7 @@ export default function DashboardScreen() {
   const [activeTab, setActiveTab] = useState<0|1|2|3>(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [requestsExpanded, setRequestsExpanded] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [bookings, setBookings] = useState<any[]>([]);
   const [feed, setFeed] = useState<any[]>([]);
@@ -238,7 +239,7 @@ export default function DashboardScreen() {
       frameNum: '03',
     },
     {
-      label: 'Lịch Chi Tiết',
+      label: 'Tùy biến lịch của bạn',
       sub: 'Xem & xếp lịch',
       icon: 'calendar-outline',
       target: 'BookingCalendar',
@@ -452,37 +453,55 @@ export default function DashboardScreen() {
           {pendingBookings.length > 0 && (
             <Animated.View entering={FadeInDown.delay(200)} style={styles.section}>
               <View style={styles.sectionHead}>
-                <Text style={styles.sectionTitle}>Yêu Cầu Mới</Text>
-                <View style={styles.pendingBadgeCount}><Text style={styles.pendingBadgeCountText}>{pendingBookings.length} đang chờ</Text></View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={styles.sectionTitle}>Yêu Cầu Mới</Text>
+                  <View style={styles.pendingBadgeCount}>
+                    <Text style={styles.pendingBadgeCountText}>{pendingBookings.length}</Text>
+                  </View>
+                </View>
+                <Pressable 
+                  style={{ 
+                    paddingHorizontal: 12, 
+                    paddingVertical: 6, 
+                    borderRadius: 999, 
+                    borderWidth: 1, 
+                    borderColor: colors.border, 
+                    backgroundColor: colors.surfaceStrong 
+                  }} 
+                  onPress={() => setRequestsExpanded(prev => !prev)}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text }}>
+                    {requestsExpanded ? 'Thu gọn' : 'Mở rộng'}
+                  </Text>
+                </Pressable>
               </View>
               
-              {pendingBookings.map((b, idx) => (
-                <View key={b.id} style={[styles.reqCard, idx > 0 && { marginTop: 12 }]}>
-                  <Image source={{ uri: 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=600&auto=format&fit=crop' }} style={styles.reqImg} />
-                  <View style={styles.reqBadge}>
-                    <View style={styles.dotNew} />
-                    <Text style={styles.reqBadgeText}>Yêu Cầu Mới</Text>
+              {requestsExpanded && pendingBookings.map((b, idx) => (
+                <View key={b.id} style={[styles.reqCard, idx > 0 && { marginTop: 8 }]}>
+                  <Image 
+                    source={{ uri: b.servicePackageImageUrl ? formatPhotoUrl(b.servicePackageImageUrl) : 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=600&auto=format&fit=crop' }} 
+                    style={styles.reqImg} 
+                  />
+                  <View style={styles.reqInfo}>
+                    <Text style={styles.reqTitle} numberOfLines={1}>{b.customerName || `Khách hàng #${b.customerId.slice(0, 5)}`}</Text>
+                    <Text style={styles.reqPackage} numberOfLines={1}>
+                      {b.servicePackageName || b.requirements || 'Gói chụp riêng'}
+                    </Text>
+                    <View style={styles.reqMetaRow}>
+                      <Ionicons name="time-outline" size={10} color={colors.textMuted} />
+                      <Text style={styles.reqMetaText} numberOfLines={1}>
+                        {new Date(b.scheduledAt).toLocaleDateString('vi-VN')} · {new Date(b.scheduledAt).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})}
+                      </Text>
+                    </View>
+                    <Text style={styles.reqPrice}>{b.agreedPrice?.toLocaleString()}₫</Text>
                   </View>
-                  <View style={styles.reqBody}>
-                    <Text style={styles.reqTitle}>Khách hàng #{b.customerId.slice(0, 5)}</Text>
-                    <View style={styles.reqMeta}>
-                      <View style={styles.reqMetaItem}>
-                        <Ionicons name="time-outline" size={12} color={colors.textMuted} />
-                        <Text style={styles.reqMetaText}>{new Date(b.scheduledAt).toLocaleDateString('vi-VN')} · {new Date(b.scheduledAt).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.reqPriceRow}>
-                      <Text style={styles.reqPrice}>{b.agreedPrice?.toLocaleString()}</Text>
-                      <Text style={styles.reqDur}>₫</Text>
-                    </View>
-                    <View style={styles.reqBtns}>
-                      <Pressable style={styles.btnAccept} onPress={async () => { await confirmBooking(b.id); handleRefresh(); }}>
-                        <Text style={styles.btnAcceptText}>✓ Chấp Nhận</Text>
-                      </Pressable>
-                      <Pressable style={styles.btnRefuse} onPress={async () => { await cancelBooking(b.id, 'Busy'); handleRefresh(); }}>
-                        <Text style={styles.btnRefuseText}>✕ Từ Chối</Text>
-                      </Pressable>
-                    </View>
+                  <View style={styles.reqActionCol}>
+                    <Pressable style={styles.btnAcceptSmall} onPress={async () => { await confirmBooking(b.id); handleRefresh(); }}>
+                      <Text style={styles.btnAcceptTextSmall}>✓ Nhận</Text>
+                    </Pressable>
+                    <Pressable style={styles.btnRefuseSmall} onPress={async () => { await cancelBooking(b.id, 'Busy'); handleRefresh(); }}>
+                      <Text style={styles.btnRefuseTextSmall}>✕ Hủy</Text>
+                    </Pressable>
                   </View>
                 </View>
               ))}
@@ -506,8 +525,10 @@ export default function DashboardScreen() {
                       <Text style={[styles.schedAmpm, isFirst && styles.schedAmpmActive]}>{d.getHours() >= 12 ? 'chiều' : 'sáng'}</Text>
                     </View>
                     <View style={styles.schedInfo}>
-                      <Text style={styles.schedName}>Khách hàng #{b.customerId.slice(0,4)}</Text>
-                      <Text style={styles.schedSub}>Trạng thái: {b.status}</Text>
+                      <Text style={styles.schedName}>{b.customerName || `Khách hàng #${b.customerId.slice(0,4)}`}</Text>
+                      <Text style={styles.schedSub} numberOfLines={1}>
+                        {b.servicePackageName || b.requirements || 'Gói chụp riêng'} · {b.status}
+                      </Text>
                     </View>
                     <View style={styles.schedRight}>
                       <Text style={styles.schedPrice}>{b.agreedPrice?.toLocaleString()}₫</Text>
@@ -1096,24 +1117,19 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   pendingBadgeCount: { backgroundColor: 'rgba(255,66,0,0.12)', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 20 },
   pendingBadgeCountText: { fontSize: 9, fontWeight: '700', color: colors.accent, textTransform: 'uppercase' },
   
-  reqCard: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
-  reqImg: { width: '100%', height: 160, opacity: 0.7 },
-  reqBadge: { position: 'absolute', top: 14, left: 14, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.accent, borderRadius: 20, paddingVertical: 5, paddingHorizontal: 12 },
-  dotNew: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFFBF0' },
-  reqBadgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase', color: '#FFFBF0' },
-  reqBody: { backgroundColor: colors.surfaceStrong, padding: 18 },
-  reqTitle: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: 6 },
-  reqMeta: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  reqMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  reqMetaText: { fontSize: 11, color: colors.textMuted },
-  reqPriceRow: { flexDirection: 'row', alignItems: 'baseline' },
-  reqPrice: { fontSize: 24, fontWeight: '900', color: colors.accent },
-  reqDur: { fontSize: 12, color: colors.textLight, marginLeft: 4 },
-  reqBtns: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  btnAccept: { flex: 1, backgroundColor: colors.text, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
-  btnAcceptText: { fontSize: 11, fontWeight: '800', color: colors.background, letterSpacing: 1, textTransform: 'uppercase' },
-  btnRefuse: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
-  btnRefuseText: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, textTransform: 'uppercase' },
+  reqCard: { flexDirection: 'row', padding: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 16, alignItems: 'center', gap: 12 },
+  reqImg: { width: 60, height: 60, borderRadius: 10 },
+  reqInfo: { flex: 1, minWidth: 0 },
+  reqTitle: { fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 2 },
+  reqPackage: { fontSize: 11, fontWeight: '600', color: colors.textMuted, marginBottom: 4 },
+  reqMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  reqMetaText: { fontSize: 9, color: colors.textMuted },
+  reqPrice: { fontSize: 13, fontWeight: '900', color: colors.accent },
+  reqActionCol: { gap: 6, alignItems: 'stretch', minWidth: 65 },
+  btnAcceptSmall: { backgroundColor: colors.text, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, alignItems: 'center' },
+  btnAcceptTextSmall: { fontSize: 9, fontWeight: '800', color: colors.background, textTransform: 'uppercase' },
+  btnRefuseSmall: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, alignItems: 'center' },
+  btnRefuseTextSmall: { fontSize: 9, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase' },
 
   schedList: { gap: 8 },
   schedCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14 },

@@ -114,6 +114,7 @@ export default function PhotographerProfileScreen() {
   const [selectedShift, setSelectedShift] = useState<'Sáng' | 'Trưa' | 'Chiều'>('Sáng');
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewsExpanded, setReviewsExpanded] = useState(false);
 
   // State for Lightbox
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
@@ -651,13 +652,29 @@ export default function PhotographerProfileScreen() {
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <Text style={styles.sectionTitle}>Đánh Giá ({reviews.length})</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={{ color: '#fbbf24', fontSize: 12 }}>
-                {'★'.repeat(Math.round(p.rating || 0)) + '☆'.repeat(5 - Math.round(p.rating || 0))}
-              </Text>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.accent }}>
-                {p.rating ? p.rating.toFixed(1) : '0.0'}
-              </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ color: '#fbbf24', fontSize: 12 }}>
+                  {'★'.repeat(Math.round(p.rating || 0)) + '☆'.repeat(5 - Math.round(p.rating || 0))}
+                </Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.accent }}>
+                  {p.rating ? p.rating.toFixed(1) : '0.0'}
+                </Text>
+              </View>
+              {reviews.length > 0 && (
+                <Pressable
+                  style={{
+                    width: 30, height: 30, borderRadius: 15,
+                    backgroundColor: 'rgba(230, 126, 34, 0.1)',
+                    justifyContent: 'center', alignItems: 'center',
+                    borderWidth: 1, borderColor: 'rgba(230, 126, 34, 0.2)'
+                  }}
+                  onPress={() => setReviewsExpanded(v => !v)}
+                  accessibilityLabel={reviewsExpanded ? 'Thu gọn đánh giá' : 'Mở rộng đánh giá'}
+                >
+                  <Ionicons name={reviewsExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={THEME.accent} />
+                </Pressable>
+              )}
             </View>
           </View>
           <View style={{ gap: 12 }}>
@@ -668,7 +685,7 @@ export default function PhotographerProfileScreen() {
                 <Ionicons name="star-outline" size={18} color="rgba(26,26,15,0.4)" />
                 <Text style={styles.reviewEmptyText}>Chưa có đánh giá nào cho nhiếp ảnh gia này.</Text>
               </View>
-            ) : (
+            ) : reviewsExpanded ? (
               reviews.map((r, i) => (
                 <View key={r.id || i} style={styles.reviewCard}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -699,6 +716,13 @@ export default function PhotographerProfileScreen() {
                   <Text style={{ fontSize: 12, lineHeight: 18, opacity: 0.7, color: THEME.accent }}>"{r.comment}"</Text>
                 </View>
               ))
+            ) : (
+              <Pressable onPress={() => setReviewsExpanded(true)} style={styles.reviewEmptyState}>
+                <Ionicons name="chatbubbles-outline" size={18} color={THEME.accent} />
+                <Text style={[styles.reviewEmptyText, { color: THEME.accent, fontWeight: '600', opacity: 1 }]}>
+                  Nhấn để xem {reviews.length} đánh giá
+                </Text>
+              </Pressable>
             )}
           </View>
         </View>
@@ -733,6 +757,12 @@ export default function PhotographerProfileScreen() {
           {lightboxImg && (
             <Image source={{ uri: formatImageUrl(lightboxImg) }} style={{ width: '95%', height: '95%', resizeMode: 'contain' }} />
           )}
+          <Pressable 
+            style={[styles.lightboxCloseBtn, { top: Math.max(insets.top, 24) }]} 
+            onPress={() => setLightboxImg(null)}
+          >
+            <Ionicons name="close" size={28} color="#fff" />
+          </Pressable>
         </View>
       </Modal>
 
@@ -822,4 +852,5 @@ const styles = StyleSheet.create({
   bookBtnText: { color: THEME.primary, fontSize: 13, fontWeight: '600' },
 
   lightbox: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', alignItems: 'center', justifyContent: 'center' },
+  lightboxCloseBtn: { position: 'absolute', right: 24, zIndex: 100, padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 24 },
 });

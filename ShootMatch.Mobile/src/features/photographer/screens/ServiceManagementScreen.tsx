@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import {
   ScrollView,
   StyleSheet,
@@ -115,6 +116,7 @@ export default function ServiceManagementScreen() {
   const { colors, isDark } = usePhotographerTheme();
   const styles = getStyles(colors);
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const [services, setServices] = useState<ServicePackage[]>([]);
   const [editorVisible, setEditorVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -319,6 +321,15 @@ export default function ServiceManagementScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) }]}>
+        <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Quản lý dịch vụ</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
       <ScrollView
         onLayout={(e) => {
           setScrollWidth(e.nativeEvent.layout.width);
@@ -916,7 +927,27 @@ function LinearButtonLabel({ label }: { label: string }) {
 
 const getStyles = (colors: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingBottom: 36 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(230, 126, 34, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  scroll: { paddingBottom: 100 },
   hero: {
     margin: 16,
     borderRadius: 28,

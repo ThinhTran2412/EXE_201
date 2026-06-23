@@ -121,7 +121,14 @@ export async function updateProfile(payload: Partial<PhotographerProfile>) {
 }
 
 export async function updateEquipments(equipments: Omit<PhotographerEquipment, 'photographerId'>[]) {
-  await apiClient.put('/api/photographers/equipments', { equipments });
+  const cleaned = equipments.map(e => ({
+    id: (e.id && typeof e.id === 'string' && e.id.startsWith('temp_')) ? null : e.id,
+    category: e.category,
+    name: e.name,
+    description: e.description,
+    isPrimary: e.isPrimary,
+  }));
+  await apiClient.put('/api/photographers/equipments', { equipments: cleaned });
 }
 
 export async function updatePersonalInfo(payload: {

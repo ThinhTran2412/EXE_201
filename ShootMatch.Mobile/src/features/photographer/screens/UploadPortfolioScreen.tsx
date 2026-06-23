@@ -746,7 +746,7 @@ export default function UploadPortfolioScreen() {
 
       {/* IMAGE VIEWER OVERLAY VIEW */}
       {viewerIndex !== null && (
-        <View style={[StyleSheet.absoluteFill, styles.viewerBackground, { zIndex: 9999, paddingTop: Math.max(0, insets.top - 2), paddingBottom: (insets.bottom || 8) + 4 }]}>
+        <View style={[StyleSheet.absoluteFill, styles.viewerBackground, { zIndex: 9999, paddingTop: Math.max(20, insets.top + 10), paddingBottom: Math.max(16, insets.bottom + 10) }]}>
 
           {/* Header */}
           <View style={styles.viewerHeader}>
@@ -773,9 +773,9 @@ export default function UploadPortfolioScreen() {
           </View>
 
           {/* Grouping Image, Tags and Thumbnails to shift them down visually without changing layout bounds (prevents image shrinking) */}
-          <View style={{ flex: 1, transform: [{ translateY: 30 }] }}>
-            {/* Main Full-Screen List */}
-            <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+          <View style={{ flex: 1, transform: [{ translateY: 10 }] }}>
+            {/* Main Full-Screen Area */}
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', position: 'relative' }} {...panResponder.panHandlers}>
               <FlatList
                 ref={flatListRef}
                 data={photoData}
@@ -788,23 +788,22 @@ export default function UploadPortfolioScreen() {
                 viewabilityConfig={viewabilityConfig}
                 renderItem={({ item }) => (
                   <View style={{ width: SCREEN_WIDTH, flex: 1, flexDirection: 'column', paddingBottom: 6 }}>
-                    {/* Image container occupies remaining space, scales image as large as possible */}
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: SCREEN_WIDTH, overflow: 'hidden' }}>
                       <PortfolioImageCell
                         uri={item.url}
-                        style={{ width: SCREEN_WIDTH, height: '100%' }}
-                        borderRadius={0}
+                        style={{ width: SCREEN_WIDTH * 0.9, height: SCREEN_HEIGHT * 0.6 }}
+                        borderRadius={8}
                         resizeMode="contain"
                       />
                     </View>
 
                     {/* Clean Tags positioned at the bottom of the middle area, right under the image */}
-                    <View>
+                    <View style={{ height: 60, justifyContent: 'center' }}>
                       <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.viewerTagsContainer}
-                        style={{ flexGrow: 0, paddingVertical: 24 }}
+                        style={{ flexGrow: 0, paddingVertical: 10 }}
                       >
                         {item.styles.length === 0 && item.concepts.length === 0 ? (
                           <Text style={styles.noTagsText}>Nhấn "Gắn thẻ" để phân loại ảnh</Text>
@@ -1116,7 +1115,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 2,
+    paddingVertical: 10,
     width: '100%',
   },
   viewerClose: {

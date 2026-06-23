@@ -19,7 +19,10 @@ import {
   confirmBooking,
   completeBooking,
   updateBookingSessionStatus,
-  getCustomerById
+  getCustomerById,
+  getMyReviews,
+  getPhotographerReviews,
+  Review
 } from '../api';
 import { getMyBookingsAsPhotographer } from '../../photographer/api';
 import * as ChatHub from '../../chat/ChatHub';
@@ -258,6 +261,7 @@ export default function BookingDetailScreen() {
   const [comment,        setComment]        = useState('');
   const [submittingRev,  setSubmittingRev]  = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
+  const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [cancelling,     setCancelling]     = useState(false);
   const [payModalVisible, setPayModalVisible] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
@@ -293,15 +297,18 @@ export default function BookingDetailScreen() {
   const centerOnMyLocation = (isFullScreen: boolean) => {
     const ref = isFullScreen ? fullScreenMapRef : mapRef;
     const myLoc = isPhotographer ? photographerLocation : customerLocation;
-    if (myLoc && ref.current) {
+    const otherLoc = isPhotographer ? customerLocation : photographerLocation;
+    const targetLoc = myLoc || otherLoc || meetingLocation || { latitude: 10.7769, longitude: 106.7009 };
+
+    if (ref.current) {
       ref.current.animateToRegion({
-        latitude: myLoc.latitude,
-        longitude: myLoc.longitude,
+        latitude: targetLoc.latitude,
+        longitude: targetLoc.longitude,
         latitudeDelta: 0.005,
         longitudeDelta: 0.005,
       }, 1000);
     } else {
-      Alert.alert('Định vị', 'Chưa lấy được vị trí hiện tại của bạn. Vui lòng đợi trong giây lát hoặc kiểm tra quyền GPS.');
+      Alert.alert('Định vị', 'Không thể khởi tạo bản đồ để định vị.');
     }
   };
 
@@ -321,6 +328,28 @@ export default function BookingDetailScreen() {
       const currentBooking = allBookings.find((b: any) => b.id?.toLowerCase() === initialBooking.id?.toLowerCase());
       if (currentBooking) {
         setBooking(currentBooking);
+        
+        if (currentBooking.status === 'Completed') {
+          try {
+            if (isPhoto) {
+              const revs = await getPhotographerReviews(initialBooking.photographerId);
+              const matchRev = revs.find((r: any) => r.bookingId?.toLowerCase() === initialBooking.id?.toLowerCase());
+              if (matchRev) {
+                setExistingReview(matchRev);
+                setReviewDone(true);
+              }
+            } else {
+              const revs = await getMyReviews();
+              const matchRev = revs.find((r: any) => r.bookingId?.toLowerCase() === initialBooking.id?.toLowerCase());
+              if (matchRev) {
+                setExistingReview(matchRev);
+                setReviewDone(true);
+              }
+            }
+          } catch (revErr) {
+            console.log('Error checking existing review:', revErr);
+          }
+        }
       }
     } catch (err) {
       console.log('Error loading booking detail screen data:', err);
@@ -409,7 +438,10 @@ export default function BookingDetailScreen() {
               lng = current.coords.longitude;
             }
           } catch (e) {
-            console.warn("Failed to get initial position, waiting for watchPositionAsync:", e);
+            console.warn("Failed to get initial position, using mock fallback for testing:", e);
+            // Default fallback to Ho Chi Minh City center (District 1)
+            lat = 10.7769;
+            lng = 106.7009;
           }
 
           if (lat !== null && lng !== null) {
@@ -526,10 +558,20 @@ export default function BookingDetailScreen() {
 
     return () => {
       if (activeWatcher) {
-        activeWatcher.remove();
+        try {
+          if (typeof activeWatcher.remove === 'function') {
+            activeWatcher.remove();
+          }
+        } catch (e) {
+          console.warn('Failed to remove location subscription:', e);
+        }
       }
       if (unsubLocReceive) {
-        unsubLocReceive();
+        try {
+          unsubLocReceive();
+        } catch (e) {
+          console.warn('Failed to unsubscribe location receiver:', e);
+        }
       }
       LocationHub.leaveSession(booking.id).catch(console.error);
     };
@@ -580,7 +622,7 @@ export default function BookingDetailScreen() {
 
   const cfg = (isDark ? STATUS_CFG_DARK[booking.status] : STATUS_CFG[booking.status]) ?? (isDark ? STATUS_CFG_DARK.Pending : STATUS_CFG.Pending);
   const canCancel = booking.status === 'Pending' || booking.status === 'AwaitingDeposit' || booking.status === 'Confirmed';
-  const canReview = booking.status === 'Completed' && !reviewDone;
+  const canReview = booking.status === 'Completed' && !reviewDone && !isPhotographer;
 
   async function handleCancel() {
     Alert.alert('Hủy lịch hẹn', 'Bạn chắc chắn muốn hủy lịch hẹn này? Hành động này không thể hoàn tác.', [
@@ -909,80 +951,88 @@ export default function BookingDetailScreen() {
             <>
               <View style={styles.mapWrapper}>
                 <View style={styles.mapContainer}>
-                  <MapView
-                    ref={mapRef}
-                    style={styles.map}
-                    initialRegion={initialRegion}
-                    key={`map-${booking.id}`}
-                  >
-                    {photographerLocation && (
-                      <>
-                        <AnimatedCircleComponent
-                          center={photographerLocation}
-                          color="#8b5cf6"
-                        />
-                        <Marker
-                          coordinate={photographerLocation}
-                          anchor={{ x: 0.5, y: 0.5 }}
-                          tracksViewChanges={true}
-                          style={{ width: 34, height: 34 }}
-                        >
-                          <PulsingMarker
-                            isPhotographerRole={true}
-                            name={pName}
-                            isMe={isPhotographer}
+                  {Platform.OS === 'web' ? (
+                    <iframe
+                      src={`https://maps.google.com/maps?q=${meetingLocation?.latitude || customerLocation?.latitude || photographerLocation?.latitude || 10.7769},${meetingLocation?.longitude || customerLocation?.longitude || photographerLocation?.longitude || 106.7009}&z=15&output=embed`}
+                      style={{ width: '100%', height: '100%', border: 0 }}
+                      title="Bản đồ Pickic"
+                    />
+                  ) : (
+                    <MapView
+                      ref={mapRef}
+                      style={styles.map}
+                      initialRegion={initialRegion}
+                      key={`map-${booking.id}`}
+                    >
+                      {photographerLocation && (
+                        <>
+                          <AnimatedCircleComponent
+                            center={photographerLocation}
+                            color="#8b5cf6"
                           />
-                        </Marker>
-                      </>
-                    )}
+                          <Marker
+                            coordinate={photographerLocation}
+                            anchor={{ x: 0.5, y: 0.5 }}
+                            tracksViewChanges={true}
+                            style={{ width: 34, height: 34 }}
+                          >
+                            <PulsingMarker
+                              isPhotographerRole={true}
+                              name={pName}
+                              isMe={isPhotographer}
+                            />
+                          </Marker>
+                        </>
+                      )}
 
-                    {customerLocation && (
-                      <>
-                        <AnimatedCircleComponent
-                          center={customerLocation}
-                          color="#1d4ed8"
-                        />
-                        <Marker
-                          coordinate={customerLocation}
-                          anchor={{ x: 0.5, y: 0.5 }}
-                          tracksViewChanges={true}
-                          style={{ width: 34, height: 34 }}
-                        >
-                          <PulsingMarker
-                            isPhotographerRole={false}
-                            name={customerProfile?.displayName ?? 'Khách hàng'}
-                            isMe={!isPhotographer}
+                      {customerLocation && (
+                        <>
+                          <AnimatedCircleComponent
+                            center={customerLocation}
+                            color="#1d4ed8"
                           />
-                        </Marker>
-                      </>
-                    )}
+                          <Marker
+                            coordinate={customerLocation}
+                            anchor={{ x: 0.5, y: 0.5 }}
+                            tracksViewChanges={true}
+                            style={{ width: 34, height: 34 }}
+                          >
+                            <PulsingMarker
+                              isPhotographerRole={false}
+                              name={customerProfile?.displayName ?? 'Khách hàng'}
+                              isMe={!isPhotographer}
+                            />
+                          </Marker>
+                        </>
+                      )}
 
-                    {meetingLocation && (
-                      <Marker
-                        coordinate={meetingLocation}
-                        anchor={{ x: 0.5, y: 1 }}
-                        tracksViewChanges={false}
-                      >
-                        <View style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
-                          backgroundColor: '#ea580c',
-                          borderWidth: 2.5,
-                          borderColor: '#ffffff',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          shadowColor: '#000',
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.3,
-                          shadowRadius: 3,
-                          elevation: 5,
-                        }}>
-                          <Ionicons name="flag" size={18} color="#ffffff" />
-                        </View>
-                      </Marker>
-                    )}
-                  </MapView>
+                      {meetingLocation && (
+                        <Marker
+                          coordinate={meetingLocation}
+                          anchor={{ x: 0.5, y: 1 }}
+                          tracksViewChanges={false}
+                        >
+                          <View style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: '#ea580c',
+                            borderWidth: 2.5,
+                            borderColor: '#ffffff',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.3,
+                            shadowRadius: 3,
+                            elevation: 5,
+                          }}>
+                            <Ionicons name="flag" size={18} color="#ffffff" />
+                          </View>
+                        </Marker>
+                      )}
+                    </MapView>
+                  )}
                 </View>
 
                 {/* Center on My Location Button */}
@@ -1011,80 +1061,88 @@ export default function BookingDetailScreen() {
                 onRequestClose={() => setMapFullScreen(false)}
               >
                 <View style={{ flex: 1, backgroundColor: '#000000' }}>
-                  <MapView
-                    ref={fullScreenMapRef}
-                    style={StyleSheet.absoluteFillObject}
-                    initialRegion={initialRegion}
-                    key={`fs-map-${booking.id}`}
-                  >
-                    {photographerLocation && (
-                      <>
-                        <AnimatedCircleComponent
-                          center={photographerLocation}
-                          color="#8b5cf6"
-                        />
-                        <Marker
-                          coordinate={photographerLocation}
-                          anchor={{ x: 0.5, y: 0.5 }}
-                          tracksViewChanges={true}
-                          style={{ width: 34, height: 34 }}
-                        >
-                          <PulsingMarker
-                            isPhotographerRole={true}
-                            name={pName}
-                            isMe={isPhotographer}
+                  {Platform.OS === 'web' ? (
+                    <iframe
+                      src={`https://maps.google.com/maps?q=${meetingLocation?.latitude || customerLocation?.latitude || photographerLocation?.latitude || 10.7769},${meetingLocation?.longitude || customerLocation?.longitude || photographerLocation?.longitude || 106.7009}&z=15&output=embed`}
+                      style={{ width: '100%', height: '100%', border: 0 }}
+                      title="Bản đồ Pickic"
+                    />
+                  ) : (
+                    <MapView
+                      ref={fullScreenMapRef}
+                      style={StyleSheet.absoluteFillObject}
+                      initialRegion={initialRegion}
+                      key={`fs-map-${booking.id}`}
+                    >
+                      {photographerLocation && (
+                        <>
+                          <AnimatedCircleComponent
+                            center={photographerLocation}
+                            color="#8b5cf6"
                           />
-                        </Marker>
-                      </>
-                    )}
+                          <Marker
+                            coordinate={photographerLocation}
+                            anchor={{ x: 0.5, y: 0.5 }}
+                            tracksViewChanges={true}
+                            style={{ width: 34, height: 34 }}
+                          >
+                            <PulsingMarker
+                              isPhotographerRole={true}
+                              name={pName}
+                              isMe={isPhotographer}
+                            />
+                          </Marker>
+                        </>
+                      )}
 
-                    {customerLocation && (
-                      <>
-                        <AnimatedCircleComponent
-                          center={customerLocation}
-                          color="#1d4ed8"
-                        />
-                        <Marker
-                          coordinate={customerLocation}
-                          anchor={{ x: 0.5, y: 0.5 }}
-                          tracksViewChanges={true}
-                          style={{ width: 34, height: 34 }}
-                        >
-                          <PulsingMarker
-                            isPhotographerRole={false}
-                            name={customerProfile?.displayName ?? 'Khách hàng'}
-                            isMe={!isPhotographer}
+                      {customerLocation && (
+                        <>
+                          <AnimatedCircleComponent
+                            center={customerLocation}
+                            color="#1d4ed8"
                           />
-                        </Marker>
-                      </>
-                    )}
+                          <Marker
+                            coordinate={customerLocation}
+                            anchor={{ x: 0.5, y: 0.5 }}
+                            tracksViewChanges={true}
+                            style={{ width: 34, height: 34 }}
+                          >
+                            <PulsingMarker
+                              isPhotographerRole={false}
+                              name={customerProfile?.displayName ?? 'Khách hàng'}
+                              isMe={!isPhotographer}
+                            />
+                          </Marker>
+                        </>
+                      )}
 
-                    {meetingLocation && (
-                      <Marker
-                        coordinate={meetingLocation}
-                        anchor={{ x: 0.5, y: 1 }}
-                        tracksViewChanges={false}
-                      >
-                        <View style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
-                          backgroundColor: '#ea580c',
-                          borderWidth: 2.5,
-                          borderColor: '#ffffff',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          shadowColor: '#000',
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.3,
-                          shadowRadius: 3,
-                          elevation: 5,
-                        }}>
-                          <Ionicons name="flag" size={18} color="#ffffff" />
-                        </View>
-                      </Marker>
-                    )}
-                  </MapView>
+                      {meetingLocation && (
+                        <Marker
+                          coordinate={meetingLocation}
+                          anchor={{ x: 0.5, y: 1 }}
+                          tracksViewChanges={false}
+                        >
+                          <View style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: '#ea580c',
+                            borderWidth: 2.5,
+                            borderColor: '#ffffff',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.3,
+                            shadowRadius: 3,
+                            elevation: 5,
+                          }}>
+                            <Ionicons name="flag" size={18} color="#ffffff" />
+                          </View>
+                        </Marker>
+                      )}
+                    </MapView>
+                  )}
 
                   {/* Center on My Location Button (Fullscreen) */}
                   <TouchableOpacity
@@ -1529,10 +1587,42 @@ export default function BookingDetailScreen() {
         )}
 
         {reviewDone && (
-          <ClayCard style={[styles.card, { backgroundColor: colors.success + '08', borderColor: colors.success + '20' }, isDark && { backgroundColor: pColors.surface, borderColor: pColors.borderStrong }]}>
-            <View style={styles.reviewDoneRow}>
-              <Ionicons name="checkmark-circle" size={24} color={isDark ? pColors.success : colors.success} />
-              <Text style={[styles.reviewDoneText, isDark && { color: pColors.success }]}>Cảm ơn bạn đã gửi đánh giá buổi chụp! 🙏</Text>
+          <ClayCard style={[styles.card, isDark && { backgroundColor: pColors.surface, borderColor: pColors.borderStrong }]}>
+            <View style={{ gap: spacing[3] }}>
+              <View style={styles.reviewDoneRow}>
+                <Ionicons name="checkmark-circle" size={24} color={isDark ? pColors.success : colors.success} />
+                <Text style={[styles.reviewDoneText, isDark && { color: pColors.success }]}>
+                  {isPhotographer ? 'Khách hàng đã gửi đánh giá buổi chụp!' : 'Bạn đã gửi đánh giá cho buổi chụp này! 🙏'}
+                </Text>
+              </View>
+              {existingReview && (
+                <View style={{ 
+                  marginTop: spacing[2], 
+                  padding: spacing[3], 
+                  borderRadius: radius.md, 
+                  backgroundColor: isDark ? pColors.surfaceStrong : colors.background,
+                  borderWidth: 1,
+                  borderColor: isDark ? pColors.border : colors.border
+                }}>
+                  <View style={{ flexDirection: 'row', gap: 4, marginBottom: spacing[2] }}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Ionicons 
+                        key={i} 
+                        name={i < existingReview.rating ? "star" : "star-outline"} 
+                        size={16} 
+                        color="#eab308" 
+                      />
+                    ))}
+                  </View>
+                  <Text style={{ 
+                    fontSize: fontSizes.md, 
+                    fontStyle: 'italic',
+                    color: isDark ? pColors.text : colors.dark 
+                  }}>
+                    "{existingReview.comment}"
+                  </Text>
+                </View>
+              )}
             </View>
           </ClayCard>
         )}
