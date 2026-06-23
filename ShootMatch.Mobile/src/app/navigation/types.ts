@@ -2,10 +2,9 @@ export type AuthStackParamList = {
   Splash:      undefined;
   RoleSelect:  undefined;
   AuthMethod:  { role: 'customer' | 'photographer' };
-  PhoneLogin:  { role: 'customer' | 'photographer' };
+  Login:       { role?: 'customer' | 'photographer' };
   OtpVerify:   { phone: string; role: string };
   Register:    { role: 'customer' | 'photographer' };
-  EmailLogin:  { role: 'customer' | 'photographer' };
 };
 
 export type CustomerTabParamList = {

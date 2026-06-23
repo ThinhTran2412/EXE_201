@@ -5,10 +5,9 @@ import { AuthStackParamList } from './types';
 import SplashScreen      from '../../features/auth/screens/SplashScreen';
 import RoleSelectScreen  from '../../features/auth/screens/RoleSelectScreen';
 import AuthMethodScreen  from '../../features/auth/screens/AuthMethodScreen';
-import PhoneLoginScreen  from '../../features/auth/screens/PhoneLoginScreen';
+import LoginScreen       from '../../features/auth/screens/LoginScreen';
 import OtpVerifyScreen   from '../../features/auth/screens/OtpVerifyScreen';
 import RegisterScreen    from '../../features/auth/screens/RegisterScreen';
-import EmailLoginScreen  from '../../features/auth/screens/EmailLoginScreen';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
@@ -18,10 +17,9 @@ export default function AuthNavigator() {
       <Stack.Screen name="Splash"      component={SplashScreen} />
       <Stack.Screen name="RoleSelect"  component={RoleSelectScreen} />
       <Stack.Screen name="AuthMethod"  component={AuthMethodScreen} />
-      <Stack.Screen name="PhoneLogin"  component={PhoneLoginScreen} />
+      <Stack.Screen name="Login"       component={LoginScreen} />
       <Stack.Screen name="OtpVerify"   component={OtpVerifyScreen} />
       <Stack.Screen name="Register"    component={RegisterScreen} />
-      <Stack.Screen name="EmailLogin"  component={EmailLoginScreen} />
     </Stack.Navigator>
   );
 }

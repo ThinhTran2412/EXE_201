@@ -11,6 +11,7 @@ if (Platform.OS === 'web') {
       height: 100%;
       height: -webkit-fill-available;
       overflow: hidden;
+      overscroll-behavior-y: none;
       background-color: #f3ede2; /* Warm premium background */
     }
     #root {

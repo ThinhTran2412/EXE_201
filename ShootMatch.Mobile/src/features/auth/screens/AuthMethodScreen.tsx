@@ -50,7 +50,7 @@ export default function AuthMethodScreen({ navigation, route }: Props) {
         {/* Email / Password */}
         <Pressable
           style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-          onPress={() => navigation.navigate('EmailLogin', { role })}
+          onPress={() => navigation.navigate('Login', { role })}
         >
           <View style={[styles.cardIcon, { backgroundColor: '#e8f4fd' }]}>
             <Text style={styles.cardEmoji}>✉️</Text>
@@ -80,7 +80,7 @@ export default function AuthMethodScreen({ navigation, route }: Props) {
         {/* Phone OTP */}
         <Pressable
           style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-          onPress={() => navigation.navigate('PhoneLogin', { role })}
+          onPress={() => navigation.navigate('Login', { role })}
         >
           <View style={[styles.cardIcon, { backgroundColor: '#fdf8e8' }]}>
             <Text style={styles.cardEmoji}>📱</Text>
