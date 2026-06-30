@@ -19,7 +19,7 @@ import { Photographer } from '../api';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const THEME = {
   cream: '#fff7e1',
@@ -296,8 +296,8 @@ export default function PhotographerPortfolioScreen() {
               >
                 <PortfolioImageCell
                   uri={item.url}
-                  style={{ width: SCREEN_WIDTH, height: '88%' }}
-                  borderRadius={0}
+                  style={{ width: SCREEN_WIDTH * 0.95, height: SCREEN_HEIGHT * 0.75 }}
+                  borderRadius={8}
                   resizeMode="contain"
                 />
               </View>

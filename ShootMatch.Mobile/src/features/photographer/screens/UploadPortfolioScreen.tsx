@@ -72,6 +72,8 @@ export default function UploadPortfolioScreen() {
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [selectedConcepts, setSelectedConcepts] = useState<string[]>([]);
   const [isSavingTags, setIsSavingTags] = useState(false);
+  const [selectedTagDesc, setSelectedTagDesc] = useState<{ name: string, description: string | null } | null>(null);
+  const [activeViewerDesc, setActiveViewerDesc] = useState<{ name: string, description: string | null } | null>(null);
 
   const [masterpiecePhotoId, setMasterpiecePhotoId] = useState<string | null>(null);
   const [moodboardPhotoIds, setMoodboardPhotoIds] = useState<string[]>([]);
@@ -117,6 +119,10 @@ export default function UploadPortfolioScreen() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    setActiveViewerDesc(null);
+  }, [viewerIndex]);
 
   async function loadData() {
     setLoading(true);
@@ -246,6 +252,7 @@ export default function UploadPortfolioScreen() {
     if (!photo) return;
     setSelectedStyles(photo.styles.map(s => s.id));
     setSelectedConcepts(photo.concepts.map(c => c.id));
+    setSelectedTagDesc(null);
     setIsTagModalOpen(true);
   };
 
@@ -798,30 +805,55 @@ export default function UploadPortfolioScreen() {
                     </View>
 
                     {/* Clean Tags positioned at the bottom of the middle area, right under the image */}
-                    <View style={{ height: 60, justifyContent: 'center' }}>
+                    <View style={{ minHeight: 60, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 }}>
                       <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.viewerTagsContainer}
-                        style={{ flexGrow: 0, paddingVertical: 10 }}
+                        style={{ flexGrow: 0, paddingVertical: 10, width: '100%' }}
                       >
                         {item.styles.length === 0 && item.concepts.length === 0 ? (
                           <Text style={styles.noTagsText}>Nhấn "Gắn thẻ" để phân loại ảnh</Text>
                         ) : (
                           <>
                             {item.styles.map((s: Style) => (
-                              <View key={s.id} style={styles.viewerTagBadge}>
+                              <Pressable
+                                key={s.id}
+                                style={styles.viewerTagBadge}
+                                onPress={() => {
+                                  setActiveViewerDesc(prev =>
+                                    prev?.name === s.name ? null : { name: s.name, description: s.description }
+                                  );
+                                }}
+                              >
                                 <Text style={styles.viewerTagText}>#{s.name}</Text>
-                              </View>
+                              </Pressable>
                             ))}
                             {item.concepts.map((c: Concept) => (
-                              <View key={c.id} style={[styles.viewerTagBadge, { backgroundColor: 'rgba(230,59,0,0.4)' }]}>
+                              <Pressable
+                                key={c.id}
+                                style={[styles.viewerTagBadge, { backgroundColor: 'rgba(230,59,0,0.4)' }]}
+                                onPress={() => {
+                                  setActiveViewerDesc(prev =>
+                                    prev?.name === c.name ? null : { name: c.name, description: c.description }
+                                  );
+                                }}
+                              >
                                 <Text style={styles.viewerTagText}>#{c.name}</Text>
-                              </View>
+                              </Pressable>
                             ))}
                           </>
                         )}
                       </ScrollView>
+
+                      {activeViewerDesc && (
+                        <View style={styles.viewerDescBox}>
+                          <Text style={styles.viewerDescText}>
+                            <Text style={{ fontWeight: 'bold', color: colors.accent }}>{activeViewerDesc.name}: </Text>
+                            {activeViewerDesc.description || 'Chưa có mô tả cho thẻ này.'}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                 )}
@@ -979,6 +1011,7 @@ export default function UploadPortfolioScreen() {
                           setSelectedStyles(prev =>
                             prev.includes(s.id) ? prev.filter(id => id !== s.id) : [...prev, s.id]
                           );
+                          setSelectedTagDesc({ name: s.name, description: s.description });
                         }}
                         style={[styles.tagChip, isSelected && styles.tagChipActive]}
                       >
@@ -1004,6 +1037,7 @@ export default function UploadPortfolioScreen() {
                           setSelectedConcepts(prev =>
                             prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]
                           );
+                          setSelectedTagDesc({ name: c.name, description: c.description });
                         }}
                         style={[styles.tagChip, isSelected && [styles.tagChipActive, { backgroundColor: 'rgba(230,59,0,0.15)', borderColor: '#e63b00' }]]}
                       >
@@ -1016,6 +1050,18 @@ export default function UploadPortfolioScreen() {
                 </View>
               </View>
             </ScrollView>
+
+            {selectedTagDesc && (
+              <View style={styles.tagDescriptionBox}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <Ionicons name="information-circle-outline" size={16} color={colors.accent} />
+                  <Text style={styles.tagDescriptionTitle}>{selectedTagDesc.name}</Text>
+                </View>
+                <Text style={styles.tagDescriptionText}>
+                  {selectedTagDesc.description || 'Chưa có mô tả chi tiết cho thẻ này.'}
+                </Text>
+              </View>
+            )}
 
             <View style={styles.tagEditorFooter}>
               <Pressable style={styles.tagEditorCancelBtn} onPress={() => setIsTagModalOpen(false)}>
@@ -1540,6 +1586,42 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#FFFBF0',
+  },
+  viewerDescBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 4,
+    maxWidth: SCREEN_WIDTH * 0.9,
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  viewerDescText: {
+    color: '#FFFBF0',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  tagDescriptionBox: {
+    backgroundColor: colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
+  tagDescriptionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  tagDescriptionText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    lineHeight: 16,
   },
 
   // Camera HUD view styles

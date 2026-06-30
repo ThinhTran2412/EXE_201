@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../../app/theme/colors';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
@@ -28,7 +28,8 @@ import {
   getPhotographerServicePackages,
   PhotographerCard, 
   FeaturedPhotographerCard, 
-  PortfolioFeedItem 
+  PortfolioFeedItem,
+  getActiveStylesAndConceptsForLookbook
 } from '../api';
 
 const REGIONS = [
@@ -91,8 +92,8 @@ const CONCEPTS = [
   { name: 'Ảnh cưới', tag: 'Wedding', subtitle: 'Khoảnh khắc trọn đời', coverIndex: 35 },
   { name: 'Cổ điển', tag: 'Vintage', subtitle: 'Màu film hoài niệm', coverIndex: 22 },
   { name: 'Thời trang', tag: 'Editorial', subtitle: 'Đậm chất tạp chí', coverIndex: 13 },
-  { name: 'Đường phố', tag: 'Streetwear', subtitle: 'Năng động tự nhiên', coverIndex: 12 },
-  { name: 'Nàng thơ', tag: 'Film look', subtitle: 'Mơ màng dịu nhẹ', coverIndex: 19 },
+  { name: 'Đường phố', tag: 'Street', subtitle: 'Năng động tự nhiên', coverIndex: 12 },
+  { name: 'Nàng thơ', tag: 'Film Look', subtitle: 'Mơ màng dịu nhẹ', coverIndex: 19 },
 ];
 
 const MOCK_TOP_PACKAGES = [
@@ -134,8 +135,8 @@ const MOCK_TOP_PACKAGES = [
 const MOCK_LOOKBOOKS = [
   { title: 'Retro Sunset', desc: 'Đón hoàng hôn rực rỡ', tag: 'Vintage', coverIndex: 29 },
   { title: 'Minimalist Studio', desc: 'Tối giản và tinh tế', tag: 'Portrait', coverIndex: 8 },
-  { title: 'Cinematic Rain', desc: 'Góc máy đậm chất điện ảnh', tag: 'Film look', coverIndex: 3 },
-  { title: 'Street Fashion', desc: 'Phong cách đường phố bụi bặm', tag: 'Streetwear', coverIndex: 10 },
+  { title: 'Cinematic Rain', desc: 'Góc máy đậm chất điện ảnh', tag: 'Film Look', coverIndex: 3 },
+  { title: 'Street Fashion', desc: 'Phong cách đường phố bụi bặm', tag: 'Street', coverIndex: 10 },
 ];
 
 export default function SearchScreen() {
@@ -170,6 +171,7 @@ export default function SearchScreen() {
   const [coolPortfolios, setCoolPortfolios] = useState<PortfolioFeedItem[]>([]);
   const [realPackages, setRealPackages] = useState<any[]>([]);
   const [lookbooks, setLookbooks] = useState<any[]>([]);
+  const [dynamicConcepts, setDynamicConcepts] = useState<{ name: string; tag: string; desc: string; subtitle: string }[]>([]);
   const [loadingDiscovery, setLoadingDiscovery] = useState(true);
 
   // Check if user is actively searching
@@ -181,25 +183,83 @@ export default function SearchScreen() {
       setLoadingDiscovery(true);
       const feed = await getCustomerHomeFeed();
       setHotPhotographers(feed.featured ?? []);
-      setCoolPortfolios(feed.latestPhotos ?? []);
 
-      // Build real lookbooks dynamically from the latest photos in the database
+      // Only keep one (latest) photo per photographer for the "Portfolio Mới Ấn Tượng" section
+      const uniqueByPhotographer: PortfolioFeedItem[] = [];
+      const seenPhotographerIds = new Set<string>();
+      for (const photo of feed.latestPhotos ?? []) {
+        if (!seenPhotographerIds.has(photo.photographerId)) {
+          seenPhotographerIds.add(photo.photographerId);
+          uniqueByPhotographer.push(photo);
+        }
+      }
+      setCoolPortfolios(uniqueByPhotographer);
+
+      // Build real lookbooks dynamically from all active styles and concepts in the database
       const portfolios = feed.latestPhotos ?? [];
-      
-      const categories = [
-        { title: 'Retro Sunset', desc: 'Hoàng hôn rực rỡ', tag: 'Vintage', coverIndex: 29 },
-        { title: 'Minimalist Studio', desc: 'Tối giản & tinh tế', tag: 'Portrait', coverIndex: 8 },
-        { title: 'Cinematic Rain', desc: 'Đậm chất điện ảnh', tag: 'Film look', coverIndex: 3 },
-        { title: 'Street Fashion', desc: 'Phố thị năng động', tag: 'Streetwear', coverIndex: 10 },
-        { title: 'Happy Together', desc: 'Khoảnh khắc hạnh phúc', tag: 'Wedding', coverIndex: 35 },
-        { title: 'High Fashion', desc: 'Đậm chất nghệ thuật', tag: 'Editorial', coverIndex: 13 },
+      let dbStyles: any[] = [];
+      let dbConcepts: any[] = [];
+      try {
+        const dbData = await getActiveStylesAndConceptsForLookbook();
+        dbStyles = dbData.styles ?? [];
+        dbConcepts = dbData.concepts ?? [];
+      } catch (err) {
+        console.warn('Failed to load active styles/concepts, fallback to defaults', err);
+      }
+
+      // Build dynamic concepts for "Concept Nổi Bật" from both styles and concepts
+      const allConceptItems = [
+        ...dbStyles.map(s => ({ name: s.name, tag: s.name, desc: s.description || '', subtitle: 'Phong cách nhiếp ảnh' })),
+        ...dbConcepts.map(c => ({ name: c.name, tag: c.name, desc: c.description || '', subtitle: 'Concept ý tưởng' })),
       ];
+      setDynamicConcepts(allConceptItems.length > 0 ? allConceptItems : [
+        { name: 'Chân dung', tag: 'Portrait', desc: '', subtitle: 'Góc mặt nghệ thuật' },
+        { name: 'Ảnh cưới', tag: 'Wedding', desc: '', subtitle: 'Khoảnh khắc trọn đời' },
+        { name: 'Cổ điển', tag: 'Vintage', desc: '', subtitle: 'Màu film hoài niệm' },
+        { name: 'Thời trang', tag: 'Editorial', desc: '', subtitle: 'Đậm chất tạp chí' },
+        { name: 'Đường phố', tag: 'Street', desc: '', subtitle: 'Năng động tự nhiên' },
+        { name: 'Nàng thơ', tag: 'Film Look', desc: '', subtitle: 'Mơ màng dịu nhẹ' },
+      ]);
+
+      // Convert to lookbook category format
+      const categories: any[] = [];
+      dbStyles.forEach((s, idx) => {
+        categories.push({
+          title: s.name,
+          desc: s.description || 'Khám phá phong cách nhiếp ảnh nghệ thuật',
+          tag: s.name,
+          coverIndex: idx * 7,
+          isStyle: true,
+        });
+      });
+      dbConcepts.forEach((c, idx) => {
+        categories.push({
+          title: c.name,
+          desc: c.description || 'Chủ đề và ý tưởng chụp ảnh xu hướng',
+          tag: c.name,
+          coverIndex: (idx + 13) * 11,
+          isStyle: false,
+        });
+      });
+
+      // Fallback categories if nothing fetched
+      if (categories.length === 0) {
+        const fallbacks = [
+          { title: 'Retro Sunset', desc: 'Hoàng hôn rực rỡ', tag: 'Vintage', coverIndex: 29 },
+          { title: 'Minimalist Studio', desc: 'Tối giản & tinh tế', tag: 'Portrait', coverIndex: 8 },
+          { title: 'Cinematic Rain', desc: 'Đậm chất điện ảnh', tag: 'Film Look', coverIndex: 3 },
+          { title: 'Street Fashion', desc: 'Phố thị năng động', tag: 'Street', coverIndex: 10 },
+          { title: 'Happy Together', desc: 'Khoảnh khắc hạnh phúc', tag: 'Wedding', coverIndex: 35 },
+          { title: 'High Fashion', desc: 'Đậm chất nghệ thuật', tag: 'Editorial', coverIndex: 13 },
+        ];
+        categories.push(...fallbacks);
+      }
       
       const mappedLookbooks = categories.map((cat) => {
         // Find a portfolio photo that actually matches this category's style or concept tag
         const matchingPhoto = portfolios.find(p => {
-          const styleMatches = p.styles?.some(s => s?.toLowerCase() === cat.tag.toLowerCase());
-          const conceptMatches = p.concepts?.some(c => c?.toLowerCase() === cat.tag.toLowerCase());
+          const styleMatches = p.styles?.some(s => s?.toLowerCase().includes(cat.tag.toLowerCase()));
+          const conceptMatches = p.concepts?.some(c => c?.toLowerCase().includes(cat.tag.toLowerCase()));
           return styleMatches || conceptMatches;
         });
 
@@ -209,7 +269,8 @@ export default function SearchScreen() {
             desc: `${cat.desc} bởi @${matchingPhoto.photographerName}`,
             tag: cat.tag,
             imageUrl: matchingPhoto.imageUrl,
-            photographerId: matchingPhoto.photographerId
+            photographerId: matchingPhoto.photographerId,
+            photoCreatedAt: matchingPhoto.createdAt ? new Date(matchingPhoto.createdAt).getTime() : 0,
           };
         } else {
           return {
@@ -218,11 +279,29 @@ export default function SearchScreen() {
             tag: cat.tag,
             coverIndex: cat.coverIndex,
             imageUrl: null,
-            photographerId: null
+            photographerId: null,
+            photoCreatedAt: 0,
           };
         }
       });
-      setLookbooks(mappedLookbooks);
+
+      // Sort: 
+      // 1. Items with matching photos first, sorted by photoCreatedAt descending (newest matching photo first).
+      // 2. Items without matching photos stably sorted.
+      const sortedLookbooks = mappedLookbooks.sort((a, b) => {
+        const aHasPhoto = a.imageUrl !== null;
+        const bHasPhoto = b.imageUrl !== null;
+
+        if (aHasPhoto && !bHasPhoto) return -1;
+        if (!aHasPhoto && bHasPhoto) return 1;
+
+        if (aHasPhoto && bHasPhoto) {
+          return b.photoCreatedAt - a.photoCreatedAt; // Newer photo first
+        }
+        return 0;
+      });
+
+      setLookbooks(sortedLookbooks);
 
       // Fetch real packages dynamically from database for top 3 photographers
       const topPhotographers = feed.featured?.slice(0, 3) ?? [];
@@ -260,9 +339,11 @@ export default function SearchScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadDiscoveryData();
-  }, [loadDiscoveryData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadDiscoveryData();
+    }, [loadDiscoveryData])
+  );
 
   // Execute Search Query
   const handleSearch = useCallback(async () => {
@@ -595,20 +676,20 @@ export default function SearchScreen() {
             </ImageBackground>
           </View>
 
-          {/* Section 1: Concept Nổi Bật (Redesigned with Photo Backgrounds) */}
+          {/* Section 1: Concept Nổi Bật — dynamic from DB */}
           <View style={styles.discoverySection}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionHeaderTitle}>Concept Nổi Bật</Text>
-              <Text style={styles.sectionHeaderCount}>{CONCEPTS.length} LỰA CHỌN</Text>
+              <Text style={styles.sectionHeaderCount}>{dynamicConcepts.length} LỰA CHỌN</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.conceptsScroll}>
-              {CONCEPTS.map((concept) => (
+              {dynamicConcepts.map((concept, idx) => (
                 <Pressable
-                  key={concept.tag}
+                  key={concept.tag + idx}
                   onPress={() => toggleStyle(concept.tag)}
                 >
                   <ImageBackground
-                    source={localPicture(concept.coverIndex)}
+                    source={localPicture((idx * 7 + 3) % 40)}
                     style={styles.conceptCard}
                     imageStyle={{ borderRadius: 20 }}
                   >
@@ -620,9 +701,9 @@ export default function SearchScreen() {
                       <Ionicons name="sparkles" size={13} color={colors.dark} />
                     </View>
                     <View style={styles.conceptBottomInfo}>
-                      <Text style={styles.conceptName}>{concept.name}</Text>
-                      <Text style={styles.conceptCardSub}>{concept.subtitle}</Text>
-                      <Text style={styles.conceptTag}>#{concept.tag}</Text>
+                      <Text style={styles.conceptName} numberOfLines={1}>{concept.name}</Text>
+                      <Text style={styles.conceptCardSub} numberOfLines={1}>{concept.subtitle || concept.desc || 'Phong cách nhiếp ảnh'}</Text>
+                      <Text style={styles.conceptTag} numberOfLines={1}>#{concept.tag}</Text>
                     </View>
                   </ImageBackground>
                 </Pressable>
@@ -694,11 +775,10 @@ export default function SearchScreen() {
             )}
           </View>
 
-          {/* Section 3: Inspiring Lookbook & Editorial (Bo góc = 5 như khách yêu cầu!) */}
+          {/* Section 3: Inspiring Lookbook & Editorial */}
           <View style={styles.discoverySection}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionHeaderTitle}>Lookbook & Cảm Hứng 📖</Text>
-              <Text style={styles.sectionHeaderCount}>Ý TƯỞNG ĐỘC QUYỀN</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.lookbooksScroll}>
               {lookbooks.map((lb, idx) => (
@@ -734,7 +814,6 @@ export default function SearchScreen() {
           <View style={styles.discoverySection}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionHeaderTitle}>Portfolio Mới Ấn Tượng 📸</Text>
-              <Text style={styles.sectionHeaderCount}>CẬP NHẬT LIÊN TỤC</Text>
             </View>
             {loadingDiscovery ? (
               <ActivityIndicator color={colors.accent} />
@@ -762,11 +841,10 @@ export default function SearchScreen() {
             )}
           </View>
 
-          {/* Section 5: Gói Dịch Vụ Được Yêu Thích (Dữ liệu thật từ DB kết hợp Mock fallback) */}
+          {/* Section 5: Gói Dịch Vụ Được Yêu Thích */}
           <View style={styles.discoverySection}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionHeaderTitle}>Gói Chụp Được Yêu Thích ⭐</Text>
-              <Text style={styles.sectionHeaderCount}>DỮ LIỆU ĐANG HOẠT ĐỘNG</Text>
             </View>
             <View style={styles.packagesList}>
               {realPackages.map((pkg) => (
@@ -800,7 +878,7 @@ export default function SearchScreen() {
                     {pkg.features.map((feat: string, fIdx: number) => (
                       <View key={fIdx} style={styles.featurePill}>
                         <Ionicons name="checkmark" size={10} color={colors.textMuted} />
-                        <Text style={styles.featurePillText}>{feat}</Text>
+                        <Text style={styles.featurePillText} numberOfLines={1}>{feat}</Text>
                       </View>
                     ))}
                   </View>
@@ -1376,11 +1454,13 @@ const getStyles = (W: number, HOT_CARD_W: number, LOOKBOOK_CARD_W: number) => St
     gap: 4,
     borderWidth: 1,
     borderColor: 'rgba(26,26,15,0.05)',
+    maxWidth: W * 0.55,
   },
   featurePillText: {
     fontSize: fontSizes.xs - 1,
     color: colors.textMuted,
     fontWeight: fontWeights.semibold,
+    flexShrink: 1,
   },
   packageCardFooter: {
     flexDirection: 'row',

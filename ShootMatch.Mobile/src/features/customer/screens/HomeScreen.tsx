@@ -52,7 +52,17 @@ export default function HomeScreen() {
       ]);
 
       const apiFeatured = buildFeaturedDisplay(feed.featured ?? []);
-      const apiMoments = buildMomentDisplay(feed.latestPhotos ?? []);
+      
+      // Ensure moments display unique photographers' latest work, rather than multiple photos from the same photographer
+      const uniqueMoments: typeof feed.latestPhotos = [];
+      const seenPhotographers = new Set<string>();
+      for (const p of feed.latestPhotos ?? []) {
+        if (!seenPhotographers.has(p.photographerId)) {
+          seenPhotographers.add(p.photographerId);
+          uniqueMoments.push(p);
+        }
+      }
+      const apiMoments = buildMomentDisplay(uniqueMoments.slice(0, 20));
 
       setFeatured(apiFeatured.length > 0 ? apiFeatured : buildFallbackFeatured(8));
       setMoments(apiMoments.length > 0 ? apiMoments : buildFallbackMoments(10));

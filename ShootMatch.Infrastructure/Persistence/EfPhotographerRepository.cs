@@ -14,7 +14,7 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
         CancellationToken cancellationToken = default)
     {
         var perPhotographer = Math.Clamp(photosPerPhotographer, 1, 5);
-        var latestLimit = Math.Clamp(latestPhotoLimit, 1, 50);
+        var latestLimit = Math.Clamp(latestPhotoLimit, 1, 500);
 
         var photographers = await db.Photographers
             .AsNoTracking()

@@ -13,7 +13,8 @@ namespace ShootMatch.Api.Controllers;
 [Authorize(Policy = "PhotographerOnly")]
 public sealed class PortfolioController(
     IStorageService storage,
-    ShootMatchDbContext db) : ControllerBase
+    ShootMatchDbContext db,
+    ILogger<PortfolioController> logger) : ControllerBase
 {
     private static readonly string[] AllowedTypes = ["image/jpeg", "image/png", "image/webp", "image/heic"];
     private const long MaxSizeBytes = 10 * 1024 * 1024; // 10 MB
@@ -140,6 +141,8 @@ public sealed class PortfolioController(
         CancellationToken ct)
     {
         var photographerId = GetPhotographerIdOrThrow();
+        logger.LogInformation("[UpdateTags] Photographer {Id} is updating photo {PhotoId}. Requested StyleIds: {Styles}, ConceptIds: {Concepts}", 
+            photographerId, id, string.Join(", ", req.StyleIds ?? []), string.Join(", ", req.ConceptIds ?? []));
 
         var photo = await db.PortfolioPhotos
             .Include(x => x.Styles)
@@ -157,6 +160,8 @@ public sealed class PortfolioController(
             .Where(x => req.ConceptIds.Contains(x.Id))
             .ToListAsync(ct);
 
+        logger.LogInformation("[UpdateTags] Found {StyleCount} styles and {ConceptCount} concepts matching request IDs in database.", newStyles.Count, newConcepts.Count);
+
         photo.Styles.Clear();
         foreach (var s in newStyles)
         {
@@ -170,6 +175,7 @@ public sealed class PortfolioController(
         }
 
         await db.SaveChangesAsync(ct);
+        logger.LogInformation("[UpdateTags] Successfully saved tag modifications to DB. New photo.Styles count: {StyleCount}, photo.Concepts count: {ConceptCount}", photo.Styles.Count, photo.Concepts.Count);
         return NoContent();
     }
 

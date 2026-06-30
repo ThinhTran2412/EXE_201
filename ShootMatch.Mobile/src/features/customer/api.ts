@@ -314,7 +314,7 @@ export async function uploadCustomerProfileImage(uri: string, mimeType: string, 
 export async function getCustomerHomeFeed(): Promise<CustomerHomeFeed> {
   const data = await gql<{ customerHomeFeed: CustomerHomeFeed }>(`
     query {
-      customerHomeFeed(photosPerPhotographer: 5, latestPhotoLimit: 20) {
+      customerHomeFeed(photosPerPhotographer: 5, latestPhotoLimit: 200) {
         featured {
           id displayName region avatarUrl rating isPremium previewPhotos
         }
@@ -513,3 +513,37 @@ export async function getMyConversations(): Promise<Conversation[]> {
   `);
   return data.myConversations ?? [];
 }
+
+export interface LookbookTaxonomyStyle {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface LookbookTaxonomyConcept {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export async function getActiveStylesAndConceptsForLookbook(): Promise<{ styles: LookbookTaxonomyStyle[]; concepts: LookbookTaxonomyConcept[] }> {
+  const data = await gql<{ styles: LookbookTaxonomyStyle[]; concepts: LookbookTaxonomyConcept[] }>(`
+    query {
+      styles(status: "Approved") {
+        id
+        name
+        description
+      }
+      concepts(status: "Approved") {
+        id
+        name
+        description
+      }
+    }
+  `);
+  return {
+    styles: data.styles ?? [],
+    concepts: data.concepts ?? [],
+  };
+}
+
