@@ -63,6 +63,7 @@ export default function PProfileScreen() {
   });
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewsExpanded, setReviewsExpanded] = useState(false);
   
   const [proposeModalVisible, setProposeModalVisible] = useState(false);
   const [proposeType, setProposeType] = useState<'style' | 'concept'>('style');
@@ -458,11 +459,22 @@ export default function PProfileScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Đánh giá nhận được ({reviews.length})</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Ionicons name="star" size={14} color="#FFD700" />
-                <Text style={{ color: '#FFD700', fontSize: 14, fontWeight: '700' }}>
-                  {profile?.rating ? profile.rating.toFixed(1) : '0.0'}
-                </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons name="star" size={14} color="#FFD700" />
+                  <Text style={{ color: '#FFD700', fontSize: 14, fontWeight: '700' }}>
+                    {profile?.rating ? profile.rating.toFixed(1) : '0.0'}
+                  </Text>
+                </View>
+                {reviews.length > 0 && (
+                  <Pressable
+                    style={styles.personalEditBtn}
+                    onPress={() => setReviewsExpanded(v => !v)}
+                    accessibilityLabel={reviewsExpanded ? 'Thu gọn đánh giá' : 'Mở rộng đánh giá'}
+                  >
+                    <Ionicons name={reviewsExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={isDark ? '#F5DEB3' : colors.accent} />
+                  </Pressable>
+                )}
               </View>
             </View>
             <View style={{ gap: 12 }}>
@@ -473,7 +485,7 @@ export default function PProfileScreen() {
                   <Ionicons name="star-outline" size={18} color="rgba(255,251,240,0.3)" />
                   <Text style={styles.reviewEmptyText}>Bạn chưa nhận được đánh giá nào.</Text>
                 </View>
-              ) : (
+              ) : reviewsExpanded ? (
                 reviews.map((r, i) => (
                   <View key={r.id || i} style={styles.reviewCard}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -504,6 +516,13 @@ export default function PProfileScreen() {
                     <Text style={{ fontSize: 12, lineHeight: 18, opacity: 0.9, color: colors.text }}>"{r.comment}"</Text>
                   </View>
                 ))
+              ) : (
+                <Pressable onPress={() => setReviewsExpanded(true)} style={styles.reviewEmptyState}>
+                  <Ionicons name="chatbubbles-outline" size={18} color={colors.accent} />
+                  <Text style={[styles.reviewEmptyText, { color: colors.accent, fontWeight: '600', opacity: 1 }]}>
+                    Nhấn để xem {reviews.length} đánh giá
+                  </Text>
+                </Pressable>
               )}
             </View>
           </View>
@@ -511,7 +530,7 @@ export default function PProfileScreen() {
           <View style={styles.menu}>
             <MenuLink icon="card-outline" label="Quản lý dịch vụ & giá" onPress={() => navigation.navigate('ServiceManagement')} />
             <MenuLink icon="camera-outline" label="Quản lý thiết bị" onPress={() => navigation.navigate('ManageEquipment')} />
-            <MenuLink icon="calendar-outline" label="Lịch hẹn dạng lịch" onPress={() => navigation.navigate('BookingCalendar')} />
+            <MenuLink icon="calendar-outline" label="Tùy biến lịch của bạn" onPress={() => navigation.navigate('BookingCalendar')} />
             <ThemeSwitchLink />
             <MenuLink icon="pricetags-outline" label="Đề xuất Style / Concept mới" onPress={() => { setProposeForm({ name: '', description: '', keywords: '' }); setProposeModalVisible(true); }} />
             <MenuLink icon="shield-checkmark-outline" label="Xác minh danh tính" onPress={handleSubmitVerification} />
