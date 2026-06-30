@@ -204,6 +204,8 @@ export interface PortfolioFeedItem {
   photographerName: string;
   avatarUrl?:       string;
   createdAt:        string;
+  styles?:          string[];
+  concepts?:        string[];
 }
 
 export interface FeaturedPhotographerCard {
@@ -317,7 +319,7 @@ export async function getCustomerHomeFeed(): Promise<CustomerHomeFeed> {
           id displayName region avatarUrl rating isPremium previewPhotos
         }
         latestPhotos {
-          photoId imageUrl photographerId photographerName avatarUrl createdAt
+          photoId imageUrl photographerId photographerName avatarUrl createdAt styles concepts
         }
       }
     }

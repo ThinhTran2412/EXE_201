@@ -8,6 +8,8 @@ public sealed class PortfolioFeedItem
     public required string PhotographerName { get; init; }
     public string? AvatarUrl { get; init; }
     public required DateTime CreatedAt { get; init; }
+    public IReadOnlyList<string> Styles { get; init; } = [];
+    public IReadOnlyList<string> Concepts { get; init; } = [];
 }
 
 public sealed class FeaturedPhotographerCard

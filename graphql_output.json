@@ -1,0 +1,140 @@
+{
+  "data": {
+    "customerHomeFeed": {
+      "latestPhotos": [
+        {
+          "photoId": "d909fd1a-33fb-4a5d-ad94-9904f12a07be",
+          "imageUrl": "https://api.pickic.io.vn/uploads/d855d6bd-d1be-440f-9f9a-6e555aa604d1/668df72b0aea4257b86bec667e970275.jpeg",
+          "styles": [
+            "Vintage"
+          ],
+          "concepts": []
+        },
+        {
+          "photoId": "d6e0bceb-a947-4be9-9f99-8d6b03fe55fe",
+          "imageUrl": "https://api.pickic.io.vn/uploads/d855d6bd-d1be-440f-9f9a-6e555aa604d1/c3a394ac3abe44d0a7023ec934a112ed.jpeg",
+          "styles": [
+            "Portrait"
+          ],
+          "concepts": []
+        },
+        {
+          "photoId": "5042b350-d216-41c2-b383-9455545d8b4e",
+          "imageUrl": "https://api.pickic.io.vn/uploads/d855d6bd-d1be-440f-9f9a-6e555aa604d1/0e51bbaba73547eabce88091c3cc59ad.jpeg",
+          "styles": [
+            "Film Look"
+          ],
+          "concepts": []
+        },
+        {
+          "photoId": "55edf85b-8d46-4c62-9a2b-4e41f364ddb3",
+          "imageUrl": "https://api.pickic.io.vn/uploads/d855d6bd-d1be-440f-9f9a-6e555aa604d1/27681e6a82e542d393e00946195f9471.jpeg",
+          "styles": [
+            "Streetwear"
+          ],
+          "concepts": []
+        },
+        {
+          "photoId": "bad264fd-e60e-4882-8082-764676397f67",
+          "imageUrl": "https://api.pickic.io.vn/uploads/d855d6bd-d1be-440f-9f9a-6e555aa604d1/fdaf374ef30d4d80bb2dbae50e550f81.jpeg",
+          "styles": [],
+          "concepts": [
+            "Wedding"
+          ]
+        },
+        {
+          "photoId": "0aa62de0-2907-4be4-accf-d5a99de2343f",
+          "imageUrl": "https://api.pickic.io.vn/uploads/d855d6bd-d1be-440f-9f9a-6e555aa604d1/c2ba7b8455a24008a920eb4fb66f431c.jpeg",
+          "styles": [
+            "Editorial"
+          ],
+          "concepts": []
+        },
+        {
+          "photoId": "78b46c23-2549-496d-b8a7-6a4dbd0c90c7",
+          "imageUrl": "https://api.pickic.io.vn/uploads/be135986-5224-4ce8-8ec9-019abb4f4cfb/76baf47928ba4057ace036c2a9ef2a06.jpeg",
+          "styles": [],
+          "concepts": []
+        },
+        {
+          "photoId": "4004cb02-eab8-471e-aaa2-c108501dd13a",
+          "imageUrl": "https://api.pickic.io.vn/uploads/be135986-5224-4ce8-8ec9-019abb4f4cfb/324dc6c354d34077a760d21bc63dabb2.jpeg",
+          "styles": [],
+          "concepts": []
+        },
+        {
+          "photoId": "48cf277b-11c1-4e33-b2ac-a68e0950b510",
+          "imageUrl": "https://api.pickic.io.vn/uploads/be135986-5224-4ce8-8ec9-019abb4f4cfb/97466fb1cca24d6ca016f1f8fd3d08bc.jpeg",
+          "styles": [],
+          "concepts": []
+        },
+        {
+          "photoId": "d7ec388f-8de6-4b90-8275-9572e16653ca",
+          "imageUrl": "https://api.pickic.io.vn/uploads/be135986-5224-4ce8-8ec9-019abb4f4cfb/27b0d6056d7a4bb6b8ffb4c32d452c2c.jpeg",
+          "styles": [],
+          "concepts": []
+        },
+        {
+          "photoId": "4f9fb93b-155a-49a7-8930-b9784ac87c9c",
+          "imageUrl": "https://api.pickic.io.vn/uploads/be135986-5224-4ce8-8ec9-019abb4f4cfb/82f8ecf70b3b4d79a0e42e58913d0313.jpeg",
+          "styles": [],
+          "concepts": []
+        },
+        {
+          "photoId": "3e3f8117-b7d0-4401-87d4-6d680ce6fcb2",
+          "imageUrl": "https://api.pickic.io.vn/uploads/be135986-5224-4ce8-8ec9-019abb4f4cfb/6b6f6fc7380643d295d0922176a56024.jpeg",
+          "styles": [],
+          "concepts": []
+        },
+        {
+          "photoId": "4c08957b-02cf-4631-a2ad-d90ace172552",
+          "imageUrl": "https://api.pickic.io.vn/uploads/be135986-5224-4ce8-8ec9-019abb4f4cfb/b415f5b185254786b7394d2d015b807c.jpeg",
+          "styles": [],
+          "concepts": []
+        },
+        {
+          "photoId": "7c03ea8d-bd96-434a-baad-4bad99f48889",
+          "imageUrl": "https://api.pickic.io.vn/uploads/852953d4-20f3-494c-bae2-3945d1f8e869/2efaa79477ba40eb8ca9b04176210f32.jpeg",
+          "styles": [],
+          "concepts": []
+        },
+        {
+          "photoId": "eae29902-a998-46fd-b29d-b55e2e55251d",
+          "imageUrl": "https://api.pickic.io.vn/uploads/852953d4-20f3-494c-bae2-3945d1f8e869/b03fc23464b3435898ea1906ff5e47c3.jpeg",
+          "styles": [],
+          "concepts": []
+        },
+        {
+          "photoId": "788ef3e0-7774-46de-9da5-b8a14bfb9aeb",
+          "imageUrl": "https://api.pickic.io.vn/uploads/852953d4-20f3-494c-bae2-3945d1f8e869/7ecb1449491a44dbab7414c5c46c8138.jpeg",
+          "styles": [],
+          "concepts": []
+        },
+        {
+          "photoId": "e3257727-3d3d-4049-9a15-f11e6b6a37aa",
+          "imageUrl": "https://api.pickic.io.vn/uploads/852953d4-20f3-494c-bae2-3945d1f8e869/b1eedc0633984fa1bdd77e2838504ca4.jpeg",
+          "styles": [],
+          "concepts": []
+        },
+        {
+          "photoId": "6f29a970-6453-4b24-baa0-2742e67f09d2",
+          "imageUrl": "https://api.pickic.io.vn/uploads/852953d4-20f3-494c-bae2-3945d1f8e869/fd7a216dd4104c64a543df58dd29bad9.jpeg",
+          "styles": [],
+          "concepts": []
+        },
+        {
+          "photoId": "34867afd-7aed-4873-8d2a-1c6550690128",
+          "imageUrl": "https://api.pickic.io.vn/uploads/852953d4-20f3-494c-bae2-3945d1f8e869/507415bf5ad749a58ec85ad325a173a7.jpeg",
+          "styles": [],
+          "concepts": []
+        },
+        {
+          "photoId": "45b4572a-2e00-4f10-a5d8-888875a5b6e7",
+          "imageUrl": "https://api.pickic.io.vn/uploads/852953d4-20f3-494c-bae2-3945d1f8e869/85e3af40d6ff445f8eab04262d118e69.jpeg",
+          "styles": [],
+          "concepts": []
+        }
+      ]
+    }
+  }
+}

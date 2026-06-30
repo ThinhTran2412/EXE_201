@@ -44,6 +44,8 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
         var latestPhotos = await db.PortfolioPhotos
             .AsNoTracking()
             .Include(x => x.Photographer)
+            .Include(x => x.Styles)
+            .Include(x => x.Concepts)
             .Where(x => x.Photographer.DeletedAt == null)
             .OrderByDescending(x => x.CreatedAt)
             .Take(latestLimit)
@@ -54,7 +56,9 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
                 PhotographerId = x.PhotographerId,
                 PhotographerName = x.Photographer.DisplayName,
                 AvatarUrl = string.IsNullOrWhiteSpace(x.Photographer.AvatarUrl) ? null : x.Photographer.AvatarUrl,
-                CreatedAt = x.CreatedAt
+                CreatedAt = x.CreatedAt,
+                Styles = x.Styles.Select(s => s.Name).ToList(),
+                Concepts = x.Concepts.Select(c => c.Name).ToList()
             })
             .ToListAsync(cancellationToken);
 

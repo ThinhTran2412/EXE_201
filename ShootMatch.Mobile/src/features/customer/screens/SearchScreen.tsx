@@ -185,18 +185,44 @@ export default function SearchScreen() {
 
       // Build real lookbooks dynamically from the latest photos in the database
       const portfolios = feed.latestPhotos ?? [];
-      const titles = ['Retro Sunset', 'Minimalist Studio', 'Cinematic Rain', 'Street Fashion', 'Vintage Vibe', 'Golden Hour'];
-      const descs = ['Hoàng hôn rực rỡ', 'Tối giản & tinh tế', 'Đậm chất điện ảnh', 'Phố thị năng động', 'Cổ điển hoài niệm', 'Nghệ thuật ánh sáng'];
-      const tags = ['Vintage', 'Portrait', 'Film look', 'Streetwear', 'Vintage', 'Portrait'];
       
-      const mappedLookbooks = portfolios.slice(0, 6).map((item, index) => ({
-        title: titles[index % titles.length],
-        desc: `${descs[index % descs.length]} bởi @${item.photographerName}`,
-        tag: tags[index % tags.length],
-        imageUrl: item.imageUrl,
-        photographerId: item.photographerId
-      }));
-      setLookbooks(mappedLookbooks.length > 0 ? mappedLookbooks : MOCK_LOOKBOOKS);
+      const categories = [
+        { title: 'Retro Sunset', desc: 'Hoàng hôn rực rỡ', tag: 'Vintage', coverIndex: 29 },
+        { title: 'Minimalist Studio', desc: 'Tối giản & tinh tế', tag: 'Portrait', coverIndex: 8 },
+        { title: 'Cinematic Rain', desc: 'Đậm chất điện ảnh', tag: 'Film look', coverIndex: 3 },
+        { title: 'Street Fashion', desc: 'Phố thị năng động', tag: 'Streetwear', coverIndex: 10 },
+        { title: 'Happy Together', desc: 'Khoảnh khắc hạnh phúc', tag: 'Wedding', coverIndex: 35 },
+        { title: 'High Fashion', desc: 'Đậm chất nghệ thuật', tag: 'Editorial', coverIndex: 13 },
+      ];
+      
+      const mappedLookbooks = categories.map((cat) => {
+        // Find a portfolio photo that actually matches this category's style or concept tag
+        const matchingPhoto = portfolios.find(p => {
+          const styleMatches = p.styles?.some(s => s?.toLowerCase() === cat.tag.toLowerCase());
+          const conceptMatches = p.concepts?.some(c => c?.toLowerCase() === cat.tag.toLowerCase());
+          return styleMatches || conceptMatches;
+        });
+
+        if (matchingPhoto) {
+          return {
+            title: cat.title,
+            desc: `${cat.desc} bởi @${matchingPhoto.photographerName}`,
+            tag: cat.tag,
+            imageUrl: matchingPhoto.imageUrl,
+            photographerId: matchingPhoto.photographerId
+          };
+        } else {
+          return {
+            title: cat.title,
+            desc: cat.desc,
+            tag: cat.tag,
+            coverIndex: cat.coverIndex,
+            imageUrl: null,
+            photographerId: null
+          };
+        }
+      });
+      setLookbooks(mappedLookbooks);
 
       // Fetch real packages dynamically from database for top 3 photographers
       const topPhotographers = feed.featured?.slice(0, 3) ?? [];

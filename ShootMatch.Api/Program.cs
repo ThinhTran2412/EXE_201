@@ -164,14 +164,14 @@ builder.Services
 // ──────────────────────────────────────────
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<ShootMatch.Infrastructure.Persistence.ShootMatchDbContext>();
-    await ShootMatch.Infrastructure.Persistence.DatabaseBootstrap.ApplyAsync(db, app.Logger);
-
-    // Database check/seeding try-catch block has been removed for cleanup
-
-}
+// using (var scope = app.Services.CreateScope())
+// {
+//     var db = scope.ServiceProvider.GetRequiredService<ShootMatch.Infrastructure.Persistence.ShootMatchDbContext>();
+//     await ShootMatch.Infrastructure.Persistence.DatabaseBootstrap.ApplyAsync(db, app.Logger);
+// 
+//     // Database check/seeding try-catch block has been removed for cleanup
+// 
+// }
 
 app.UseSwagger();
 app.UseSwaggerUI(options =>

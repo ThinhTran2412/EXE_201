@@ -66,7 +66,9 @@ public sealed class InMemoryPhotographerRepository : IPhotographerRepository
                 PhotographerId = p.Id,
                 PhotographerName = p.DisplayName,
                 AvatarUrl = p.AvatarUrl,
-                CreatedAt = p.UpdatedAt
+                CreatedAt = p.UpdatedAt,
+                Styles = [],
+                Concepts = []
             }))
             .OrderByDescending(x => x.CreatedAt)
             .Take(latestLimit)
