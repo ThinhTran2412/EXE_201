@@ -1,5 +1,5 @@
 import React, { memo, type ComponentProps } from 'react';
-import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../app/theme/colors';
 import { fontWeights } from '../../../../app/theme/typography';
@@ -27,9 +27,10 @@ const ActionTile = memo(function ActionTile({
   return (
     <Pressable style={styles.tile} onPress={onPress}>
       {tile.image ? (
-        <ImageBackground source={resolveImageSource(tile.image)!} style={styles.tileBg} resizeMode="cover">
+        <>
+          <Image source={resolveImageSource(tile.image)!} style={[styles.tileBg, { width: '100%', height: '100%' }]} resizeMode="cover" />
           <View style={styles.tileDim} />
-        </ImageBackground>
+        </>
       ) : (
         <View style={[styles.tileBg, { backgroundColor: colors.dark }]} />
       )}

@@ -219,25 +219,53 @@ function HistoryItem({ booking, photographer }: { booking: Booking; photographer
   const navigation = useNavigation<any>();
   const cfg = STATUS_CFG[booking.status] ?? STATUS_CFG.Completed;
   const pName = photographer?.displayName ?? 'Nhiếp ảnh gia';
+  const pAvatar = formatPhotoUrl(photographer?.avatarUrl) || DEFAULT_AVATAR;
+  
   const date = new Date(booking.scheduledAt);
-  const dateStr = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+  const dateStr = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+  const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <Pressable
-      style={styles.historyItemCard}
-      onPress={() => navigation.navigate('BookingDetail', { booking })}
-    >
-      <View style={styles.historyItemLeft}>
-        <Text style={styles.historyItemDate}>{dateStr}</Text>
-        <Text style={styles.historyItemName}>{pName}</Text>
-      </View>
-      <View style={styles.historyItemRight}>
-        <Text style={styles.historyItemPrice}>{booking.agreedPrice?.toLocaleString('vi-VN')}đ</Text>
-        <View style={[styles.historyStatusBadge, { backgroundColor: cfg.bgColor }]}>
-          <Text style={[styles.historyStatusText, { color: cfg.color }]}>{cfg.label}</Text>
+    <Animated.View entering={FadeInDown.duration(400)}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.historyTicket,
+          pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
+        ]}
+        onPress={() => navigation.navigate('BookingDetail', { booking })}
+      >
+        <View style={styles.ticketHeader}>
+          <View style={styles.ticketDateCol}>
+             <Text style={styles.ticketTime}>{timeStr}</Text>
+             <Text style={styles.ticketDate}>{dateStr}</Text>
+          </View>
+          <View style={[styles.ticketStatusBadge, { backgroundColor: cfg.bgColor }]}>
+             <Ionicons name={cfg.icon as any} size={12} color={cfg.color} />
+             <Text style={[styles.ticketStatusText, { color: cfg.color }]}>{cfg.label}</Text>
+          </View>
         </View>
-      </View>
-    </Pressable>
+
+        <View style={styles.ticketDivider}>
+          <View style={styles.ticketNotchLeft} />
+          <View style={styles.ticketDashedLine} />
+          <View style={styles.ticketNotchRight} />
+        </View>
+
+        <View style={styles.ticketBody}>
+          <View style={styles.ticketPhotographerInfo}>
+            <Image source={{ uri: pAvatar }} style={styles.ticketAvatar} />
+            <View>
+              <Text style={styles.ticketRole}>NHIẾP ẢNH GIA</Text>
+              <Text style={styles.ticketName}>{pName}</Text>
+            </View>
+          </View>
+          <View style={styles.ticketPriceCol}>
+             <Text style={styles.ticketPriceLabel}>TỔNG CỘNG</Text>
+             <Text style={styles.ticketPrice}>{booking.agreedPrice?.toLocaleString('vi-VN')}đ</Text>
+          </View>
+        </View>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -769,44 +797,133 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 10,
   },
-  historyItemCard: {
+  historyTicket: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  ticketHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f3ecd8',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(26,26,15,0.12)',
+    padding: 20,
+    backgroundColor: '#ffffff',
   },
-  historyItemLeft: {
+  ticketDateCol: {
     gap: 4,
   },
-  historyItemDate: {
-    fontSize: 11,
-    color: colors.textLight,
-  },
-  historyItemName: {
-    fontSize: 14,
-    fontWeight: fontWeights.semibold,
+  ticketTime: {
+    fontSize: 18,
+    fontWeight: '800',
     color: colors.dark,
+    letterSpacing: 0.5,
   },
-  historyItemRight: {
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-  historyItemPrice: {
+  ticketDate: {
     fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: fontWeights.medium,
+  },
+  ticketStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+  },
+  ticketStatusText: {
+    fontSize: 11,
     fontWeight: fontWeights.bold,
-    color: colors.dark,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  historyStatusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+  ticketDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 24,
+    position: 'relative',
+    zIndex: 1,
   },
-  historyStatusText: {
+  ticketNotchLeft: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+    position: 'absolute',
+    left: -13,
+    borderRightWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+  },
+  ticketNotchRight: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+    position: 'absolute',
+    right: -13,
+    borderLeftWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+  },
+  ticketDashedLine: {
+    flex: 1,
+    height: 0,
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(0,0,0,0.1)',
+    marginHorizontal: 16,
+  },
+  ticketBody: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#faf9f6',
+  },
+  ticketPhotographerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  ticketAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  ticketRole: {
     fontSize: 9,
     fontWeight: fontWeights.bold,
+    color: colors.textLight,
+    letterSpacing: 1,
+    marginBottom: 3,
+  },
+  ticketName: {
+    fontSize: 15,
+    fontWeight: fontWeights.bold,
+    color: colors.dark,
+  },
+  ticketPriceCol: {
+    alignItems: 'flex-end',
+  },
+  ticketPriceLabel: {
+    fontSize: 9,
+    fontWeight: fontWeights.bold,
+    color: colors.textLight,
+    letterSpacing: 0.5,
+    marginBottom: 3,
+  },
+  ticketPrice: {
+    fontSize: 16,
+    fontWeight: fontWeights.bold,
+    color: colors.accent,
   },
 });

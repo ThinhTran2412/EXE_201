@@ -2,6 +2,7 @@
   "expo": {
     "name": "PicKic",
     "slug": "shootmatch-mobile",
+    "scheme": "shootmatch",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/cream_original_square.png",
@@ -35,6 +36,9 @@
     },
     "experiments": {
       "tsconfigPaths": true
-    }
+    },
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }

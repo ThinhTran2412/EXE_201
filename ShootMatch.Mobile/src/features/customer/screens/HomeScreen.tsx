@@ -38,6 +38,7 @@ export default function HomeScreen() {
 
   const [featured, setFeatured] = useState<FeaturedDisplay[]>([]);
   const [moments, setMoments] = useState<MomentDisplay[]>([]);
+  const [allMoments, setAllMoments] = useState<MomentDisplay[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -63,13 +64,19 @@ export default function HomeScreen() {
         }
       }
       const apiMoments = buildMomentDisplay(uniqueMoments.slice(0, 20));
+      
+      // Khám phá (Khoảnh khắc) uses all photos mixed randomly
+      const allMomentsRaw = [...(feed.latestPhotos ?? [])].sort(() => Math.random() - 0.5);
+      const apiAllMoments = buildMomentDisplay(allMomentsRaw.slice(0, 40));
 
       setFeatured(apiFeatured.length > 0 ? apiFeatured : buildFallbackFeatured(8));
       setMoments(apiMoments.length > 0 ? apiMoments : buildFallbackMoments(10));
+      setAllMoments(apiAllMoments.length > 0 ? apiAllMoments : buildFallbackMoments(20));
       setMatches(m.slice(0, 5));
     } catch {
       setFeatured(buildFallbackFeatured(8));
       setMoments(buildFallbackMoments(10));
+      setAllMoments(buildFallbackMoments(20));
       setError(null);
     } finally {
       setLoading(false);
@@ -88,7 +95,7 @@ export default function HomeScreen() {
   );
 
   const heroCover = useMemo(() => featured[0]?.coverSource ?? localPictureSlice(39, 1)[0], [featured]);
-  const actionCovers = useMemo(() => localPictureSlice(20, 4), []);
+  const actionCovers = useMemo(() => localPictureSlice(0, 4), []);
 
   const goTab = useCallback(
     (screen: string) => navigation.navigate(screen),
@@ -166,7 +173,7 @@ export default function HomeScreen() {
                 actionOrange
               />
               <PortfolioMasonry
-                items={moments}
+                items={allMoments}
                 onPressItem={item => openProfile(item.photographerId)}
               />
             </View>

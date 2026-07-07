@@ -14,6 +14,11 @@ import { colors } from '../../../app/theme/colors';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { radius, spacing } from '../../../app/theme/spacing';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import { makeRedirectUri } from 'expo-auth-session';
+
+WebBrowser.maybeCompleteAuthSession();
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -21,7 +26,7 @@ const { width } = Dimensions.get('window');
 
 export default function LoginScreen({ navigation, route }: Props) {
   const initialRole = route.params?.role as UserRole ?? 'customer';
-  const { loginWithEmail, sendOtp } = useAuth();
+  const { loginWithEmail, sendOtp, loginWithGoogle } = useAuth();
 
   const [role, setRole] = useState<UserRole>(initialRole);
   const [loginMode, setLoginMode] = useState<'email' | 'phone'>('email');
@@ -29,6 +34,30 @@ export default function LoginScreen({ navigation, route }: Props) {
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Google Auth Setup
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    webClientId: '898887567340-orp0qab3ghipr6ephe2n7ijueq3e24d5.apps.googleusercontent.com',
+  }, {
+    scheme: 'shootmatch',
+  });
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      if (id_token) {
+        setLoading(true);
+        loginWithGoogle(id_token, role)
+          .catch((e: any) => {
+            const msg = e.response?.data?.error ?? e.response?.data ?? e.message;
+            Alert.alert('Đăng nhập Google thất bại', String(msg));
+          })
+          .finally(() => setLoading(false));
+      }
+    } else if (response?.type === 'error') {
+      Alert.alert('Lỗi xác thực', 'Không thể kết nối với Google lúc này.');
+    }
+  }, [response]);
 
   // Animated theme transition
   const animProgress = useSharedValue(initialRole === 'photographer' ? 1 : 0);
@@ -281,7 +310,6 @@ export default function LoginScreen({ navigation, route }: Props) {
             )}
           </View>
 
-          {/* Action Button */}
           <Pressable 
             style={({ pressed }) => [
               styles.submitBtn,
@@ -294,6 +322,28 @@ export default function LoginScreen({ navigation, route }: Props) {
           >
             <Text style={styles.submitBtnText}>
               {loading ? 'ĐANG KẾT NỐI...' : loginMode === 'email' ? 'ĐĂNG NHẬP' : 'GỬI MÃ OTP'}
+            </Text>
+          </Pressable>
+
+          <View style={styles.socialDivider}>
+            <View style={[styles.socialDividerLine, { borderColor: isPhotographer ? '#3a3a24' : '#e8dfce' }]} />
+            <Text style={[styles.socialDividerText, { color: isPhotographer ? '#555544' : '#b5a895' }]}>hoặc</Text>
+            <View style={[styles.socialDividerLine, { borderColor: isPhotographer ? '#3a3a24' : '#e8dfce' }]} />
+          </View>
+
+          <Pressable 
+            style={({ pressed }) => [
+              styles.googleBtn,
+              { backgroundColor: isPhotographer ? '#1a1a0f' : '#ffffff', borderColor: isPhotographer ? '#3a3a24' : '#e8dfce' },
+              pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
+              !request && { opacity: 0.5 }
+            ]}
+            onPress={() => promptAsync()}
+            disabled={!request || loading}
+          >
+            <Ionicons name="logo-google" size={18} color={isPhotographer ? '#faf5ee' : '#1a1a0f'} />
+            <Text style={[styles.googleBtnText, { color: isPhotographer ? '#faf5ee' : '#1a1a0f' }]}>
+              Tiếp tục với Google
             </Text>
           </Pressable>
 
@@ -612,6 +662,41 @@ const styles = StyleSheet.create({
     fontWeight: fontWeights.bold,
     fontSize: fontSizes.sm,
     letterSpacing: 1.5,
+  },
+  socialDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing[4],
+    zIndex: 2,
+  },
+  socialDividerLine: {
+    flex: 1,
+    borderTopWidth: 1,
+  },
+  socialDividerText: {
+    paddingHorizontal: spacing[3],
+    fontSize: 10,
+    fontWeight: fontWeights.bold,
+    textTransform: 'uppercase',
+  },
+  googleBtn: {
+    flexDirection: 'row',
+    height: 48,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[2],
+    borderWidth: 1.5,
+    zIndex: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  googleBtnText: {
+    fontWeight: fontWeights.bold,
+    fontSize: fontSizes.sm,
   },
   lightMeterContainer: {
     alignItems: 'center',

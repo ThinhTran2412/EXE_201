@@ -13,64 +13,64 @@ export interface AvailabilitySlot {
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface PhotographerCard {
   photographerId: string;
-  displayName:    string;
-  region:         string;
-  minBudget:      number;
-  maxBudget:      number;
-  rating:         number;
-  isPremium:      boolean;
+  displayName: string;
+  region: string;
+  minBudget: number;
+  maxBudget: number;
+  rating: number;
+  isPremium: boolean;
   similarityScore: number;
-  finalScore:     number;
-  avatarUrl?:     string;
+  finalScore: number;
+  avatarUrl?: string;
   currentLatitude?: number;
   currentLongitude?: number;
   portfolioPhotos?: string[];
 }
 
 export interface Photographer {
-  id:                 string;
-  displayName:        string;
-  phone:              string;
-  email:              string;
-  region:             string;
-  bio:                string;
-  quote:              string;
-  avatarUrl:          string;
-  coverPhotoUrl:      string;
-  instagramUrl:       string;
-  minBudget:          number;
-  maxBudget:          number;
-  rating:             number;
-  isPremium:          boolean;
-  isAvailable:        boolean;
+  id: string;
+  displayName: string;
+  phone: string;
+  email: string;
+  region: string;
+  bio: string;
+  quote: string;
+  avatarUrl: string;
+  coverPhotoUrl: string;
+  instagramUrl: string;
+  minBudget: number;
+  maxBudget: number;
+  rating: number;
+  isPremium: boolean;
+  isAvailable: boolean;
   verificationStatus: string;
-  portfolioPhotos?:   string[];
-  equipments?:        any[];
+  portfolioPhotos?: string[];
+  equipments?: any[];
 }
 
 export interface Match {
-  id:             string;
-  customerId:     string;
+  id: string;
+  customerId: string;
   photographerId: string;
-  status:         string;
-  matchedAt:      string;
+  status: string;
+  matchedAt: string;
 }
 
 export interface Booking {
-  id:             string;
-  customerId:     string;
+  id: string;
+  customerId: string;
   photographerId: string;
-  matchId:        string;
-  status:         string;
-  agreedPrice:    number;
-  commission:     number;
-  scheduledAt:    string;
-  createdAt:      string;
+  matchId: string;
+  status: string;
+  agreedPrice: number;
+  commission: number;
+  scheduledAt: string;
+  createdAt: string;
   cancellationReason?: string;
-  phone?:         string;
-  location?:      string;
-  note?:          string;
-  requirements?:  string;
+  phone?: string;
+  location?: string;
+  note?: string;
+  requirements?: string;
   servicePackageId?: string | null;
 }
 
@@ -105,33 +105,33 @@ export async function getMyBookings(): Promise<Booking[]> {
 }
 
 export interface Conversation {
-  id:             string;
-  matchId:        string;
-  customerId:     string;
+  id: string;
+  matchId: string;
+  customerId: string;
   photographerId: string;
-  status:         string;
-  createdAt:      string;
+  status: string;
+  createdAt: string;
   lastMessageAt?: string;
-  lastMessageContent?:       string;
-  lastMessageSenderName?:    string;
-  lastMessageSenderRole?:    string;
-  unreadCount?:              number;
-  customerDisplayName?:      string;
-  photographerDisplayName?:  string;
-  customerAvatarUrl?:        string;
-  photographerAvatarUrl?:    string;
+  lastMessageContent?: string;
+  lastMessageSenderName?: string;
+  lastMessageSenderRole?: string;
+  unreadCount?: number;
+  customerDisplayName?: string;
+  photographerDisplayName?: string;
+  customerAvatarUrl?: string;
+  photographerAvatarUrl?: string;
 }
 
 export interface Review {
-  id:                  string;
-  bookingId:           string;
-  authorCustomerId:    string;
+  id: string;
+  bookingId: string;
+  authorCustomerId: string;
   targetPhotographerId: string;
-  rating:              number;
-  comment:             string;
-  createdAt:           string;
-  authorName?:         string;
-  authorAvatarUrl?:    string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  authorName?: string;
+  authorAvatarUrl?: string;
 }
 
 export interface PhotographerAvailabilitySlot {
@@ -198,47 +198,47 @@ export async function getSwipeFeed(searchId: string): Promise<PhotographerCard[]
 }
 
 export interface PortfolioFeedItem {
-  photoId:          string;
-  imageUrl:         string;
-  photographerId:   string;
+  photoId: string;
+  imageUrl: string;
+  photographerId: string;
   photographerName: string;
-  avatarUrl?:       string;
-  createdAt:        string;
-  styles?:          string[];
-  concepts?:        string[];
+  avatarUrl?: string;
+  createdAt: string;
+  styles?: string[];
+  concepts?: string[];
 }
 
 export interface FeaturedPhotographerCard {
-  id:            string;
-  displayName:   string;
-  region:        string;
-  avatarUrl?:    string;
-  rating:        number;
-  isPremium:     boolean;
+  id: string;
+  displayName: string;
+  region: string;
+  avatarUrl?: string;
+  rating: number;
+  isPremium: boolean;
   previewPhotos: string[];
 }
 
 export interface CustomerHomeFeed {
-  featured:     FeaturedPhotographerCard[];
+  featured: FeaturedPhotographerCard[];
   latestPhotos: PortfolioFeedItem[];
 }
 
 export interface CustomerProfile {
-  id:            string;
-  displayName:   string;
-  phone:         string;
-  email:         string;
-  region:        string;
-  avatarUrl:          string;
-  coverPhotoUrl:      string;
+  id: string;
+  displayName: string;
+  phone: string;
+  email: string;
+  region: string;
+  avatarUrl: string;
+  coverPhotoUrl: string;
   highlightPhoto1Url: string;
   highlightPhoto2Url: string;
   highlightPhoto3Url: string;
   rollPreviewPhotos?: string;
-  preferredStyles?:   string;
-  isVerified:         boolean;
+  preferredStyles?: string;
+  isVerified: boolean;
   /** ISO — từ GraphQL `me` */
-  createdAt?:    string;
+  createdAt?: string;
 }
 
 export async function getCustomerProfile(): Promise<CustomerProfile | null> {
@@ -290,8 +290,8 @@ export async function uploadCustomerRollPreviewPhoto(uri: string, mimeType: stri
 }
 
 const UPLOAD_ENDPOINTS: Record<CustomerPhotoSlot, string> = {
-  avatar:     '/api/customers/profile/avatar/upload',
-  cover:      '/api/customers/profile/cover/upload',
+  avatar: '/api/customers/profile/avatar/upload',
+  cover: '/api/customers/profile/cover/upload',
   highlight1: '/api/customers/profile/highlight-1/upload',
   highlight2: '/api/customers/profile/highlight-2/upload',
   highlight3: '/api/customers/profile/highlight-3/upload',
@@ -441,15 +441,15 @@ export async function getMyMatches(): Promise<Match[]> {
 // ── Bookings ──────────────────────────────────────────────────────────────────
 
 export async function createBooking(payload: {
-  matchId:          string;
+  matchId: string;
   servicePackageId?: string | null;
-  agreedPrice:       number;
-  commission:        number;
-  scheduledAt:       string;
-  phone:             string;
-  location:          string;
-  note:              string;
-  requirements:      string;
+  agreedPrice: number;
+  commission: number;
+  scheduledAt: string;
+  phone: string;
+  location: string;
+  note: string;
+  requirements: string;
 }): Promise<string> {
   const { data } = await apiClient.post('/api/bookings', payload);
   return data.bookingId;
@@ -486,8 +486,8 @@ export async function getMyReviews(): Promise<Review[]> {
 
 export async function submitReview(payload: {
   bookingId: string;
-  rating:    number;
-  comment:   string;
+  rating: number;
+  comment: string;
 }) {
   await apiClient.post('/api/reviews', payload);
 }
