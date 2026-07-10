@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, View, ActivityIndicator } from 'react-native';
+import OnboardingQuestionnaireScreen from '../../features/customer/screens/OnboardingQuestionnaireScreen';
+import { getCustomerProfile } from '../../features/customer/api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CustomerTabParamList, CustomerStackParamList } from './types';
 import { colors } from '../theme/colors';
@@ -77,9 +79,45 @@ function CustomerTabNavigator() {
 
 // Root stack wraps tabs + full-screen routes
 export default function CustomerTabs() {
+  const [loading, setLoading] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+
+  useEffect(() => {
+    async function checkOnboarding() {
+      try {
+        const profile = await getCustomerProfile();
+        if (profile) {
+          // If preferredStyles is empty/null/blank, they need onboarding
+          const hasStyles = profile.preferredStyles && profile.preferredStyles.trim().length > 0;
+          setNeedsOnboarding(!hasStyles);
+        } else {
+          setNeedsOnboarding(false);
+        }
+      } catch (err) {
+        console.warn('Failed to check customer onboarding:', err);
+        setNeedsOnboarding(false);
+      } finally {
+        setLoading(false);
+      }
+    }
+    checkOnboarding();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
+
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{ headerShown: false }}
+      initialRouteName={needsOnboarding ? "OnboardingQuestionnaire" : "CustomerRoot"}
+    >
       <Stack.Screen name="CustomerRoot"         component={CustomerTabNavigator} />
+      <Stack.Screen name="OnboardingQuestionnaire" component={OnboardingQuestionnaireScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="Search"               component={SearchScreen} />
       <Stack.Screen name="EmergencySearch"      component={EmergencySearchScreen} />
       <Stack.Screen name="PhotographerProfile"  component={PhotographerProfileScreen} />
@@ -95,7 +133,6 @@ export default function CustomerTabs() {
       <Stack.Screen name="Chat"                 component={ChatScreen} />
       <Stack.Screen name="Call"                 component={CallScreen} />
     </Stack.Navigator>
-
   );
 }
 

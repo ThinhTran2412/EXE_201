@@ -32,6 +32,9 @@ import PortfolioMasonry from '../components/PortfolioMasonry';
 import { colors } from '../../../app/theme/colors';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { spacing } from '../../../app/theme/spacing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import AppTutorialOverlay from '../components/AppTutorialOverlay';
+import { useAuth } from '../../auth/AuthContext';
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -43,6 +46,9 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { session } = useAuth();
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -86,6 +92,34 @@ export default function HomeScreen() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    async function checkWalkthrough() {
+      if (!session?.userId) return;
+      try {
+        const needsWalkthrough = await AsyncStorage.getItem(`needs_walkthrough_${session.userId}`);
+        if (needsWalkthrough === 'true') {
+          setShowWalkthrough(true);
+        }
+      } catch (e) {
+        console.warn('Failed to check walkthrough status:', e);
+      }
+    }
+    if (!loading) {
+      checkWalkthrough();
+    }
+  }, [loading, session]);
+
+  const handleCloseWalkthrough = async () => {
+    setShowWalkthrough(false);
+    if (session?.userId) {
+      try {
+        await AsyncStorage.setItem(`needs_walkthrough_${session.userId}`, 'false');
+      } catch (e) {
+        console.warn('Failed to save walkthrough status:', e);
+      }
+    }
+  };
+
   const openProfile = useCallback(
     (photographerId: string) => {
       if (photographerId.startsWith('local-')) return;
@@ -108,6 +142,11 @@ export default function HomeScreen() {
         onSearch={() => navigation.navigate('Search')}
         onNotifications={() => navigation.navigate('Notifications')}
         onProfile={() => goTab('Profile')}
+      />
+
+      <AppTutorialOverlay
+        visible={showWalkthrough}
+        onClose={handleCloseWalkthrough}
       />
 
       <ScrollView

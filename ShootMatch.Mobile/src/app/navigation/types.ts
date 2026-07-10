@@ -25,6 +25,7 @@ export type PhotographerTabParamList = {
 
 export type CustomerStackParamList = {
   CustomerRoot: undefined;
+  OnboardingQuestionnaire: undefined;
   Search: undefined;
   EmergencySearch: undefined;
   PhotographerProfile: { id: string };
