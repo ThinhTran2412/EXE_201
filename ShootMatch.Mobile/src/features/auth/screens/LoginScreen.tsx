@@ -38,6 +38,8 @@ export default function LoginScreen({ navigation, route }: Props) {
   // Google Auth Setup
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     webClientId: '898887567340-orp0qab3ghipr6ephe2n7ijueq3e24d5.apps.googleusercontent.com',
+    androidClientId: process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID ?? '898887567340-dummyandroid.apps.googleusercontent.com',
+    iosClientId: process.env.EXPO_PUBLIC_IOS_CLIENT_ID ?? '898887567340-dummyios.apps.googleusercontent.com',
   }, {
     scheme: 'shootmatch',
   });
