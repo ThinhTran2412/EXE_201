@@ -49,7 +49,7 @@ jobs:
 
       - name: Build APK (Release)
         working-directory: ShootMatch.Mobile/android
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
