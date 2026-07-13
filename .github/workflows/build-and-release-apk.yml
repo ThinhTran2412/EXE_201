@@ -1,0 +1,100 @@
+name: Build and Release APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+
+jobs:
+  build:
+    name: Build and Release APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Important for creating a release
+      
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'ShootMatch.Mobile/package-lock.json'
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Install dependencies
+        working-directory: ShootMatch.Mobile
+        run: npm ci
+
+      - name: Expo Prebuild
+        working-directory: ShootMatch.Mobile
+        run: npx expo prebuild --platform android
+
+      - name: Build APK (Release)
+        working-directory: ShootMatch.Mobile/android
+        run: ./gradlew assembleRelease
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: ShootMatch.Mobile/android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "build-${{ github.run_number }}"
+          name: "Release Build #${{ github.run_number }}"
+          body: "Automated APK build triggered by commit ${{ github.sha }}"
+          files: ShootMatch.Mobile/android/app/build/outputs/apk/release/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify Discord
+        if: success() && github.event_name == 'push'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "DISCORD_WEBHOOK_URL is not set in GitHub Secrets. Skipping Discord notification."
+            exit 0
+          fi
+
+          curl -H "Content-Type: application/json" \
+               -d '{
+                 "embeds": [{
+                   "title": "🚀 New APK Release is Ready!",
+                   "description": "A new build has been successfully generated and published to GitHub Releases.",
+                   "color": 5814783,
+                   "fields": [
+                     {
+                       "name": "Build Number",
+                       "value": "#${{ github.run_number }}",
+                       "inline": true
+                     },
+                     {
+                       "name": "Commit",
+                       "value": "`${{ github.sha }}`",
+                       "inline": true
+                     }
+                   ],
+                   "url": "https://github.com/${{ github.repository }}/releases/tag/build-${{ github.run_number }}"
+                 }]
+               }' \
+               $DISCORD_WEBHOOK_URL
