@@ -135,8 +135,9 @@ export default function LoginScreen({ navigation, route }: Props) {
       try {
         await loginWithEmail(email.trim().toLowerCase(), password, role);
       } catch (e: any) {
-        const msg = e.response?.data?.error ?? e.response?.data ?? 'Đăng nhập thất bại. Vui lòng kiểm tra lại.';
-        Alert.alert('Đăng nhập thất bại', String(msg));
+        const errorDetail = e.response?.data?.error ?? e.response?.data ?? e.message ?? 'Lỗi không xác định';
+        const urlHint = e.config?.url ? `\nURL: ${e.config.url}` : '';
+        Alert.alert('Đăng nhập thất bại', `Chi tiết: ${String(errorDetail)}${urlHint}\n(Vui lòng kiểm tra kết nối mạng hoặc server)`);
       } finally {
         setLoading(false);
       }
@@ -152,7 +153,9 @@ export default function LoginScreen({ navigation, route }: Props) {
         await sendOtp(fullPhone, role);
         navigation.navigate('OtpVerify', { phone: fullPhone, role: role as string });
       } catch (e: any) {
-        Alert.alert('Lỗi gửi OTP', e.response?.data?.title ?? 'Không thể gửi mã OTP lúc này.');
+        const errorDetail = e.response?.data?.title ?? e.response?.data ?? e.message ?? 'Lỗi không xác định';
+        const urlHint = e.config?.url ? `\nURL: ${e.config.url}` : '';
+        Alert.alert('Lỗi gửi OTP', `Chi tiết: ${String(errorDetail)}${urlHint}\n(Vui lòng kiểm tra kết nối mạng hoặc server)`);
       } finally {
         setLoading(false);
       }
