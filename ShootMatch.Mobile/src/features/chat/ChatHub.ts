@@ -1,7 +1,7 @@
 import * as signalR from '@microsoft/signalr';
 import { tokenStorage } from '../../shared/storage/tokenStorage';
 
-const HUB_URL = process.env.EXPO_PUBLIC_SIGNALR_URL ?? 'http://192.168.1.7:5000/hubs/chat';
+import { SIGNALR_URL as HUB_URL } from '../../shared/api/config';
 
 import { refreshAccessToken } from '../../shared/api/client';
 

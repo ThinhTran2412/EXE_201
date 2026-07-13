@@ -2,7 +2,7 @@ import * as signalR from '@microsoft/signalr';
 import { tokenStorage } from '../../shared/storage/tokenStorage';
 import { refreshAccessToken } from '../../shared/api/client';
 
-const CHAT_HUB_URL = process.env.EXPO_PUBLIC_SIGNALR_URL ?? 'http://192.168.1.7:5000/hubs/chat';
+import { SIGNALR_URL as CHAT_HUB_URL } from '../../shared/api/config';
 const HUB_URL = CHAT_HUB_URL.replace('/chat', '/location');
 
 let connection: signalR.HubConnection | null = null;
