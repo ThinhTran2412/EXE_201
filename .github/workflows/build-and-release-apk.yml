@@ -62,6 +62,13 @@ jobs:
             
             **Các file thay đổi:**
             ${{ env.changed_files }}
+            
+            👉 Bấm vào tiêu đề màu xanh bên trên để xem log chi tiết.
+            **Repository:** ${{ github.repository }}
+            **Ref:** ${{ github.ref }}
+            **Event - ${{ github.event_name }}:** `${{ env.SHORT_SHA }} ${{ github.event.head_commit.message || 'Không có' }}`
+            **Triggered by:** ${{ github.actor }}
+            **Workflow:** ${{ github.workflow }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
