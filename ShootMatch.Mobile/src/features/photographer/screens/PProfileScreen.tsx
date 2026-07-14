@@ -272,11 +272,19 @@ export default function PProfileScreen() {
 
         <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.profileHeader}>
 
-          <View style={styles.avatarWrapper}>
-            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-            <Pressable style={styles.avatarEditBtn} onPress={() => pickAndUploadImage('avatar')}>
-              {savingImage === 'avatar' ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="camera" size={16} color="#fff" />}
-            </Pressable>
+          <View style={styles.avatarFocusContainer}>
+            {/* Focus Ring Indicator Lines */}
+            <View style={styles.lensFocusMarkTop} />
+            <View style={styles.lensFocusMarkBottom} />
+            <View style={styles.lensFocusMarkLeft} />
+            <View style={styles.lensFocusMarkRight} />
+
+            <View style={styles.avatarWrapper}>
+              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+              <Pressable style={styles.avatarEditBtn} onPress={() => pickAndUploadImage('avatar')}>
+                {savingImage === 'avatar' ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="camera" size={16} color="#fff" />}
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.nameRow}>
@@ -284,9 +292,19 @@ export default function PProfileScreen() {
             {profile?.verificationStatus === 'Verified' && <Ionicons name="checkmark-circle" size={22} color="#2ECC71" />}
           </View>
 
-          <View style={[styles.verifiedBadge, { borderColor: `${verificationColor}33`, backgroundColor: `${verificationColor}15` }]}>
-            <Ionicons name={profile?.verificationStatus === 'Verified' ? 'shield-checkmark' : 'shield-outline'} size={14} color={verificationColor} />
-            <Text style={[styles.verifiedText, { color: verificationColor }]}>{verificationLabel}</Text>
+          <View style={styles.badgeRow}>
+            <View style={styles.ratingBadge}>
+              <Ionicons name="star" size={10} color="#FFD700" />
+              <Text style={styles.ratingText}>RATING · {profile?.rating?.toFixed(1) || '0.0'}</Text>
+            </View>
+            <View style={styles.regionBadge}>
+              <Ionicons name="location" size={10} color={colors.accent} />
+              <Text style={styles.regionText}>LOC · {formatRegion(profile?.region)?.toUpperCase() || 'UNKNOWN'}</Text>
+            </View>
+            <View style={[styles.verifiedBadge, { borderColor: `${verificationColor}33`, backgroundColor: `${verificationColor}10` }]}>
+              <Ionicons name={profile?.verificationStatus === 'Verified' ? 'shield-checkmark' : 'shield-outline'} size={10} color={verificationColor} />
+              <Text style={[styles.verifiedText, { color: verificationColor }]}>{verificationLabel?.toUpperCase()}</Text>
+            </View>
           </View>
 
           {canVerify && (
@@ -297,21 +315,13 @@ export default function PProfileScreen() {
             </Pressable>
           )}
 
-          <View style={styles.badgeRow}>
-            <View style={styles.regionBadge}>
-              <Ionicons name="location" size={12} color={colors.accent} />
-              <Text style={styles.regionText}>{formatRegion(profile?.region) || 'Chưa cập nhật'}</Text>
-            </View>
-            <View style={styles.ratingBadge}>
-              <Ionicons name="star" size={12} color="#FFD700" />
-              <Text style={styles.ratingText}>{profile?.rating?.toFixed(1) || '0.0'}</Text>
-            </View>
-          </View>
-
           <View style={styles.quoteSection}>
             <Text style={styles.quoteSectionLabel}>Quote cá nhân</Text>
             {profile?.quote ? (
               <View style={styles.quoteWrapper}>
+                {/* Minimalist Watermark Circle */}
+                <View style={styles.quoteWatermarkCircle} />
+                
                 <Text style={styles.quoteMarkLeft}>“</Text>
                 <Text style={styles.quoteText}>{profile.quote}</Text>
                 <Text style={styles.quoteMarkRight}>”</Text>
@@ -326,26 +336,37 @@ export default function PProfileScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(400).duration(600)} style={styles.content}>
-          <LinearGradient colors={isDark ? ['#1e1c26', '#141121'] : [colors.surface, colors.surfaceStrong]} style={styles.statsBar}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{photos.length}</Text>
-              <Text style={styles.statLabel}>Tác phẩm</Text>
+          <View style={styles.statsCardsRow}>
+            <View style={styles.statCardItem}>
+              <View style={styles.statCardLeftAccent} />
+              <Text style={styles.statCardValue}>
+                {photos.length}
+                <Text style={styles.statCardSuffix}> px</Text>
+              </Text>
+              <Text style={styles.statCardLabel}>TÁC PHẨM</Text>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>2+</Text>
-              <Text style={styles.statLabel}>Năm KN</Text>
+            <View style={styles.statCardItem}>
+              <View style={styles.statCardLeftAccent} />
+              <Text style={styles.statCardValue}>
+                2+
+                <Text style={styles.statCardSuffix}> yr</Text>
+              </Text>
+              <Text style={styles.statCardLabel}>KINH NGHIỆM</Text>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>100%</Text>
-              <Text style={styles.statLabel}>Phản hồi</Text>
+            <View style={styles.statCardItem}>
+              <View style={styles.statCardLeftAccent} />
+              <Text style={styles.statCardValue}>
+                100
+                <Text style={styles.statCardSuffix}> %</Text>
+              </Text>
+              <Text style={styles.statCardLabel}>PHẢN HỒI</Text>
             </View>
-          </LinearGradient>
+          </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Giới Thiệu</Text>
             <View style={styles.bioContainer}>
+              <View style={styles.cardHeaderAccent} />
               <Text style={styles.bioText}>{profile?.bio || 'Chưa có thông tin giới thiệu. Hãy thêm tiểu sử để khách hàng hiểu rõ hơn về phong cách của bạn.'}</Text>
             </View>
           </View>
@@ -368,6 +389,7 @@ export default function PProfileScreen() {
             </View>
             {personalInfoVisible ? (
               <View style={styles.personalInfoCard}>
+                <View style={styles.cardHeaderAccent} />
                 <PersonalInfoRow icon="call-outline" label="SĐT" value={personalForm.phone || 'Chưa cập nhật'} />
                 <PersonalInfoRow icon="mail-outline" label="Email" value={personalForm.email || 'Chưa cập nhật'} />
                 <PersonalInfoRow icon="map-outline" label="Tỉnh / Thành phố" value={formatRegion(personalForm.region) || 'Chưa cập nhật'} />
@@ -391,11 +413,66 @@ export default function PProfileScreen() {
             </View>
             
             {profile?.equipments && profile.equipments.length > 0 ? (
-              <View style={styles.personalInfoCard}>
-                {profile.equipments.slice(0, 4).map((eq: any) => (
-                  <EquipmentRow key={eq.id} equipment={eq} />
-                ))}
-              </View>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={styles.portfolioStrip}
+              >
+                {profile.equipments.map((eq: any, idx: number) => {
+                  let iconName = 'camera-outline';
+                  if (eq.category === 'Lens') iconName = 'aperture-outline';
+                  else if (eq.category === 'Lighting') iconName = 'flash-outline';
+                  else if (eq.category === 'Drone') iconName = 'airplane-outline';
+                  else if (eq.category === 'Other') iconName = 'cube-outline';
+
+                  const categoryColors: Record<string, string> = {
+                    Camera: '#cf4028',
+                    Lens: '#3498db',
+                    Lighting: '#f1c40f',
+                    Drone: '#2ecc71',
+                    Other: '#95a5a6',
+                  };
+                  const catColor = categoryColors[eq.category] || '#95a5a6';
+
+                  return (
+                    <Pressable
+                      key={eq.id || idx}
+                      style={styles.portfolioSlideMount}
+                      onPress={() => navigation.navigate('ManageEquipment')}
+                    >
+                      {/* Top Sprocket Holes */}
+                      <View style={styles.sprocketHolesRow}>
+                        {[1, 2, 3, 4].map(i => (
+                          <View key={`sprock-t-${i}`} style={styles.sprocketHole} />
+                        ))}
+                      </View>
+
+                      <View style={[styles.portfolioSlideInner, { backgroundColor: isDark ? '#121118' : '#FAF7F2', justifyContent: 'center', alignItems: 'center' }]}>
+                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: `${catColor}15`, justifyContent: 'center', alignItems: 'center', marginBottom: 6 }}>
+                          <Ionicons name={iconName as any} size={22} color={catColor} />
+                        </View>
+                        <Text style={{ color: colors.text, fontSize: 11, fontWeight: '700', textAlign: 'center', paddingHorizontal: 6 }} numberOfLines={2}>
+                          {eq.name}
+                        </Text>
+                      </View>
+                      
+                      <View style={styles.portfolioSlideMeta}>
+                        <Text style={styles.portfolioSlideText}>GEAR {String(idx + 1).padStart(2, '0')}</Text>
+                        <Text style={[styles.portfolioSlideSpec, { color: catColor, fontSize: 8 }]}>
+                          {eq.category.toUpperCase()}{eq.isPrimary ? ' · MAIN' : ''}
+                        </Text>
+                      </View>
+
+                      {/* Bottom Sprocket Holes */}
+                      <View style={[styles.sprocketHolesRow, { marginTop: 4 }]}>
+                        {[1, 2, 3, 4].map(i => (
+                          <View key={`sprock-b-${i}`} style={styles.sprocketHole} />
+                        ))}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
             ) : (
               <View style={styles.personalInfoHidden}>
                 <Ionicons name="camera-outline" size={16} color="rgba(255,251,240,0.45)" />
@@ -436,15 +513,24 @@ export default function PProfileScreen() {
                             width: photoSize,
                             height: photoSize,
                             marginRight: col < 2 ? gridGap : 0,
+                            position: 'relative',
                           }}
                         >
                           {url ? (
-                            <PortfolioImageCell
-                              uri={url}
-                              style={{ width: photoSize, height: photoSize }}
-                              borderRadius={12}
-                              onPress={() => navigation.navigate('Portfolio')}
-                            />
+                            <>
+                              <PortfolioImageCell
+                                uri={url}
+                                style={{ width: photoSize, height: photoSize }}
+                                borderRadius={12}
+                                onPress={() => navigation.navigate('Portfolio')}
+                              />
+                              {/* Contact Sheet Frame Index Overlay */}
+                              <View style={styles.gridPhotoIndexBadge}>
+                                <Text style={styles.gridPhotoIndexText}>
+                                  {String(idx + 1).padStart(2, '0')}
+                                </Text>
+                              </View>
+                            </>
                           ) : null}
                         </View>
                       );
@@ -799,65 +885,297 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   topActions: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', zIndex: 10 },
   iconBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
   profileHeader: { alignItems: 'center', marginTop: -60, paddingHorizontal: 24, zIndex: 5 },
-  avatarWrapper: { position: 'relative', marginBottom: 12 },
+  
+  // Custom camera lens focus ring avatar styling
+  avatarFocusContainer: {
+    position: 'relative',
+    padding: 8,
+    borderRadius: 70,
+    borderWidth: 1.5,
+    borderColor: 'rgba(230, 126, 34, 0.35)',
+    borderStyle: 'dashed',
+    marginBottom: 12,
+  },
+  lensFocusMarkTop: {
+    position: 'absolute',
+    top: -2,
+    left: '50%',
+    marginLeft: -5,
+    width: 10,
+    height: 4,
+    backgroundColor: colors.accent,
+  },
+  lensFocusMarkBottom: {
+    position: 'absolute',
+    bottom: -2,
+    left: '50%',
+    marginLeft: -5,
+    width: 10,
+    height: 4,
+    backgroundColor: colors.accent,
+  },
+  lensFocusMarkLeft: {
+    position: 'absolute',
+    left: -2,
+    top: '50%',
+    marginTop: -5,
+    width: 4,
+    height: 10,
+    backgroundColor: colors.accent,
+  },
+  lensFocusMarkRight: {
+    position: 'absolute',
+    right: -2,
+    top: '50%',
+    marginTop: -5,
+    width: 4,
+    height: 10,
+    backgroundColor: colors.accent,
+  },
+  
+  avatarWrapper: { position: 'relative' },
   avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 4, borderColor: colors.background },
   avatarEditBtn: { position: 'absolute', right: 2, bottom: 2, width: 32, height: 32, borderRadius: 16, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.background },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   name: { fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: 8, letterSpacing: 0.5 },
-  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, marginBottom: 10 },
-  verifiedText: { fontSize: 13, fontWeight: '700' },
+  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, borderWidth: 1 },
+  verifiedText: { fontSize: 10, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
   verifyBtn: { marginBottom: 12, borderRadius: 14, overflow: 'hidden' },
   verifyBtnGradient: { paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
   verifyBtnText: { color: '#fff', fontWeight: '700' },
-  badgeRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  regionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surfaceStrong, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: colors.border },
-  regionText: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  badgeRow: { flexDirection: 'row', gap: 8, marginBottom: 20, flexWrap: 'wrap', justifyContent: 'center' },
+  regionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surfaceStrong, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, borderWidth: 1, borderColor: colors.border },
+  regionText: { color: colors.text, fontSize: 10, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
   personalActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   personalInfoHidden: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surfaceStrong, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border },
   personalInfoHiddenText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  ratingBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: isDark ? 'rgba(255, 215, 0, 0.15)' : 'rgba(212, 175, 55, 0.12)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: isDark ? 'rgba(255, 215, 0, 0.3)' : 'rgba(212, 175, 55, 0.25)' },
-  ratingText: { color: isDark ? '#FFD700' : '#B4781A', fontSize: 13, fontWeight: '600' },
+  ratingBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: isDark ? 'rgba(255, 215, 0, 0.1)' : 'rgba(212, 175, 55, 0.08)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, borderWidth: 1, borderColor: isDark ? 'rgba(255, 215, 0, 0.25)' : 'rgba(212, 175, 55, 0.2)' },
+  ratingText: { color: isDark ? '#FFD700' : '#B4781A', fontSize: 10, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
   quoteSection: { width: '100%', marginBottom: 6 },
   quoteSectionLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10, alignSelf: 'flex-start' },
-  quoteWrapper: { position: 'relative', paddingHorizontal: 20, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', width: '100%', backgroundColor: isDark ? 'rgba(245, 222, 179, 0.06)' : 'rgba(230, 126, 34, 0.08)', borderRadius: 18, borderWidth: 1, borderColor: isDark ? 'rgba(245, 222, 179, 0.12)' : 'rgba(230, 126, 34, 0.14)' },
+  
+  // Custom watermarked aperture quote card styling
+  quoteWrapper: {
+    position: 'relative',
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    backgroundColor: isDark ? 'rgba(243, 192, 139, 0.04)' : 'rgba(230, 126, 34, 0.05)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  quoteWatermarkCircle: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.02)',
+    pointerEvents: 'none',
+  },
   quoteMarkLeft: { position: 'absolute', top: 4, left: 12, fontSize: 36, fontWeight: 'bold', color: isDark ? '#F5DEB3' : colors.accent, opacity: 0.25 },
   quoteMarkRight: { position: 'absolute', bottom: -8, right: 12, fontSize: 36, fontWeight: 'bold', color: isDark ? '#F5DEB3' : colors.accent, opacity: 0.25 },
   quoteText: { fontSize: 16, fontStyle: 'italic', color: colors.text, textAlign: 'center', lineHeight: 24, fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', paddingHorizontal: 18, flexShrink: 1, width: '100%' },
   quoteEmptyState: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 18, backgroundColor: colors.surfaceStrong, borderWidth: 1, borderColor: colors.border },
   quoteEmptyText: { flex: 1, color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   content: { paddingHorizontal: 20, paddingTop: 10 },
-  statsBar: { flexDirection: 'row', borderRadius: 20, padding: 20, marginBottom: 30, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10, backgroundColor: colors.surface },
-  statItem: { flex: 1, alignItems: 'center', gap: 4 },
-  statDivider: { width: 1, backgroundColor: colors.border, marginVertical: 4 },
-  statValue: { fontSize: 22, fontWeight: 'bold', color: colors.text },
-  statLabel: { fontSize: 12, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 1 },
+  
+  // Custom camera-spec themed stats cards row
+  statsCardsRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
+  statCardItem: {
+    flex: 1,
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  statCardLeftAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    backgroundColor: colors.accent,
+  },
+  statCardValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.text,
+    fontFamily: Platform.OS === 'ios' ? 'Courier-Bold' : 'monospace',
+  },
+  statCardSuffix: {
+    fontSize: 10,
+    color: colors.accent,
+    fontWeight: '600',
+  },
+  statCardLabel: {
+    fontSize: 8.5,
+    color: colors.textMuted,
+    marginTop: 6,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
   section: { marginBottom: 32 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text, letterSpacing: 0.5 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: 0.5 },
   seeAllBtn: { color: colors.accent, fontSize: 14, fontWeight: '600' },
   personalEditBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(243,192,139,0.12)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(243,192,139,0.12)' },
-  bioContainer: { backgroundColor: colors.surfaceStrong, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: colors.border },
+  
+  // Minimalist cards with fine accent color top border
+  bioContainer: {
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  cardHeaderAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2.5,
+    backgroundColor: colors.accent,
+    opacity: 0.8,
+  },
   bioText: { color: colors.textMuted, lineHeight: 24, fontSize: 15 },
-  personalInfoCard: { backgroundColor: colors.surfaceStrong, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: colors.border, gap: 10 },
+  personalInfoCard: {
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 10,
+    position: 'relative',
+    overflow: 'hidden',
+  },
   personalRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   personalRowIcon: { width: 26, height: 26, borderRadius: 8, backgroundColor: 'rgba(243,192,139,0.12)', justifyContent: 'center', alignItems: 'center', marginTop: 1 },
   personalRowBody: { flex: 1 },
   personalRowLabel: { color: colors.textLight, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   personalRowValue: { color: colors.text, fontSize: 13, fontWeight: '600', lineHeight: 18, marginTop: 2 },
+  portfolioStrip: { gap: 12, paddingBottom: 10 },
+  portfolioSlideMount: {
+    backgroundColor: isDark ? '#121118' : '#FAF7F2',
+    borderWidth: 1,
+    borderColor: isDark ? '#2E2A36' : '#E6E3DB',
+    padding: 8,
+    paddingBottom: 6,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: isDark ? 0.3 : 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  
+  // Custom sprocket holes to simulate 35mm photographic film slide frames
+  sprocketHolesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    height: 6,
+    width: '100%',
+    marginBottom: 4,
+  },
+  sprocketHole: {
+    width: 8,
+    height: 5,
+    borderRadius: 1,
+    backgroundColor: isDark ? '#2E2A36' : '#E6E3DB',
+  },
+  
+  portfolioSlideInner: {
+    aspectRatio: 3 / 4,
+    borderRadius: 6,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    width: 120,
+  },
+  portfolioSlideMeta: {
+    marginTop: 6,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+  },
+  portfolioSlideText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: colors.text,
+    fontFamily: Platform.OS === 'ios' ? 'Courier-Bold' : 'monospace',
+  },
+  portfolioSlideSpec: {
+    fontSize: 7.5,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  portfolioEmptyBox: {
+    borderRadius: 12,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: 'rgba(230, 126, 34, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(230, 126, 34, 0.05)',
+    padding: 24,
+    width: '100%',
+  },
+  portfolioEmptyText: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  portfolioEmptySub: { color: colors.textMuted, fontSize: 12 },
   photoGrid: { alignItems: 'flex-start' },
   gridPhoto: { borderRadius: 12, backgroundColor: colors.surfaceStrong },
+  
+  // Contact Sheet Frame Index Badging
+  gridPhotoIndexBadge: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
+  },
+  gridPhotoIndexText: {
+    color: '#FFD700',
+    fontSize: 8,
+    fontWeight: '800',
+    fontFamily: Platform.OS === 'ios' ? 'Courier-Bold' : 'monospace',
+  },
+  
   addPhotoPlaceholder: { borderRadius: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(230, 126, 34, 0.3)', justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: 'rgba(230, 126, 34, 0.05)' },
   addPhotoText: { color: colors.accent, fontSize: 12, fontWeight: '600' },
-  menu: { gap: 12, marginTop: 10 },
+  menu: { gap: 10, marginTop: 10 },
   reviewCard: { backgroundColor: colors.surfaceStrong, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 16, marginBottom: 12 },
   reviewAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
   reviewAvatarImage: { width: 32, height: 32, borderRadius: 16 },
   reviewEmptyState: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16, backgroundColor: colors.surfaceStrong, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
   reviewEmptyText: { fontSize: 12, opacity: 0.5, color: colors.text },
-  menuLink: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.surfaceStrong, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
+  menuLink: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   menuLinkLeft: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  menuIconWrapper: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(230, 126, 34, 0.1)', justifyContent: 'center', alignItems: 'center' },
-  menuLinkLabel: { color: colors.text, fontSize: 16, fontWeight: '500' },
+  menuIconWrapper: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(230, 126, 34, 0.08)', justifyContent: 'center', alignItems: 'center' },
+  menuLinkLabel: { color: colors.text, fontSize: 15, fontWeight: '600' },
   modalWrapper: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay },
   modalContent: { backgroundColor: colors.surfaceStrong, borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '90%', paddingBottom: Platform.OS === 'ios' ? 20 : 0, borderWidth: 1, borderColor: colors.border },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, borderBottomWidth: 1, borderBottomColor: colors.border },

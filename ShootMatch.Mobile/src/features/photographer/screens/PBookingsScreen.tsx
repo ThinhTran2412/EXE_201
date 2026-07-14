@@ -28,8 +28,8 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CAL_CELL = Math.floor((SCREEN_WIDTH - 40 - 36) / 7);
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  Pending: { label: 'Chờ duyệt', color: '#B4781A', bg: 'rgba(212, 175, 55, 0.15)', icon: 'time-outline' },
-  AwaitingDeposit: { label: 'Chờ khách cọc', color: '#ea580c', bg: 'rgba(234, 88, 12, 0.15)', icon: 'wallet-outline' },
+  Pending: { label: 'Chờ duyệt', color: '#B4781A', bg: '#fef9e7', icon: 'time-outline' },
+  AwaitingDeposit: { label: 'Chờ khách cọc', color: '#ea580c', bg: '#fff7ed', icon: 'wallet-outline' },
   Confirmed: { label: 'Đã xác nhận', color: '#3A6073', bg: 'rgba(58, 96, 115, 0.12)', icon: 'checkmark-circle-outline' },
   Moving: { label: 'Đang di chuyển', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)', icon: 'bicycle-outline' },
   Arrived: { label: 'Đã đến nơi', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', icon: 'flag-outline' },

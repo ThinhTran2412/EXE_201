@@ -17,7 +17,7 @@ import { colors } from '../../../app/theme/colors';
 
 const { width: W, height: H } = Dimensions.get('window');
 const CARD_W = W - 20;
-const CARD_H = H * 0.65; // Đủ chỗ cho bảng thông tin nghệ thuật bên dưới
+const CARD_H = H * 0.63; // Giảm nhẹ tỉ lệ từ 0.65 xuống 0.63 để tránh đè lấp trên màn hình có phím điều hướng hệ thống
 const SWIPE_THRESHOLD = W * 0.38;
 
 const REGIONS: Record<string, string> = {
@@ -401,7 +401,7 @@ export default function DiscoverScreen() {
           onPress={() => navigation.navigate('PhotographerProfile', { photographerId: topCard.id })}
           style={({ pressed }) => [
             styles.dashboardContainer,
-            { paddingBottom: Math.max(insets.bottom, 16), opacity: pressed ? 0.85 : 1 }
+            { paddingBottom: 6, opacity: pressed ? 0.85 : 1 }
           ]}
         >
           <View style={styles.dashboardInner}>
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   filterBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.85)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 },
 
   stackArea: { flex: 1, justifyContent: 'center', alignItems: 'center', zIndex: 5 },
-  stack: { width: CARD_W, height: CARD_H, alignItems: 'center', justifyContent: 'center' },
+  stack: { width: CARD_W, height: CARD_H, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
 
   card: { position: 'absolute', width: CARD_W, height: CARD_H, borderRadius: 28, backgroundColor: '#1c1c13', shadowColor: '#1a1a0f', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.18, shadowRadius: 24, elevation: 12, borderWidth: 1.5, borderColor: 'rgba(255,247,225,0.08)' },
   cardInner: { flex: 1, borderRadius: 28, overflow: 'hidden', position: 'relative' },
@@ -504,21 +504,21 @@ const styles = StyleSheet.create({
 
   // DSLR brackets
   focusBrackets: { ...StyleSheet.absoluteFillObject, zIndex: 22 },
-  focusBracketTL: { position: 'absolute', top: 24, left: 24, width: 16, height: 16, borderTopWidth: 2, borderLeftWidth: 2, borderColor: 'rgba(255,255,255,0.45)' },
-  focusBracketTR: { position: 'absolute', top: 24, right: 24, width: 16, height: 16, borderTopWidth: 2, borderRightWidth: 2, borderColor: 'rgba(255,255,255,0.45)' },
-  focusBracketBL: { position: 'absolute', bottom: 120, left: 24, width: 16, height: 16, borderBottomWidth: 2, borderLeftWidth: 2, borderColor: 'rgba(255,255,255,0.45)' },
-  focusBracketBR: { position: 'absolute', bottom: 120, right: 24, width: 16, height: 16, borderBottomWidth: 2, borderRightWidth: 2, borderColor: 'rgba(255,255,255,0.45)' },
+  focusBracketTL: { position: 'absolute', top: 32, left: 24, width: 16, height: 16, borderTopWidth: 2, borderLeftWidth: 2, borderColor: 'rgba(255,255,255,0.45)' },
+  focusBracketTR: { position: 'absolute', top: 32, right: 24, width: 16, height: 16, borderTopWidth: 2, borderRightWidth: 2, borderColor: 'rgba(255,255,255,0.45)' },
+  focusBracketBL: { position: 'absolute', bottom: 95, left: 24, width: 16, height: 16, borderBottomWidth: 2, borderLeftWidth: 2, borderColor: 'rgba(255,255,255,0.45)' },
+  focusBracketBR: { position: 'absolute', bottom: 95, right: 24, width: 16, height: 16, borderBottomWidth: 2, borderRightWidth: 2, borderColor: 'rgba(255,255,255,0.45)' },
 
   // DSLR HUD HUD
-  hudTop: { position: 'absolute', top: 16, left: 20, right: 20, zIndex: 25 },
-  hudBottom: { position: 'absolute', bottom: 105, left: 20, right: 20, zIndex: 25 },
+  hudTop: { position: 'absolute', top: 24, left: 20, right: 20, zIndex: 25 },
+  hudBottom: { position: 'absolute', bottom: 80, left: 20, right: 20, zIndex: 25 },
   hudRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   hudText: { color: 'rgba(255,255,255,0.85)', fontSize: 10, fontWeight: '700', fontFamily: 'monospace', textShadowColor: '#000', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 },
   recIndicator: { flexDirection: 'row', alignItems: 'center' },
   redDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#ef4444', marginRight: 4 },
   batteryRow: { flexDirection: 'row', alignItems: 'center' },
 
-  carouselIndicators: { position: 'absolute', top: 10, left: 20, right: 20, flexDirection: 'row', gap: 4, zIndex: 30 },
+  carouselIndicators: { position: 'absolute', top: 18, left: 20, right: 20, flexDirection: 'row', gap: 4, zIndex: 30 },
   carouselBarBg: { flex: 1, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' },
   carouselBarFill: { height: '100%', width: 0, backgroundColor: 'rgba(255,255,255,0.4)' },
   carouselBarFillActive: { width: '100%', backgroundColor: '#fff' },
@@ -530,23 +530,23 @@ const styles = StyleSheet.create({
   swipeIconCircle: { width: 90, height: 90, borderRadius: 45, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 15, elevation: 8 },
 
   // Overlay info on image (Name & Tags only)
-  photoInfoOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 20, paddingTop: 30, zIndex: 25 },
+  photoInfoOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 10, paddingTop: 30, zIndex: 25 },
   cardName: { color: '#fff', fontSize: 26, fontWeight: '900', marginBottom: 6, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   tag: { backgroundColor: 'rgba(26,26,15,0.7)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.1)' },
   tagText: { color: '#fff7e1', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
 
   // Bottom Dashboard replaces action buttons
-  dashboardContainer: { paddingHorizontal: 16, paddingTop: 10, zIndex: 10 },
-  dashboardInner: { backgroundColor: 'rgba(26,26,15,0.04)', borderRadius: 20, padding: 14, borderWidth: 1, borderColor: 'rgba(26,26,15,0.06)' },
-  dashHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  dashboardContainer: { paddingHorizontal: 16, paddingTop: 4, zIndex: 10 },
+  dashboardInner: { backgroundColor: 'rgba(26,26,15,0.04)', borderRadius: 20, padding: 10, borderWidth: 1, borderColor: 'rgba(26,26,15,0.06)' },
+  dashHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   dashMatchBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
   dashMatchText: { color: '#fff', fontSize: 11, fontWeight: '800' },
   dashLocBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(26,26,15,0.06)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
   dashLocText: { color: colors.dark, fontSize: 11, fontWeight: '700' },
 
-  dashStatsRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  dashStatPill: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', paddingVertical: 10, borderRadius: 14, shadowColor: '#1a1a0f', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: 'rgba(26,26,15,0.04)' },
+  dashStatsRow: { flexDirection: 'row', gap: 10, marginBottom: 8 },
+  dashStatPill: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', paddingVertical: 7, borderRadius: 14, shadowColor: '#1a1a0f', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: 'rgba(26,26,15,0.04)' },
   dashStatValue: { color: colors.dark, fontSize: 13, fontWeight: '800' },
   dashStatLabel: { color: 'rgba(26,26,15,0.55)', fontSize: 10, fontWeight: '700' },
 

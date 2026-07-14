@@ -36,8 +36,8 @@ import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { radius, spacing } from '../../../app/theme/spacing';
 
 const STATUS_CFG: Record<string, { label: string; color: string; bgColor: string; icon: string }> = {
-  Pending:    { label: 'Chờ xác nhận', color: '#b88d14', bgColor: 'rgba(233,196,106,0.15)', icon: 'time-outline' },
-  AwaitingDeposit: { label: 'Chờ cọc', color: '#ea580c', bgColor: 'rgba(234,88,12,0.15)', icon: 'wallet-outline' },
+  Pending:    { label: 'Chờ xác nhận', color: '#b88d14', bgColor: '#fef9e7', icon: 'time-outline' },
+  AwaitingDeposit: { label: 'Chờ cọc', color: '#ea580c', bgColor: '#fff7ed', icon: 'wallet-outline' },
   Processing: { label: 'Đang xử lý',    color: '#b88d14', bgColor: 'rgba(233,196,106,0.15)', icon: 'time-outline' },
   Confirmed:  { label: 'Đã xác nhận', color: '#1d4ed8', bgColor: 'rgba(69,123,157,0.15)',  icon: 'checkmark-circle-outline' },
   Moving:     { label: 'Đang di chuyển', color: '#8b5cf6', bgColor: 'rgba(139,92,246,0.15)', icon: 'bicycle-outline' },
