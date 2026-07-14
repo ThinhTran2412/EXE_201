@@ -22,6 +22,7 @@ jobs:
       changed_files: ""
       build_duration: ""
       build_result_msg: ""
+      short_sha: ""
       
     steps:
       - name: Checkout Code
@@ -32,6 +33,7 @@ jobs:
       - name: Ghi nhận thời gian bắt đầu & Lấy file thay đổi
         run: |
           echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           
           # Lấy danh sách file thay đổi (loại bỏ file hệ thống .cursor, .config, v.v.)
           CHANGED=$(git show --name-only --format= | grep -v -E '^(\.cursor/|\.config/|\.git)' | awk 'NF' | head -n 15 | sed 's/^/- /')
@@ -51,10 +53,11 @@ jobs:
           color: "0xF1C40F" # Ghi đè màu vàng (Gold)
           noprefix: true
           nocontext: true
-          title: "🔨 Bắt đầu build APK: ${{ github.repository }}"
+          title: "🔨 Bắt đầu build APK: ${{ github.repository }} (Build #${{ github.run_number }})"
           description: |
             **Người commit:** `${{ github.actor }}`
             **Nhánh:** `${{ github.ref_name }}`
+            **Commit:** [`${{ env.SHORT_SHA }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
             **Nội dung Commit:** `${{ github.event.head_commit.message || 'Không có' }}`
             
             **Các file thay đổi:**
