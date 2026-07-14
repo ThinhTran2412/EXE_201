@@ -20,10 +20,43 @@ jobs:
       contents: write # Important for creating a release
     env:
       changed_files: ""
+      build_duration: ""
+      build_result_msg: ""
       
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Ghi nhận thời gian bắt đầu & Lấy file thay đổi
+        run: |
+          echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+          
+          # Lấy danh sách file thay đổi (loại bỏ file hệ thống .cursor, .config, v.v.)
+          CHANGED=$(git show --name-only --format= | grep -v -E '^(\.cursor/|\.config/|\.git)' | awk 'NF' | head -n 15 | sed 's/^/- /')
+          if [ -z "$CHANGED" ]; then
+            CHANGED="- Không có file mã nguồn nào thay đổi hoặc chỉ đổi file hệ thống"
+          fi
+          
+          echo "changed_files<<EOF" >> $GITHUB_ENV
+          echo "$CHANGED" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: 📢 Báo cáo nhận commit mới về Discord
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          status: "Success" # Mượn status này để gửi tin nhắn
+          color: "0xF1C40F" # Ghi đè màu vàng (Gold)
+          noprefix: true
+          nocontext: true
+          title: "🔨 Bắt đầu build APK: ${{ github.repository }}"
+          description: |
+            **Người commit:** `${{ github.actor }}`
+            **Nhánh:** `${{ github.ref_name }}`
+            **Nội dung Commit:** `${{ github.event.head_commit.message || 'Không có' }}`
+            
+            **Các file thay đổi:**
+            ${{ env.changed_files }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -73,30 +106,33 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Lấy danh sách file thay đổi
+      - name: Tính thời gian chạy và chuẩn bị thông báo
         if: always()
         run: |
-          CHANGED=$(git show --name-only --format= | awk 'NF' | head -n 15 | paste -sd ", " -)
-          if [ -z "$CHANGED" ]; then
-            CHANGED="Không có thông tin file"
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          MIN=$((DURATION / 60))
+          SEC=$((DURATION % 60))
+          echo "build_duration=${MIN}m ${SEC}s" >> $GITHUB_ENV
+          
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "build_result_msg=🚀 Bản build APK đã sẵn sàng để tải xuống từ GitHub Release!" >> $GITHUB_ENV
+          else
+            echo "build_result_msg=❌ Quá trình build gặp lỗi, vui lòng kiểm tra log." >> $GITHUB_ENV
           fi
-          echo "changed_files=$CHANGED" >> $GITHUB_ENV
 
-      - name: 📢 Báo cáo trạng thái CI/CD về Discord
+      - name: 📢 Báo cáo kết quả CI/CD về Discord
         uses: sarisia/actions-status-discord@v1
         if: always() # Kim bài miễn tử: Các bước trên có lỗi thì bước này vẫn phải chạy để báo cáo
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
           status: ${{ job.status }}
+          nocontext: true # Tắt context mặc định để hiển thị gọn gàng hơn
           title: "Trạng thái CI/CD: ${{ github.repository }}"
           description: |
-            **Người chạy:** `${{ github.actor }}`
-            **Nhánh:** `${{ github.ref_name }}`
-            **Nội dung Commit:** `${{ github.event.head_commit.message || 'Không có' }}`
+            **Kết quả:** `${{ job.status }}`
+            **Thời gian chạy:** `${{ env.build_duration }}`
             
-            **Các file đã thay đổi:**
-            ```text
-            ${{ env.changed_files }}
-            ```
+            ${{ env.build_result_msg }}
             
             👉 Bấm vào tiêu đề màu xanh bên trên để xem log chi tiết.
