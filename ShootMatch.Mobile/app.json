@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "PicKic",
+    "name": "Pickic",
     "slug": "shootmatch-mobile",
     "scheme": "shootmatch",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/cream_original_square.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#fff7e1"
       },
       "package": "com.shootmatch.mobile",
@@ -27,8 +27,8 @@
       ]
     },
     "web": {
-      "favicon": "./assets/images/cream_original_square.png",
-      "shortName": "PicKic",
+      "favicon": "./assets/icon.png",
+      "shortName": "Pickic",
       "themeColor": "#fff7e1",
       "backgroundColor": "#fff7e1",
       "display": "standalone",

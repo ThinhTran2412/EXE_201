@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # Important for creating a release
+    env:
+      changed_files: ""
       
     steps:
       - name: Checkout Code
@@ -51,11 +53,14 @@ jobs:
         working-directory: ShootMatch.Mobile/android
         run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 
+      - name: Rename APK
+        run: mv ShootMatch.Mobile/android/app/build/outputs/apk/release/app-release.apk ShootMatch.Mobile/android/app/build/outputs/apk/release/Pickic.apk
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: ShootMatch.Mobile/android/app/build/outputs/apk/release/app-release.apk
+          name: Pickic-apk
+          path: ShootMatch.Mobile/android/app/build/outputs/apk/release/Pickic.apk
 
       - name: Create GitHub Release
         if: github.event_name == 'push'
@@ -64,39 +69,34 @@ jobs:
           tag_name: "build-${{ github.run_number }}"
           name: "Release Build #${{ github.run_number }}"
           body: "Automated APK build triggered by commit ${{ github.sha }}"
-          files: ShootMatch.Mobile/android/app/build/outputs/apk/release/app-release.apk
+          files: ShootMatch.Mobile/android/app/build/outputs/apk/release/Pickic.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Notify Discord
-        if: success() && github.event_name == 'push'
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      - name: Lấy danh sách file thay đổi
+        if: always()
         run: |
-          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
-            echo "DISCORD_WEBHOOK_URL is not set in GitHub Secrets. Skipping Discord notification."
-            exit 0
+          CHANGED=$(git show --name-only --format= | awk 'NF' | head -n 15 | paste -sd ", " -)
+          if [ -z "$CHANGED" ]; then
+            CHANGED="Không có thông tin file"
           fi
+          echo "changed_files=$CHANGED" >> $GITHUB_ENV
 
-          curl -H "Content-Type: application/json" \
-               -d '{
-                 "embeds": [{
-                   "title": "🚀 New APK Release is Ready!",
-                   "description": "A new build has been successfully generated and published to GitHub Releases.",
-                   "color": 5814783,
-                   "fields": [
-                     {
-                       "name": "Build Number",
-                       "value": "#${{ github.run_number }}",
-                       "inline": true
-                     },
-                     {
-                       "name": "Commit",
-                       "value": "`${{ github.sha }}`",
-                       "inline": true
-                     }
-                   ],
-                   "url": "https://github.com/${{ github.repository }}/releases/tag/build-${{ github.run_number }}"
-                 }]
-               }' \
-               $DISCORD_WEBHOOK_URL
+      - name: 📢 Báo cáo trạng thái CI/CD về Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always() # Kim bài miễn tử: Các bước trên có lỗi thì bước này vẫn phải chạy để báo cáo
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          title: "Trạng thái CI/CD: ${{ github.repository }}"
+          description: |
+            **Người chạy:** `${{ github.actor }}`
+            **Nhánh:** `${{ github.ref_name }}`
+            **Nội dung Commit:** `${{ github.event.head_commit.message || 'Không có' }}`
+            
+            **Các file đã thay đổi:**
+            ```text
+            ${{ env.changed_files }}
+            ```
+            
+            👉 Bấm vào tiêu đề màu xanh bên trên để xem log chi tiết.
