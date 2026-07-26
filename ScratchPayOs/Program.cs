@@ -1,11 +1,16 @@
 using System;
 using System.Reflection;
+using BCrypt.Net;
 using PayOS;
 
 class Program
 {
     static void Main()
     {
+        string password = "12345678";
+        string hash = BCrypt.Net.BCrypt.HashPassword(password, 10);
+        Console.WriteLine(hash);
+
         var asm = typeof(PayOSClient).Assembly;
         foreach (var type in asm.GetTypes())
         {

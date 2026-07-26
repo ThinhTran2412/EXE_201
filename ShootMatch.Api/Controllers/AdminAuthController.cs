@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using ShootMatch.Application.Abstractions;
+using ShootMatch.Infrastructure.Persistence;
 using System;
 
 namespace ShootMatch.Api.Controllers;
@@ -9,24 +10,28 @@ public record AdminLoginRequest(string Username, string Password);
 
 [ApiController]
 [Route("api/admin/auth")]
-public sealed class AdminAuthController(IAuthTokenService authTokenService, IConfiguration configuration) : ControllerBase
+public sealed class AdminAuthController(IAuthTokenService authTokenService, ShootMatchDbContext dbContext) : ControllerBase
 {
-    private static readonly Guid AdminUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-
     [HttpPost("login")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public IActionResult Login([FromBody] AdminLoginRequest request)
+    public async Task<IActionResult> Login([FromBody] AdminLoginRequest request, CancellationToken cancellationToken)
     {
-        var validUsername = configuration["Admin:Username"] ?? "admin";
-        var validPassword = configuration["Admin:Password"] ?? "admin123";
+        var staff = await dbContext.Staffs
+            .FirstOrDefaultAsync(s => s.Email == request.Username && s.Role == "admin", cancellationToken);
 
-        if (request.Username != validUsername || request.Password != validPassword)
+        if (staff == null)
         {
             return Unauthorized(new { error = "Invalid admin credentials." });
         }
 
-        var token = authTokenService.GenerateAccessToken(AdminUserId, "admin", "admin");
+        bool isPasswordValid = ShootMatch.Infrastructure.Auth.BcryptPasswordHasher.VerifyPassword(request.Password, staff.PasswordHash);
+        if (!isPasswordValid)
+        {
+            return Unauthorized(new { error = "Invalid admin credentials." });
+        }
+
+        var token = authTokenService.GenerateAccessToken(staff.Id, "staff", "admin");
         return Ok(new { accessToken = token, expiresIn = 3600 });
     }
 }

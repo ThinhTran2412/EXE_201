@@ -23,6 +23,7 @@ public static class DatabaseBootstrap
         await EnsureBookingFieldsAsync(db, logger, cancellationToken);
         await EnsureMembershipTiersAsync(db, logger, cancellationToken);
         await EnsureStylesAndConceptsSeededAsync(db, logger, cancellationToken);
+        await EnsureAdminAccountsSeededAsync(db, logger, cancellationToken);
     }
 
     private static async Task EnsureCallSessionsTableAsync(
@@ -306,6 +307,46 @@ public static class DatabaseBootstrap
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Styles and concepts database seeding skipped.");
+        }
+    }
+
+    private static async Task EnsureAdminAccountsSeededAsync(
+        ShootMatchDbContext db,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            logger.LogInformation("Ensuring admin accounts are seeded...");
+            var adminEmails = new[] { "thinhtt2412@gmail.com" };
+            foreach (var email in adminEmails)
+            {
+                var exists = await db.Staffs.AnyAsync(s => s.Email == email, cancellationToken);
+                if (!exists)
+                {
+                    // For the passwords from 1 to 8: 12345678
+                    var passwordHash = BCrypt.Net.BCrypt.HashPassword("12345678", 10);
+                    var newAdmin = new Entities.StaffRecord
+                    {
+                        Id = Guid.NewGuid(),
+                        DisplayName = "Admin Thinh",
+                        Email = email,
+                        Role = "admin",
+                        ApprovalStatus = "Approved",
+                        PasswordHash = passwordHash,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        ApprovedAt = DateTime.UtcNow,
+                        Phone = "0999999999"
+                    };
+                    await db.Staffs.AddAsync(newAdmin, cancellationToken);
+                }
+            }
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Admin accounts database seeding skipped.");
         }
     }
 }
