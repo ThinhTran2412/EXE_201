@@ -25,7 +25,7 @@ public sealed class AdminAuthController(IAuthTokenService authTokenService, Shoo
             return Unauthorized(new { error = "Invalid admin credentials." });
         }
 
-        bool isPasswordValid = ShootMatch.Infrastructure.Auth.BcryptPasswordHasher.VerifyPassword(request.Password, staff.PasswordHash);
+        bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password, staff.PasswordHash);
         if (!isPasswordValid)
         {
             return Unauthorized(new { error = "Invalid admin credentials." });
