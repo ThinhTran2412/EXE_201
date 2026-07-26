@@ -31,6 +31,7 @@ public sealed class PhotographerRecord
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
+    public string MembershipTier { get; set; } = "Basic";
     public ICollection<PortfolioEmbeddingRecord> PortfolioEmbeddings { get; set; } = [];
     public ICollection<PortfolioPhotoRecord> PortfolioPhotos { get; set; } = [];
     public ICollection<ServicePackageRecord> ServicePackages { get; set; } = [];

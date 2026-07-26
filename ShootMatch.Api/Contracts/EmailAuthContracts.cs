@@ -4,7 +4,8 @@ namespace ShootMatch.Api.Contracts;
 public sealed record RegisterRequest(
     string Email,
     string Password,
-    string DisplayName);
+    string DisplayName,
+    string OtpCode = "");
 
 /// <summary>Login with email + password.</summary>
 public sealed record EmailLoginRequest(
@@ -14,3 +15,6 @@ public sealed record EmailLoginRequest(
 /// <summary>Login / register via Google ID token.</summary>
 public sealed record GoogleLoginRequest(
     string IdToken);
+
+public sealed record SendEmailOtpRequest(
+    string Email);

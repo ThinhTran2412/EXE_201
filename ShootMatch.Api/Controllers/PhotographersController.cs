@@ -31,6 +31,54 @@ public sealed class PhotographersController(
         return photographer is null ? NotFound() : Ok(photographer);
     }
 
+    [Authorize(Roles = "photographer")]
+    [HttpPost("membership")]
+    public async Task<IActionResult> UpdateMembership([FromBody] UpdateMembershipRequest request, CancellationToken cancellationToken)
+    {
+        var id = GetPhotographerIdOrThrow(User);
+        var existing = await photographerRepository.GetByIdAsync(id, cancellationToken);
+        if (existing is null) return NotFound();
+
+        var updated = new Photographer
+        {
+            Id                            = existing.Id,
+            Phone                         = existing.Phone,
+            Email                         = existing.Email,
+            DisplayName                   = existing.DisplayName,
+            Bio                           = existing.Bio,
+            Quote                         = existing.Quote,
+            NationalId                    = existing.NationalId,
+            PersonalAddress               = existing.PersonalAddress,
+            VerificationDocumentFrontUrl  = existing.VerificationDocumentFrontUrl,
+            VerificationDocumentBackUrl   = existing.VerificationDocumentBackUrl,
+            VerificationPortraitUrl       = existing.VerificationPortraitUrl,
+            InstagramUrl                  = existing.InstagramUrl,
+            AvatarUrl                     = existing.AvatarUrl,
+            CoverPhotoUrl                 = existing.CoverPhotoUrl,
+            MinBudget                     = existing.MinBudget,
+            MaxBudget                     = existing.MaxBudget,
+            Rating                        = existing.Rating,
+            IsPremium                     = request.MembershipTier == "Pro" || request.MembershipTier == "Studio+",
+            IsAvailable                   = existing.IsAvailable,
+            AcceptsInstantBooking         = existing.AcceptsInstantBooking,
+            VerificationStatus            = existing.VerificationStatus,
+            PasswordHash                  = existing.PasswordHash,
+            GoogleId                      = existing.GoogleId,
+            CurrentLatitude               = existing.CurrentLatitude,
+            CurrentLongitude              = existing.CurrentLongitude,
+            CreatedAt                     = existing.CreatedAt,
+            UpdatedAt                     = DateTime.UtcNow,
+            DeletedAt                     = existing.DeletedAt,
+            PortfolioEmbeddings           = existing.PortfolioEmbeddings,
+            PortfolioPhotos               = existing.PortfolioPhotos,
+            Equipments                    = existing.Equipments,
+            MembershipTier                = request.MembershipTier
+        };
+
+        await photographerRepository.UpsertAsync(updated, cancellationToken);
+        return Ok(new { membershipTier = updated.MembershipTier });
+    }
+
     [HttpGet("availability")]
     [ProducesResponseType(typeof(IReadOnlyList<PhotographerAvailability>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMyAvailability([FromQuery] DateOnly? from, [FromQuery] DateOnly? to, CancellationToken cancellationToken)

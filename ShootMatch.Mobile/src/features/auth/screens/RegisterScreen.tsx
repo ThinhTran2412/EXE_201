@@ -33,6 +33,21 @@ export default function RegisterScreen({ navigation, route }: Props) {
   const [showDebug, setShowDebug] = useState(false);
   const [debugLog, setDebugLog] = useState<string[]>([]);
 
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [sendingOtp, setSendingOtp] = useState(false);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [otpTimer]);
+
   // Animated theme transition
   const animProgress = useSharedValue(initialRole === 'photographer' ? 1 : 0);
 
@@ -118,6 +133,27 @@ export default function RegisterScreen({ navigation, route }: Props) {
     }
   }
 
+  async function handleSendOtp() {
+    if (!email.trim()) {
+      Alert.alert('Thiếu thông tin', 'Vui lòng điền email để nhận mã OTP.');
+      return;
+    }
+    setSendingOtp(true);
+    log(`POST /api/auth/send-email-otp — email: ${email.trim()}`);
+    try {
+      const endpoint = role === 'photographer' ? '/api/photographer-auth/send-email-otp' : '/api/auth/send-email-otp';
+      await apiClient.post(endpoint, { email: email.trim().toLowerCase() });
+      setOtpSent(true);
+      setOtpTimer(60);
+      Alert.alert('Thành công', 'Mã OTP xác thực đã được gửi về email của bạn.');
+    } catch (e: any) {
+      const msg = e.response?.data?.error ?? 'Không thể gửi mã OTP. Vui lòng kiểm tra lại email.';
+      Alert.alert('Lỗi', String(msg));
+    } finally {
+      setSendingOtp(false);
+    }
+  }
+
   async function handleRegister() {
     if (!displayName.trim()) {
       Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên hiển thị.');
@@ -136,10 +172,15 @@ export default function RegisterScreen({ navigation, route }: Props) {
       return;
     }
 
+    if (!otpCode.trim()) {
+      Alert.alert('Thiếu thông tin', 'Vui lòng nhập mã xác thực OTP gửi về email.');
+      return;
+    }
+
     log(`POST /api/auth/register — email: ${email.trim().toLowerCase()}`);
     setLoading(true);
     try {
-      await registerWithEmail(email.trim().toLowerCase(), password, displayName.trim(), role);
+      await registerWithEmail(email.trim().toLowerCase(), password, displayName.trim(), role, otpCode.trim());
       log('✅ Register success — session set');
     } catch (e: any) {
       const status  = e.response?.status;
@@ -272,10 +313,10 @@ export default function RegisterScreen({ navigation, route }: Props) {
             {/* Email */}
             <View style={styles.inputField}>
               <Text style={[styles.inputLabel, { color: isPhotographer ? '#b5a895' : '#786b59' }]}>EMAIL</Text>
-              <View style={[styles.inputContainer, { borderColor: isPhotographer ? '#3a3a24' : '#e8dfce' }]}>
+              <View style={[styles.inputContainer, { borderColor: isPhotographer ? '#3a3a24' : '#e8dfce', flexDirection: 'row', alignItems: 'center' }]}>
                 <Ionicons name="mail-outline" size={16} color={isPhotographer ? '#b5a895' : '#786b59'} style={styles.inputIcon} />
                 <TextInput
-                  style={[styles.textInput, { color: isPhotographer ? '#faf5ee' : '#1a1a0f' }]}
+                  style={[styles.textInput, { color: isPhotographer ? '#faf5ee' : '#1a1a0f', flex: 1 }]}
                   placeholder="your@email.com"
                   placeholderTextColor={isPhotographer ? '#555544' : '#b5a895'}
                   value={email}
@@ -283,6 +324,40 @@ export default function RegisterScreen({ navigation, route }: Props) {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                />
+                <TouchableOpacity
+                  onPress={handleSendOtp}
+                  disabled={sendingOtp || otpTimer > 0}
+                  style={{
+                    backgroundColor: isPhotographer ? '#d97706' : '#bca374',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 8,
+                    marginRight: 4,
+                    opacity: (sendingOtp || otpTimer > 0) ? 0.6 : 1
+                  }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                    {sendingOtp ? 'Đang gửi...' : otpTimer > 0 ? `${otpTimer}s` : 'Gửi OTP'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Mã OTP Xác Thực */}
+            <View style={styles.inputField}>
+              <Text style={[styles.inputLabel, { color: isPhotographer ? '#b5a895' : '#786b59' }]}>MÃ XÁC THỰC OTP</Text>
+              <View style={[styles.inputContainer, { borderColor: isPhotographer ? '#3a3a24' : '#e8dfce' }]}>
+                <Ionicons name="keypad-outline" size={16} color={isPhotographer ? '#b5a895' : '#786b59'} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.textInput, { color: isPhotographer ? '#faf5ee' : '#1a1a0f' }]}
+                  placeholder="Nhập mã OTP 6 số"
+                  placeholderTextColor={isPhotographer ? '#555544' : '#b5a895'}
+                  value={otpCode}
+                  onChangeText={setOtpCode}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  autoCapitalize="none"
                 />
               </View>
             </View>

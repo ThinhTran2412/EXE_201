@@ -21,6 +21,7 @@ public static class DatabaseBootstrap
         await EnsureCallSessionsTableAsync(db, logger, cancellationToken);
         await EnsureChatMediaAndNotificationsAsync(db, logger, cancellationToken);
         await EnsureBookingFieldsAsync(db, logger, cancellationToken);
+        await EnsureMembershipTiersAsync(db, logger, cancellationToken);
         await EnsureStylesAndConceptsSeededAsync(db, logger, cancellationToken);
     }
 
@@ -139,6 +140,97 @@ public static class DatabaseBootstrap
         catch (Exception ex)
         {
             logger.LogWarning(ex, "bookings fields bootstrap alteration skipped.");
+        }
+    }
+
+    private static async Task EnsureMembershipTiersAsync(
+        ShootMatchDbContext db,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            logger.LogInformation("Ensuring membership tiers fields and plans exist in database...");
+            
+            // Add column to customers and photographers
+            await db.Database.ExecuteSqlRawAsync(
+                """
+                ALTER TABLE customers ADD COLUMN IF NOT EXISTS "MembershipTier" character varying(50) NOT NULL DEFAULT 'Lướt Nhẹ';
+                ALTER TABLE photographers ADD COLUMN IF NOT EXISTS "MembershipTier" character varying(50) NOT NULL DEFAULT 'Basic';
+                """,
+                cancellationToken);
+
+            // Create membership_plans table if not exists
+            await db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE IF NOT EXISTS membership_plans (
+                    "Id" character varying(50) NOT NULL,
+                    "Name" character varying(100) NOT NULL,
+                    "TargetRole" character varying(20) NOT NULL,
+                    "PriceMonthly" numeric(18,2) NOT NULL,
+                    "PriceSixMonths" numeric(18,2) NOT NULL,
+                    "PriceYearly" numeric(18,2) NOT NULL,
+                    "SavingSixMonths" character varying(200),
+                    "SavingYearly" character varying(200),
+                    "Description" character varying(1000),
+                    "FeaturesJson" character varying(4000) NOT NULL,
+                    CONSTRAINT "PK_membership_plans" PRIMARY KEY ("Id")
+                );
+                """,
+                cancellationToken);
+
+            // Create membership_orders table if not exists
+            await db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE IF NOT EXISTS membership_orders (
+                    "OrderCode" bigint NOT NULL,
+                    "UserId" uuid NOT NULL,
+                    "UserRole" character varying(20) NOT NULL,
+                    "PlanId" character varying(50) NOT NULL,
+                    "Cycle" character varying(20) NOT NULL,
+                    "Amount" numeric(18,2) NOT NULL,
+                    "Status" character varying(20) NOT NULL DEFAULT 'Pending',
+                    "CreatedAt" timestamp with time zone NOT NULL,
+                    CONSTRAINT "PK_membership_orders" PRIMARY KEY ("OrderCode")
+                );
+                """,
+                cancellationToken);
+
+            // Add banking details columns to membership_orders if not exists
+            await db.Database.ExecuteSqlRawAsync(
+                """
+                ALTER TABLE membership_orders ADD COLUMN IF NOT EXISTS "CounterAccountBankName" character varying(200);
+                ALTER TABLE membership_orders ADD COLUMN IF NOT EXISTS "CounterAccountName" character varying(200);
+                ALTER TABLE membership_orders ADD COLUMN IF NOT EXISTS "CounterAccountNumber" character varying(100);
+                """,
+                cancellationToken);
+
+            // Seed membership plans
+            await db.Database.ExecuteSqlRawAsync(
+                """
+                INSERT INTO membership_plans ("Id", "Name", "TargetRole", "PriceMonthly", "PriceSixMonths", "PriceYearly", "SavingSixMonths", "SavingYearly", "Description", "FeaturesJson")
+                VALUES 
+                ('luot_nhe', 'Lướt Nhẹ', 'customer', 0, 0, 0, '', '', 'Mới gia nhập, tìm hiểu dịch vụ', '["Hiển thị 5 ảnh portfolio", "Bộ lọc cơ bản (Khu vực, phong cách, giá)", "Nhận tối đa 10 lượt quẹt/ngày"]'),
+                ('chon_xinh', 'Chọn Xinh', 'customer', 99000, 529000, 990000, 'Tiết kiệm khoảng 65.000 VNĐ', 'Tiết kiệm khoảng 198.000 VNĐ', 'Phù hợp với nhu cầu chụp ảnh định kỳ', '["Hiển thị 15 ảnh portfolio", "Mở rộng bộ lọc nâng cao", "Ưu tiên hiển thị feedback chi tiết", "Gợi ý thông minh"]'),
+                ('chot_xin', 'Chốt Xịn', 'customer', 199000, 1050000, 1990000, 'Tiết kiệm khoảng 144.000 VNĐ', 'Tiết kiệm khoảng 398.000 VNĐ', 'Trải nghiệm tối đa tính năng', '["Xem không giới hạn portfolio", "Bộ lọc chuyên sâu", "Số liệu phản hồi & tỷ lệ hoàn thành", "Hỗ trợ kết nối ưu tiên", "Quẹt không giới hạn"]'),
+                ('basic', 'Basic', 'photographer', 0, 0, 0, '', '', 'Photographer mới gia nhập', '["Tối đa 20 ảnh portfolio", "Hiển thị tìm kiếm tiêu chuẩn", "Nhận yêu cầu booking giới hạn", "Lịch chụp cơ bản", "Hỗ trợ qua email"]'),
+                ('pro', 'Pro', 'photographer', 299000, 1650000, 2990000, 'Tiết kiệm khoảng 144.000 VNĐ', 'Tiết kiệm khoảng 598.000 VNĐ', 'Photographer hoạt động thường xuyên', '["Không giới hạn ảnh portfolio", "1 video giới thiệu bản thân", "Ưu tiên hiển thị tìm kiếm", "Đề xuất ở mục Recommended", "Nhận booking không giới hạn", "Mở khóa thống kê lượt xem & lượt quẹt"]'),
+                ('studio_plus', 'Studio+', 'photographer', 699000, 3850000, 6990000, 'Tiết kiệm khoảng 344.000 VNĐ', 'Tiết kiệm khoảng 1.398.000 VNĐ', 'Studio / photographer chuyên nghiệp', '["Không giới hạn ảnh portfolio", "Nhiều video giới thiệu bản thân", "Thứ hạng tìm kiếm cao nhất", "Đề xuất Recommended", "Thống kê chi tiết nâng cao", "Hỗ trợ ưu tiên khẩn cấp"]')
+                ON CONFLICT ("Id") DO UPDATE SET
+                    "Name" = EXCLUDED."Name",
+                    "PriceMonthly" = EXCLUDED."PriceMonthly",
+                    "PriceSixMonths" = EXCLUDED."PriceSixMonths",
+                    "PriceYearly" = EXCLUDED."PriceYearly",
+                    "SavingSixMonths" = EXCLUDED."SavingSixMonths",
+                    "SavingYearly" = EXCLUDED."SavingYearly",
+                    "Description" = EXCLUDED."Description",
+                    "FeaturesJson" = EXCLUDED."FeaturesJson";
+                """,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "customers / photographers membership tiers and plans database alteration skipped.");
         }
     }
 

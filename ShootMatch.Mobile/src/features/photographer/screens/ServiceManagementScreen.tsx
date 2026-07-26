@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { usePhotographerTheme } from '../PhotographerThemeContext';
+import { useAuth } from '../../auth/AuthContext';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { spacing } from '../../../app/theme/spacing';
 import { radius } from '../../../app/theme/spacing';
@@ -117,6 +118,7 @@ export default function ServiceManagementScreen() {
   const styles = getStyles(colors);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const { session } = useAuth();
   const [services, setServices] = useState<ServicePackage[]>([]);
   const [editorVisible, setEditorVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -152,6 +154,17 @@ export default function ServiceManagementScreen() {
   }, [services]);
 
   function openCreate() {
+    if (session?.membershipTier === 'Basic' && services.length >= 1) {
+      Alert.alert(
+        'Giới hạn tài khoản',
+        'Tài khoản gói Basic chỉ được đăng tối đa 1 gói dịch vụ chụp. Vui lòng nâng cấp lên gói Pro để đăng nhiều gói chụp hơn.',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          { text: 'Nâng cấp ngay', onPress: () => navigation.navigate('PhotographerSubscription') }
+        ]
+      );
+      return;
+    }
     setEditingId(null);
     setForm(DEFAULT_FORM);
     setTagInput('');

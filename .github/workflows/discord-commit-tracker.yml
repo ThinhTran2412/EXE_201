@@ -1,0 +1,72 @@
+name: Track Commits to Discord
+
+on:
+  push:
+    branches:
+      - '**' # Lắng nghe mọi branch, nếu chỉ muốn main thì đổi thành - main
+
+jobs:
+  notify:
+    name: Gửi thông báo Commit
+    runs-on: ubuntu-latest
+    env:
+      changed_files: ""
+      short_sha: ""
+      update_msg: ""
+      
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Cần thiết để lấy danh sách file thay đổi giữa các commit
+
+      - name: Lấy thông tin file thay đổi & SHA
+        run: |
+          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          
+          # Lấy danh sách file thay đổi (bỏ qua một số file cấu hình hệ thống nếu cần)
+          CHANGED=$(git show --name-only --format= | grep -v -E '^(\.cursor/|\.config/|\.git)' | awk 'NF' | head -n 15 | sed 's/^/- /')
+          if [ -z "$CHANGED" ]; then
+            CHANGED="- Không có file nào thay đổi"
+          fi
+          
+          echo "changed_files<<EOF" >> $GITHUB_ENV
+          echo "$CHANGED" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Đọc nội dung file UPDATE.md (nếu có)
+        run: |
+          # Kiểm tra xem file UPDATE.md có tồn tại không
+          if [ -f "UPDATE.md" ]; then
+            # Đọc tối đa 15 dòng để tránh tin nhắn Discord bị quá giới hạn ký tự
+            UPDATE_CONTENT=$(head -n 15 UPDATE.md)
+            
+            echo "update_msg<<EOF" >> $GITHUB_ENV
+            echo "$UPDATE_CONTENT" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          else
+            echo "update_msg=_Không có ghi chú trong file UPDATE.md_" >> $GITHUB_ENV
+          fi
+
+      - name: 📢 Gửi báo cáo về Discord
+        uses: sarisia/actions-status-discord@v1
+        with:
+          # Tui đã điền sẵn webhook URL bạn cung cấp
+          webhook: "https://discord.com/api/webhooks/1526538394904035359/MmLUwCC2sOMjXHw-kh_f_-SjVABCyTtalAXfg6pgFsdQrsg_ISk25Nx7bfFKAWLHPCq6"
+          status: "Success"
+          color: "0x3498DB" # Màu xanh dương
+          noprefix: true
+          nocontext: true
+          title: "📌 Có Commit mới tại: ${{ github.repository }}"
+          description: |
+            **Người commit:** `${{ github.actor }}`
+            **Nhánh:** `${{ github.ref_name }}`
+            **Commit:** [`${{ env.SHORT_SHA }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+            **Lời nhắn Commit:** `${{ github.event.head_commit.message || 'Không có nội dung' }}`
+            
+            **Các file thay đổi:**
+            ${{ env.changed_files }}
+
+            ---
+            **📝 Lời nhắn từ Dev (từ UPDATE.md):**
+            ${{ env.update_msg }}

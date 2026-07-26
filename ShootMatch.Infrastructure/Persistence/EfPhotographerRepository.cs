@@ -154,6 +154,7 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
             existing.CurrentLongitude             = photographer.CurrentLongitude ?? existing.CurrentLongitude;
             existing.UpdatedAt                    = DateTime.UtcNow;
             existing.DeletedAt            = photographer.DeletedAt;
+            existing.MembershipTier       = photographer.MembershipTier;
 
             // Sync Equipments
             db.PhotographerEquipments.RemoveRange(existing.Equipments);
@@ -204,6 +205,7 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
         CreatedAt            = r.CreatedAt,
         UpdatedAt            = r.UpdatedAt,
         DeletedAt            = r.DeletedAt,
+        MembershipTier       = r.MembershipTier,
         PortfolioEmbeddings  = r.PortfolioEmbeddings
             .Select(e => System.Text.Json.JsonSerializer.Deserialize<float[]>(e.VectorJson) ?? [])
             .ToList(),
@@ -253,6 +255,7 @@ public sealed class EfPhotographerRepository(ShootMatchDbContext db) : IPhotogra
         CreatedAt            = p.CreatedAt,
         UpdatedAt            = p.UpdatedAt,
         DeletedAt            = p.DeletedAt,
+        MembershipTier       = p.MembershipTier,
         Equipments           = p.Equipments.Select(e => new PhotographerEquipmentRecord
         {
             Id = e.Id,

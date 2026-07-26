@@ -57,6 +57,7 @@ export type CustomerStackParamList = {
     name: string;
     avatarUrl?: string;
   };
+  CustomerSubscription: undefined;
 };
 
 export type PhotographerStackParamList = {
@@ -78,5 +79,6 @@ export type PhotographerStackParamList = {
   };
   Notifications: undefined;
   PhotographerPortfolio: { photographer: any };
+  PhotographerSubscription: undefined;
 };
 

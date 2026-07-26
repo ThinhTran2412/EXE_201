@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using ShootMatch.Api.Contracts;
 using ShootMatch.Application.Services;
+using ShootMatch.Application.Abstractions;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ShootMatch.Api.Controllers;
 
@@ -14,7 +16,10 @@ namespace ShootMatch.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/photographer-auth")]
-public sealed class PhotographerAuthController(PhotographerAuthService authService) : ControllerBase
+public sealed class PhotographerAuthController(
+    PhotographerAuthService authService,
+    IEmailService emailService,
+    IMemoryCache memoryCache) : ControllerBase
 {
     /// <summary>Sends OTP to photographer's phone number.</summary>
     [HttpPost("otp/send")]
@@ -70,6 +75,24 @@ public sealed class PhotographerAuthController(PhotographerAuthService authServi
 
     // ── Email + Password ─────────────────────────────────────────────────────
 
+    [HttpPost("send-email-otp")]
+    public async Task<IActionResult> SendEmailOtp([FromBody] SendEmailOtpRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email))
+            return BadRequest(new { error = "Email is required." });
+
+        var random = new Random();
+        var otp = random.Next(100000, 999999).ToString();
+
+        // Cache OTP for 5 minutes
+        memoryCache.Set($"otp_{request.Email}", otp, TimeSpan.FromMinutes(5));
+
+        // Send OTP
+        await emailService.SendOtpEmailAsync(request.Email, otp, cancellationToken);
+
+        return Ok(new { message = "OTP has been sent to your email." });
+    }
+
     [HttpPost("register")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -81,6 +104,14 @@ public sealed class PhotographerAuthController(PhotographerAuthService authServi
             return BadRequest(new { error = "Email and password are required." });
         if (request.Password.Length < 8)
             return BadRequest(new { error = "Password must be at least 8 characters." });
+
+        // Verify OTP
+        if (!memoryCache.TryGetValue($"otp_{request.Email}", out string? cachedOtp) || cachedOtp != request.OtpCode)
+        {
+            return BadRequest(new { error = "Mã xác thực OTP không hợp lệ hoặc đã hết hạn." });
+        }
+
+        memoryCache.Remove($"otp_{request.Email}");
 
         try
         {

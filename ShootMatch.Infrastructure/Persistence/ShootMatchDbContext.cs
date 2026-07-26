@@ -17,6 +17,8 @@ public sealed class ShootMatchDbContext(
     public DbSet<SearchSessionRecord> SearchSessions => Set<SearchSessionRecord>();
     public DbSet<AuthSessionRecord> AuthSessions => Set<AuthSessionRecord>();
     public DbSet<SwipeActionRecord> SwipeActions => Set<SwipeActionRecord>();
+    public DbSet<MembershipPlanRecord> MembershipPlans => Set<MembershipPlanRecord>();
+    public DbSet<MembershipOrderRecord> MembershipOrders => Set<MembershipOrderRecord>();
 
     // New
     public DbSet<PortfolioPhotoRecord> PortfolioPhotos => Set<PortfolioPhotoRecord>();
@@ -82,6 +84,7 @@ public sealed class ShootMatchDbContext(
             entity.Property(x => x.VerificationStatus).HasMaxLength(20);
             entity.Property(x => x.PasswordHash).HasMaxLength(100);
             entity.Property(x => x.GoogleId).HasMaxLength(128);
+            entity.Property(x => x.MembershipTier).HasMaxLength(50).HasDefaultValue("Basic");
             entity.HasIndex(x => x.Email);
             entity.HasIndex(x => x.GoogleId);
             entity.HasMany(x => x.PortfolioEmbeddings).WithOne(x => x.Photographer).HasForeignKey(x => x.PhotographerId).OnDelete(DeleteBehavior.Cascade);
@@ -167,6 +170,7 @@ public sealed class ShootMatchDbContext(
             entity.Property(x => x.PreferredBudgetMax).HasColumnType("numeric(18,2)");
             entity.Property(x => x.PasswordHash).HasMaxLength(100);
             entity.Property(x => x.GoogleId).HasMaxLength(128);
+            entity.Property(x => x.MembershipTier).HasMaxLength(50).HasDefaultValue("Lướt Nhẹ");
             entity.HasIndex(x => x.Email);
             entity.HasIndex(x => x.GoogleId);
             entity.HasIndex(x => x.Phone);
@@ -427,6 +431,39 @@ public sealed class ShootMatchDbContext(
             entity.HasKey(x => new { x.ConceptId, x.StyleId });
             entity.HasOne(x => x.Concept).WithMany().HasForeignKey(x => x.ConceptId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Style).WithMany().HasForeignKey(x => x.StyleId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── MembershipPlan ───────────────────────────────────────────────────
+        modelBuilder.Entity<MembershipPlanRecord>(entity =>
+        {
+            entity.ToTable("membership_plans");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasMaxLength(50);
+            entity.Property(x => x.Name).HasMaxLength(100);
+            entity.Property(x => x.TargetRole).HasMaxLength(20);
+            entity.Property(x => x.PriceMonthly).HasColumnType("numeric(18,2)");
+            entity.Property(x => x.PriceSixMonths).HasColumnType("numeric(18,2)");
+            entity.Property(x => x.PriceYearly).HasColumnType("numeric(18,2)");
+            entity.Property(x => x.SavingSixMonths).HasMaxLength(200);
+            entity.Property(x => x.SavingYearly).HasMaxLength(200);
+            entity.Property(x => x.Description).HasMaxLength(1000);
+            entity.Property(x => x.FeaturesJson).HasMaxLength(4000);
+        });
+
+        // ── MembershipOrder ──────────────────────────────────────────────────
+        modelBuilder.Entity<MembershipOrderRecord>(entity =>
+        {
+            entity.ToTable("membership_orders");
+            entity.HasKey(x => x.OrderCode);
+            entity.Property(x => x.OrderCode).ValueGeneratedNever();
+            entity.Property(x => x.UserRole).HasMaxLength(20);
+            entity.Property(x => x.PlanId).HasMaxLength(50);
+            entity.Property(x => x.Cycle).HasMaxLength(20);
+            entity.Property(x => x.Amount).HasColumnType("numeric(18,2)");
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.Property(x => x.CounterAccountBankName).HasMaxLength(200);
+            entity.Property(x => x.CounterAccountName).HasMaxLength(200);
+            entity.Property(x => x.CounterAccountNumber).HasMaxLength(100);
         });
     }
 }

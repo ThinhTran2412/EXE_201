@@ -188,7 +188,7 @@ function ArchiveTile({
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const { logout, session, initializing } = useAuth();
+  const { logout, session, initializing, updateMembershipTier } = useAuth();
 
   const { width: windowWidth } = useWindowDimensions();
   const W = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
@@ -487,6 +487,47 @@ export default function ProfileScreen() {
           </ScrollView>
         </Animated.View>
 
+        {/* ── THẺ THÀNH VIÊN (MEMBERSHIP CARD) ── */}
+        <Animated.View entering={FadeInDown.delay(100).duration(450)} style={styles.section}>
+          <Text style={styles.sectionEyebrow}>Thành viên</Text>
+          <Text style={styles.sectionTitle}>Hội viên ShootMatch</Text>
+          <LinearGradient
+            colors={
+              session?.membershipTier === 'Chốt Xịn'
+                ? ['#8B5CF6', '#EC4899', '#F43F5E']
+                : session?.membershipTier === 'Chọn Xinh'
+                ? ['#F59E0B', '#D97706']
+                : ['#64748B', '#475569']
+            }
+            style={styles.membershipCard}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.membershipCardHeader}>
+              <Text style={styles.membershipRole}>KHÁCH HÀNG</Text>
+              <View style={styles.membershipBadge}>
+                <Text style={styles.membershipBadgeText}>
+                  {session?.membershipTier?.toUpperCase() || 'LƯỚT NHẸ'}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.membershipName}>{displayName}</Text>
+            <View style={styles.membershipFooter}>
+              <Text style={styles.membershipExpiry}>Gói đang hoạt động</Text>
+              <Pressable
+                onPress={() => navigation.navigate('CustomerSubscription')}
+                style={({ pressed }) => [
+                  styles.membershipActionBtn,
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                <Text style={styles.membershipActionText}>Đổi gói / Nâng cấp</Text>
+                <Ionicons name="arrow-forward-outline" size={12} color="#0F172A" />
+              </Pressable>
+            </View>
+          </LinearGradient>
+        </Animated.View>
+
         {/* ── PHONG CÁCH ── */}
         <Animated.View entering={FadeInDown.delay(120).duration(450)} style={styles.section}>
           <Text style={styles.sectionEyebrow}>Phong cách</Text>
@@ -580,6 +621,32 @@ export default function ProfileScreen() {
               </View>
             </Animated.View>
           )}
+        </Animated.View>
+
+        {/* ── DEVELOPER CHEAT MODE ── */}
+        <Animated.View entering={FadeInDown.delay(220).duration(450)} style={styles.section}>
+          <Text style={styles.sectionEyebrow}>Developer Mode</Text>
+          <Text style={styles.sectionTitle}>Chuyển nhanh gói để test</Text>
+          <View style={styles.cheatRow}>
+            <Pressable
+              onPress={() => updateMembershipTier('Lướt Nhẹ')}
+              style={[styles.cheatBtn, session?.membershipTier === 'Lướt Nhẹ' && styles.cheatBtnActive]}
+            >
+              <Text style={[styles.cheatBtnText, session?.membershipTier === 'Lướt Nhẹ' && styles.cheatBtnTextActive]}>Lướt Nhẹ</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => updateMembershipTier('Chọn Xinh')}
+              style={[styles.cheatBtn, session?.membershipTier === 'Chọn Xinh' && styles.cheatBtnActive]}
+            >
+              <Text style={[styles.cheatBtnText, session?.membershipTier === 'Chọn Xinh' && styles.cheatBtnTextActive]}>Chọn Xinh</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => updateMembershipTier('Chốt Xịn')}
+              style={[styles.cheatBtn, session?.membershipTier === 'Chốt Xịn' && styles.cheatBtnActive]}
+            >
+              <Text style={[styles.cheatBtnText, session?.membershipTier === 'Chốt Xịn' && styles.cheatBtnTextActive]}>Chốt Xịn</Text>
+            </Pressable>
+          </View>
         </Animated.View>
 
         {/* ── SETTINGS ── */}
@@ -884,5 +951,101 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     color: colors.textLight,
     fontWeight: fontWeights.bold,
+  },
+
+  // Membership Card Styles
+  membershipCard: {
+    borderRadius: radius.lg,
+    padding: spacing[5],
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+    marginBottom: spacing[2],
+  },
+  membershipCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing[4],
+  },
+  membershipRole: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: 'rgba(255, 255, 255, 0.8)',
+    letterSpacing: 1.5,
+  },
+  membershipBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: spacing[3],
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+  },
+  membershipBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
+  membershipName: {
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.bold,
+    color: '#FFFFFF',
+    marginBottom: spacing[5],
+  },
+  membershipFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  membershipExpiry: {
+    fontSize: fontSizes.xs,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  membershipActionBtn: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: spacing[2],
+    borderRadius: radius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  membershipActionText: {
+    fontSize: fontSizes.xs - 1,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+
+  // Cheat Mode Styles
+  cheatRow: {
+    flexDirection: 'row',
+    gap: spacing[2],
+    width: '100%',
+  },
+  cheatBtn: {
+    flex: 1,
+    paddingVertical: spacing[3],
+    alignItems: 'center',
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cheatBtnActive: {
+    borderColor: colors.accentOrange,
+    backgroundColor: 'rgba(255,66,0,0.05)',
+  },
+  cheatBtnText: {
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  cheatBtnTextActive: {
+    color: colors.accentOrange,
+    fontWeight: '700',
   },
 });

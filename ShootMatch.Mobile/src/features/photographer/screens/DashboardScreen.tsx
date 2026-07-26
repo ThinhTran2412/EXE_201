@@ -20,6 +20,7 @@ import {
 } from '../api';
 import { useAuth } from '../../auth/AuthContext';
 import { usePhotographerTheme } from '../PhotographerThemeContext';
+import { LinearGradient } from 'expo-linear-gradient';
 import { localPicture } from '../../../shared/assets/localPictures';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -48,7 +49,7 @@ export default function DashboardScreen() {
   const { colors, isDark } = usePhotographerTheme();
   const styles = getStyles(colors, isDark);
 
-  const { logout } = useAuth();
+  const { logout, session, updateMembershipTier } = useAuth();
   const [activeTab, setActiveTab] = useState<0|1|2|3>(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -328,6 +329,26 @@ export default function DashboardScreen() {
               <Animated.Text entering={FadeInUp.delay(200)} style={styles.heroName}>
                 {(profile?.displayName || 'Nhiếp ảnh gia').toUpperCase()}
               </Animated.Text>
+              
+              <Animated.View entering={FadeInUp.delay(250)} style={styles.badgeRow}>
+                <LinearGradient
+                  colors={
+                    session?.membershipTier === 'Studio+'
+                      ? ['#D4AF37', '#8F6E00']
+                      : session?.membershipTier === 'Pro'
+                      ? ['#cf4028', '#ff4200']
+                      : ['#7A8A9E', '#4B5563']
+                  }
+                  style={styles.tierBadge}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Ionicons name="shield-checkmark" size={10} color="#FFFFFF" style={{ marginRight: 4 }} />
+                  <Text style={styles.tierBadgeText}>
+                    {session?.membershipTier?.toUpperCase() || 'BASIC'}
+                  </Text>
+                </LinearGradient>
+              </Animated.View>
               <Animated.Text entering={FadeInUp.delay(300)} style={styles.heroStudio}>
                 {profile?.studioName || 'PIC-KIC STUDIO'}
               </Animated.Text>
@@ -404,6 +425,38 @@ export default function DashboardScreen() {
                   </Text>
                   <Text style={styles.viewfinderSub}>Buổi chụp tháng này</Text>
                 </View>
+              </View>
+
+              {/* Viewfinder Stats Row 2 (Profile Views & Swipes) */}
+              <View style={[styles.viewfinderRow, { marginTop: 16, paddingTop: 16, borderTopWidth: 0.5, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
+                <View style={styles.viewfinderCol}>
+                  <Text style={styles.viewfinderLabel}>LƯỢT XEM PROFILE</Text>
+                  <Text style={styles.viewfinderValue}>245</Text>
+                  <Text style={styles.viewfinderSub}>Tăng 12% tuần này</Text>
+                </View>
+
+                <View style={styles.viewfinderDivider} />
+
+                <View style={styles.viewfinderCol}>
+                  <Text style={styles.viewfinderLabel}>LƯỢT QUẸT PHẢI</Text>
+                  <Text style={styles.viewfinderValue}>78</Text>
+                  <Text style={styles.viewfinderSub}>Tỷ lệ match 32%</Text>
+                </View>
+
+                {session?.membershipTier === 'Basic' && (
+                  <View style={StyleSheet.absoluteFillObject}>
+                    <View style={styles.blurStatsOverlay}>
+                      <Ionicons name="lock-closed" size={24} color="#FFFFFF" style={{ marginBottom: 4 }} />
+                      <Text style={styles.blurStatsText}>Gói PRO để mở khóa thống kê chi tiết</Text>
+                      <Pressable
+                        onPress={() => navigation.navigate('PhotographerSubscription')}
+                        style={styles.blurStatsBtn}
+                      >
+                        <Text style={styles.blurStatsBtnText}>NÂNG CẤP NGAY</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
               </View>
 
               {/* Exposure Meter (Light Meter) */}
@@ -811,6 +864,31 @@ export default function DashboardScreen() {
                 <Text style={styles.endcapAuthor}>— End of deck</Text>
               </View>
             </ImageBackground>
+          </Animated.View>
+
+          {/* ── DEVELOPER CHEAT MODE ── */}
+          <Animated.View entering={FadeInDown.delay(240)} style={styles.section}>
+            <Text style={styles.cheatSectionTitle}>TESTER: CHUYỂN GÓI ĐỐI TÁC</Text>
+            <View style={styles.cheatRow}>
+              <Pressable
+                onPress={() => updateMembershipTier('Basic')}
+                style={[styles.cheatBtn, session?.membershipTier === 'Basic' && styles.cheatBtnActive]}
+              >
+                <Text style={[styles.cheatBtnText, session?.membershipTier === 'Basic' && styles.cheatBtnTextActive]}>Basic</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => updateMembershipTier('Pro')}
+                style={[styles.cheatBtn, session?.membershipTier === 'Pro' && styles.cheatBtnActive]}
+              >
+                <Text style={[styles.cheatBtnText, session?.membershipTier === 'Pro' && styles.cheatBtnTextActive]}>Pro</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => updateMembershipTier('Studio+')}
+                style={[styles.cheatBtn, session?.membershipTier === 'Studio+' && styles.cheatBtnActive]}
+              >
+                <Text style={[styles.cheatBtnText, session?.membershipTier === 'Studio+' && styles.cheatBtnTextActive]}>Studio+</Text>
+              </Pressable>
+            </View>
           </Animated.View>
 
           <View style={{ height: 100 }} />
@@ -1733,5 +1811,88 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 10,
     color: colors.textMuted,
     textAlign: 'center',
+  },
+
+  // Membership & Stats styles
+  badgeRow: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  tierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  tierBadgeText: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 1.2,
+  },
+  blurStatsOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: isDark ? 'rgba(13,11,20,0.92)' : 'rgba(242,236,225,0.94)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  blurStatsText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  blurStatsBtn: {
+    backgroundColor: colors.accentOrange,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  blurStatsBtnText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
+
+  // Cheat Mode Styles
+  cheatSectionTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    color: colors.textMuted,
+    marginBottom: 10,
+  },
+  cheatRow: {
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%',
+  },
+  cheatBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 6,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cheatBtnActive: {
+    borderColor: colors.accentOrange,
+    backgroundColor: isDark ? 'rgba(255,66,0,0.06)' : 'rgba(255,66,0,0.04)',
+  },
+  cheatBtnText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  cheatBtnTextActive: {
+    color: colors.accentOrange,
+    fontWeight: '800',
   },
 });

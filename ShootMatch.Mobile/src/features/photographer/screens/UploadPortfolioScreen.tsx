@@ -23,6 +23,7 @@ import {
   Concept
 } from '../api';
 import { usePhotographerTheme } from '../PhotographerThemeContext';
+import { useAuth } from '../../auth/AuthContext';
 import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -59,6 +60,7 @@ export default function UploadPortfolioScreen() {
   const navigation = useNavigation<any>();
   const { colors, isDark } = usePhotographerTheme();
   const styles = getStyles(colors, isDark);
+  const { session } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -178,6 +180,18 @@ export default function UploadPortfolioScreen() {
   }
 
   async function handlePickImage() {
+    if (session?.membershipTier === 'Basic' && photoData.length >= 20) {
+      Alert.alert(
+        'Giới hạn tài khoản',
+        'Tài khoản gói Basic chỉ được upload tối đa 20 tác phẩm vào Portfolio. Vui lòng nâng cấp lên gói Pro để tải lên không giới hạn.',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          { text: 'Nâng cấp ngay', onPress: () => navigation.navigate('PhotographerSubscription') }
+        ]
+      );
+      return;
+    }
+
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Quyền truy cập', 'Vui lòng cấp quyền truy cập thư viện ảnh để upload portfolio.');
@@ -198,6 +212,17 @@ export default function UploadPortfolioScreen() {
   }
 
   async function handleUploadMultiple(assets: ImagePicker.ImagePickerAsset[]) {
+    if (session?.membershipTier === 'Basic' && photoData.length + assets.length > 20) {
+      Alert.alert(
+        'Giới hạn tài khoản',
+        `Tài khoản gói Basic chỉ được upload tối đa 20 tác phẩm. Bạn hiện tại đã có ${photoData.length} ảnh, không thể upload thêm ${assets.length} ảnh.\n\nVui lòng nâng cấp lên gói Pro để tải lên không giới hạn.`,
+        [
+          { text: 'Hủy', style: 'cancel' },
+          { text: 'Nâng cấp ngay', onPress: () => navigation.navigate('PhotographerSubscription') }
+        ]
+      );
+      return;
+    }
     setUploading(true);
     let successCount = 0;
     try {

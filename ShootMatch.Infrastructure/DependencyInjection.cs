@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasher,      BcryptPasswordHasher>();
         services.AddScoped<IGoogleAuthService,   GoogleAuthService>();
         services.AddSingleton<IPaymentService,   Services.PayOsPaymentService>();
+        services.AddScoped<IEmailService,        Services.SmtpEmailService>();
 
         // ── Storage (Always Local disk as requested) ───────────
         services.AddScoped<IStorageService, LocalDiskStorageService>();

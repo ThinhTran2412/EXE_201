@@ -6,6 +6,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminStaff from "./pages/admin/AdminStaff";
 import AdminBookings from "./pages/admin/AdminBookings";
+import AdminMemberships from "./pages/admin/AdminMemberships";
 import AuthHub from "./pages/auth/AuthHub";
 import CustomerAuth from "./pages/auth/CustomerAuth";
 import PhotographerAuth from "./pages/auth/PhotographerAuth";
@@ -68,6 +69,7 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="staff" element={<AdminStaff />} />
           <Route path="bookings" element={<AdminBookings />} />
+          <Route path="memberships" element={<AdminMemberships />} />
         </Route>
 
         {/* Fallback */}

@@ -11,6 +11,7 @@ import { getPhotographer, Photographer, getMyConversations, getMyMatches, record
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { addFavorite, removeFavorite, isFavorite } from '../utils/favorites';
 import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
+import { useAuth } from '../../auth/AuthContext';
 
 const { width: W } = Dimensions.get('window');
 /** Lưới 3×3: bề ngang nội dung = W − padding hai bên; mỗi ô vuông, 2 khe giữa 3 cột */
@@ -98,6 +99,7 @@ export default function PhotographerProfileScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
+  const { session } = useAuth();
   const { photographerId } = route.params as { photographerId: string };
 
   const [p, setP] = useState<Photographer | null>(null);
@@ -442,6 +444,7 @@ export default function PhotographerProfileScreen() {
                   {[0, 1, 2].map(col => {
                     const idx = row * 3 + col;
                     const img = displayPhotos[idx];
+                    const isLocked = session?.membershipTier === 'Lướt Nhẹ' && idx >= 5;
                     return (
                       <View
                         key={`cell-${row}-${col}`}
@@ -452,12 +455,44 @@ export default function PhotographerProfileScreen() {
                         }}
                       >
                         {img ? (
-                          <PortfolioImageCell
-                            uri={img}
-                            borderRadius={14}
-                            style={{ width: PORTFOLIO_CELL, height: PORTFOLIO_CELL }}
-                            onPress={() => setLightboxImg(img)}
-                          />
+                          isLocked ? (
+                            <Pressable
+                              style={[
+                                styles.lockedCell,
+                                {
+                                  width: PORTFOLIO_CELL,
+                                  height: PORTFOLIO_CELL,
+                                  backgroundColor: 'rgba(26,26,15,0.06)',
+                                  borderRadius: 14,
+                                  borderWidth: 1,
+                                  borderColor: 'rgba(26,26,15,0.15)',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  overflow: 'hidden',
+                                }
+                              ]}
+                              onPress={() => {
+                                Alert.alert(
+                                  'Gói Lướt Nhẹ giới hạn',
+                                  'Bạn chỉ được xem tối đa 5 ảnh trong portfolio của photographer ở gói Lướt Nhẹ.\n\nNâng cấp lên gói Chọn Xinh hoặc Chốt Xịn để mở khóa xem toàn bộ tác phẩm!',
+                                  [
+                                    { text: 'Đóng', style: 'cancel' },
+                                    { text: 'Nâng cấp ngay', onPress: () => navigation.navigate('CustomerSubscription') }
+                                  ]
+                                );
+                              }}
+                            >
+                              <Image source={{ uri: formatImageUrl(img) }} style={[StyleSheet.absoluteFillObject, { opacity: 0.25 }]} blurRadius={8} />
+                              <Ionicons name="lock-closed" size={16} color="#1a1a0f" />
+                            </Pressable>
+                          ) : (
+                            <PortfolioImageCell
+                              uri={img}
+                              borderRadius={14}
+                              style={{ width: PORTFOLIO_CELL, height: PORTFOLIO_CELL }}
+                              onPress={() => setLightboxImg(img)}
+                            />
+                          )
                         ) : null}
                       </View>
                     );
@@ -467,7 +502,23 @@ export default function PhotographerProfileScreen() {
             </View>
             {photos.length > 0 && (
               <View style={{ paddingHorizontal: GRID_H_PAD, marginTop: 14 }}>
-                <Pressable style={styles.viewAllBtn} onPress={() => navigation.navigate('PhotographerPortfolio', { photographer: p })}>
+                <Pressable
+                  style={styles.viewAllBtn}
+                  onPress={() => {
+                    if (session?.membershipTier === 'Lướt Nhẹ') {
+                      Alert.alert(
+                        'Tính năng giới hạn',
+                        'Xem toàn bộ portfolio chỉ dành cho hội viên gói Chọn Xinh và Chốt Xịn.\n\nVui lòng nâng cấp gói để xem không giới hạn!',
+                        [
+                          { text: 'Đóng', style: 'cancel' },
+                          { text: 'Nâng cấp ngay', onPress: () => navigation.navigate('CustomerSubscription') }
+                        ]
+                      );
+                      return;
+                    }
+                    navigation.navigate('PhotographerPortfolio', { photographer: p });
+                  }}
+                >
                   <Text style={styles.viewAllBtnText}>Mở toàn bộ portfolio</Text>
                 </Pressable>
               </View>
@@ -853,4 +904,8 @@ const styles = StyleSheet.create({
 
   lightbox: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', alignItems: 'center', justifyContent: 'center' },
   lightboxCloseBtn: { position: 'absolute', right: 24, zIndex: 100, padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 24 },
+  lockedCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

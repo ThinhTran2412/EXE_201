@@ -32,6 +32,7 @@ import CustomerSharedMediaScreen from '../../features/customer/screens/CustomerS
 import ChatScreen                from '../../features/chat/screens/ChatScreen';
 import CallScreen                from '../../features/chat/screens/CallScreen';
 import EmergencySearchScreen     from '../../features/customer/screens/EmergencySearchScreen';
+import CustomerSubscriptionScreen from '../../features/customer/screens/CustomerSubscriptionScreen';
 
 const Tab   = createBottomTabNavigator<CustomerTabParamList>();
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -132,6 +133,7 @@ export default function CustomerTabs() {
       <Stack.Screen name="CustomerSharedMedia"  component={CustomerSharedMediaScreen} />
       <Stack.Screen name="Chat"                 component={ChatScreen} />
       <Stack.Screen name="Call"                 component={CallScreen} />
+      <Stack.Screen name="CustomerSubscription" component={CustomerSubscriptionScreen} />
     </Stack.Navigator>
   );
 }

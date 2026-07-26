@@ -11,6 +11,8 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../../auth/AuthContext';
 import { getPhotographers, Photographer } from '../api';
 import { addFavorite } from '../utils/favorites';
 import { colors } from '../../../app/theme/colors';
@@ -302,6 +304,7 @@ function SwipeCard({
 export default function DiscoverScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { session } = useAuth();
   const [cards, setCards] = useState<Photographer[]>([]);
   const [totalCards, setTotalCards] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -335,10 +338,32 @@ export default function DiscoverScreen() {
   const handleSwipeRight = useCallback(async () => {
     const top = cards[0];
     if (!top) return;
+
+    if (session?.membershipTier === 'Lướt Nhẹ') {
+      const today = new Date().toISOString().slice(0, 10);
+      const storageKey = `sm_swipes_${session.userId}_${today}`;
+      const countStr = await AsyncStorage.getItem(storageKey);
+      const count = countStr ? parseInt(countStr, 10) : 0;
+
+      if (count >= 10) {
+        Alert.alert(
+          'Đạt giới hạn lượt quẹt',
+          'Gói Lướt Nhẹ chỉ giới hạn tối đa 10 lượt thích (quẹt phải) mỗi ngày.\n\nNâng cấp lên Chọn Xinh hoặc Chốt Xịn để mở khóa quẹt không giới hạn!',
+          [
+            { text: 'Hủy', style: 'cancel' },
+            { text: 'Nâng cấp ngay', onPress: () => navigation.navigate('CustomerSubscription') }
+          ]
+        );
+        return;
+      }
+
+      await AsyncStorage.setItem(storageKey, (count + 1).toString());
+    }
+
     setCards((c) => c.slice(1));
     showToast(`❤️ Đã lưu ${top?.displayName || 'Nhiếp ảnh gia'} vào Yêu Thích!`);
     await addFavorite(top);
-  }, [cards]);
+  }, [cards, session]);
 
   if (loading) {
     return (

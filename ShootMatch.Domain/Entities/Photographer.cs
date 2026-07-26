@@ -34,4 +34,5 @@ public sealed class Photographer
     public IReadOnlyList<float[]> PortfolioEmbeddings { get; init; } = [];
     public List<string> PortfolioPhotos { get; init; } = [];
     public List<PhotographerEquipment> Equipments { get; init; } = [];
+    public string MembershipTier { get; init; } = "Basic";
 }

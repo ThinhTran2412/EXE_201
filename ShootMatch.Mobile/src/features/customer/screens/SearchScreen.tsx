@@ -10,6 +10,7 @@ import {
   Text,
   TextInput,
   View,
+  Alert,
   Dimensions,
   Platform,
   useWindowDimensions,
@@ -17,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../../auth/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../../app/theme/colors';
 import { fontSizes, fontWeights } from '../../../app/theme/typography';
@@ -141,6 +143,7 @@ const MOCK_LOOKBOOKS = [
 
 export default function SearchScreen() {
   const navigation = useNavigation<any>();
+  const { session } = useAuth();
 
   const { width: windowWidth } = useWindowDimensions();
   const W = Platform.OS === 'web' ? Math.min(windowWidth, 800) : windowWidth;
@@ -173,6 +176,21 @@ export default function SearchScreen() {
   const [lookbooks, setLookbooks] = useState<any[]>([]);
   const [dynamicConcepts, setDynamicConcepts] = useState<{ name: string; tag: string; desc: string; subtitle: string }[]>([]);
   const [loadingDiscovery, setLoadingDiscovery] = useState(true);
+
+  const handleLockedFilterPress = (filterName: string) => {
+    if (session?.membershipTier === 'Lướt Nhẹ') {
+      Alert.alert(
+        'Tính năng giới hạn',
+        `Bộ lọc "${filterName}" chỉ mở khóa cho hội viên gói Chọn Xinh và Chốt Xịn.\n\nNâng cấp ngay để sử dụng toàn bộ tính năng lọc nâng cao!`,
+        [
+          { text: 'Đóng', style: 'cancel' },
+          { text: 'Nâng cấp ngay', onPress: () => navigation.navigate('CustomerSubscription') }
+        ]
+      );
+      return true;
+    }
+    return false;
+  };
 
   // Check if user is actively searching
   const isSearching = query.length > 0 || selectedRegion !== '' || minBudget !== '' || maxBudget !== '' || selectedDuration > 0 || selectedStyles.length > 0 || isEmergency || selectedLocationType !== '' || selectedAgeGroup !== '' || selectedGroupSize !== '' || selectedColorTone !== '';
@@ -549,13 +567,19 @@ export default function SearchScreen() {
             ))}
           </ScrollView>
 
-          <Text style={styles.filterTitle}>Thời Lượng Gói Chụp</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.filterTitle}>Thời Lượng Gói Chụp</Text>
+            {session?.membershipTier === 'Lướt Nhẹ' && <Ionicons name="lock-closed" size={12} color="#EF4444" style={{ marginLeft: 6, marginBottom: 8 }} />}
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.regionList}>
             {DURATIONS.map((dur) => (
               <Pressable
                 key={dur.value}
                 style={[styles.regionChip, selectedDuration === dur.value && styles.regionChipActive]}
-                onPress={() => setSelectedDuration(dur.value)}
+                onPress={() => {
+                  if (handleLockedFilterPress('Thời Lượng Gói Chụp')) return;
+                  setSelectedDuration(dur.value);
+                }}
               >
                 <Text style={[styles.regionChipText, selectedDuration === dur.value && styles.regionChipTextActive]}>
                   {dur.label}
@@ -585,13 +609,19 @@ export default function SearchScreen() {
             />
           </View>
 
-          <Text style={styles.filterTitle}>Địa điểm chụp</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.filterTitle}>Địa điểm chụp</Text>
+            {session?.membershipTier === 'Lướt Nhẹ' && <Ionicons name="lock-closed" size={12} color="#EF4444" style={{ marginLeft: 6, marginBottom: 8 }} />}
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.regionList}>
             {LOCATION_TYPES.map((loc) => (
               <Pressable
                 key={loc.value}
                 style={[styles.regionChip, selectedLocationType === loc.value && styles.regionChipActive]}
-                onPress={() => setSelectedLocationType(loc.value)}
+                onPress={() => {
+                  if (handleLockedFilterPress('Địa điểm chụp')) return;
+                  setSelectedLocationType(loc.value);
+                }}
               >
                 <Text style={[styles.regionChipText, selectedLocationType === loc.value && styles.regionChipTextActive]}>
                   {loc.label}
@@ -600,13 +630,19 @@ export default function SearchScreen() {
             ))}
           </ScrollView>
 
-          <Text style={styles.filterTitle}>Đối tượng chụp</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.filterTitle}>Đối tượng chụp</Text>
+            {session?.membershipTier === 'Lướt Nhẹ' && <Ionicons name="lock-closed" size={12} color="#EF4444" style={{ marginLeft: 6, marginBottom: 8 }} />}
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.regionList}>
             {AGE_GROUPS.map((age) => (
               <Pressable
                 key={age.value}
                 style={[styles.regionChip, selectedAgeGroup === age.value && styles.regionChipActive]}
-                onPress={() => setSelectedAgeGroup(age.value)}
+                onPress={() => {
+                  if (handleLockedFilterPress('Đối tượng chụp')) return;
+                  setSelectedAgeGroup(age.value);
+                }}
               >
                 <Text style={[styles.regionChipText, selectedAgeGroup === age.value && styles.regionChipTextActive]}>
                   {age.label}
@@ -615,13 +651,19 @@ export default function SearchScreen() {
             ))}
           </ScrollView>
 
-          <Text style={styles.filterTitle}>Số lượng người</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.filterTitle}>Số lượng người</Text>
+            {session?.membershipTier === 'Lướt Nhẹ' && <Ionicons name="lock-closed" size={12} color="#EF4444" style={{ marginLeft: 6, marginBottom: 8 }} />}
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.regionList}>
             {GROUP_SIZES.map((gs) => (
               <Pressable
                 key={gs.value}
                 style={[styles.regionChip, selectedGroupSize === gs.value && styles.regionChipActive]}
-                onPress={() => setSelectedGroupSize(gs.value)}
+                onPress={() => {
+                  if (handleLockedFilterPress('Số lượng người')) return;
+                  setSelectedGroupSize(gs.value);
+                }}
               >
                 <Text style={[styles.regionChipText, selectedGroupSize === gs.value && styles.regionChipTextActive]}>
                   {gs.label}
@@ -630,7 +672,10 @@ export default function SearchScreen() {
             ))}
           </ScrollView>
 
-          <Text style={styles.filterTitle}>Tông màu chính</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.filterTitle}>Tông màu chính</Text>
+            {session?.membershipTier === 'Lướt Nhẹ' && <Ionicons name="lock-closed" size={12} color="#EF4444" style={{ marginLeft: 6, marginBottom: 8 }} />}
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.regionList}>
             {COLOR_TONES.map((colorTone) => (
               <Pressable
@@ -640,7 +685,10 @@ export default function SearchScreen() {
                   selectedColorTone === colorTone.value && styles.regionChipActive,
                   { flexDirection: 'row', alignItems: 'center', gap: 6 }
                 ]}
-                onPress={() => setSelectedColorTone(colorTone.value)}
+                onPress={() => {
+                  if (handleLockedFilterPress('Tông màu chính')) return;
+                  setSelectedColorTone(colorTone.value);
+                }}
               >
                 <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colorTone.color }} />
                 <Text style={[styles.regionChipText, selectedColorTone === colorTone.value && styles.regionChipTextActive]}>
@@ -934,11 +982,30 @@ export default function SearchScreen() {
             </View>
           ) : (
             <FlatList
-              data={results}
+              data={session?.membershipTier === 'Lướt Nhẹ' ? results.slice(0, 5) : results}
               renderItem={renderPhotographerItem}
               keyExtractor={(item) => item.photographerId}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
+              ListFooterComponent={() => {
+                if (session?.membershipTier === 'Lướt Nhẹ' && results.length > 5) {
+                  return (
+                    <View style={styles.limitBanner}>
+                      <Ionicons name="lock-closed-outline" size={16} color="#D97706" style={{ marginRight: 6 }} />
+                      <Text style={styles.limitBannerText}>
+                        Đang hiển thị giới hạn 5 kết quả đầu tiên. Nâng cấp gói để xem tất cả {results.length} photographer.
+                      </Text>
+                      <Pressable
+                        style={styles.limitBannerBtn}
+                        onPress={() => navigation.navigate('CustomerSubscription')}
+                      >
+                        <Text style={styles.limitBannerBtnText}>NÂNG CẤP</Text>
+                      </Pressable>
+                    </View>
+                  );
+                }
+                return null;
+              }}
             />
           )}
         </View>
@@ -1651,5 +1718,33 @@ const getStyles = (W: number, HOT_CARD_W: number, LOOKBOOK_CARD_W: number) => St
     height: 80,
     borderRadius: 8,
     backgroundColor: colors.clayLight,
+  },
+  limitBanner: {
+    padding: spacing[4],
+    backgroundColor: '#FFFBEB',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    marginVertical: spacing[3],
+    marginHorizontal: spacing[4],
+    alignItems: 'center',
+  },
+  limitBannerText: {
+    fontSize: fontSizes.xs,
+    color: '#B45309',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: spacing[2],
+  },
+  limitBannerBtn: {
+    backgroundColor: '#D97706',
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[2],
+    borderRadius: 6,
+  },
+  limitBannerBtnText: {
+    fontSize: fontSizes.xs - 1,
+    fontWeight: fontWeights.bold,
+    color: '#FFFFFF',
   },
 });

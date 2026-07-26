@@ -15,6 +15,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAuth } from '../../auth/AuthContext';
 import { Photographer } from '../api';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import PortfolioImageCell from '../../../shared/components/PortfolioImageCell';
@@ -52,6 +53,7 @@ export default function PhotographerPortfolioScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { photographer } = route.params as { photographer: Photographer };
+  const { session } = useAuth();
 
   const insets = useSafeAreaInsets();
 
@@ -70,7 +72,9 @@ export default function PhotographerPortfolioScreen() {
 
   async function loadData() {
     setLoading(true);
-    const urls = photographer.portfolioPhotos || [];
+    const rawUrls = photographer.portfolioPhotos || [];
+    const limit = session?.membershipTier === 'Chọn Xinh' ? 15 : (session?.membershipTier === 'Lướt Nhẹ' ? 5 : 9999);
+    const urls = rawUrls.slice(0, limit);
     if (urls.length === 0) {
       setPhotoData([]);
       setLoading(false);
@@ -241,6 +245,22 @@ export default function PhotographerPortfolioScreen() {
                 </View>
               </View>
             </View>
+            {session?.membershipTier === 'Chọn Xinh' && (photographer.portfolioPhotos || []).length > 15 && (
+              <View style={styles.limitBanner}>
+                <Ionicons name="lock-closed" size={16} color="#F59E0B" style={{ marginBottom: 4 }} />
+                <Text style={styles.limitBannerText}>
+                  Đang giới hạn xem 15 ảnh (gói Chọn Xinh). Nâng cấp Chốt Xịn để xem toàn bộ {(photographer.portfolioPhotos || []).length} tác phẩm.
+                </Text>
+                <Pressable
+                  style={styles.limitBannerBtn}
+                  onPress={() => {
+                    navigation.navigate('CustomerSubscription');
+                  }}
+                >
+                  <Text style={styles.limitBannerBtnText}>NÂNG CẤP</Text>
+                </Pressable>
+              </View>
+            )}
           </>
         ) : (
           <View style={styles.emptyState}>
@@ -445,4 +465,32 @@ const styles = StyleSheet.create({
   thumbnailsScroll: { paddingHorizontal: 20, alignItems: 'center', gap: 12 },
   thumbnail: { width: 50, height: 50, borderWidth: 2, borderColor: 'transparent', opacity: 0.55 },
   thumbnailActive: { borderColor: THEME.orange, opacity: 1 },
+  limitBanner: {
+    padding: 16,
+    backgroundColor: 'rgba(217,119,6,0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(217,119,6,0.2)',
+    marginHorizontal: 16,
+    marginVertical: 16,
+    alignItems: 'center',
+  },
+  limitBannerText: {
+    fontSize: 12,
+    color: '#F59E0B',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  limitBannerBtn: {
+    backgroundColor: '#D97706',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  limitBannerBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
 });

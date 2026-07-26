@@ -15,7 +15,16 @@ public sealed class PayOsPaymentService : IPaymentService
         var apiKey = configuration["PayOS:ApiKey"] ?? throw new ArgumentException("PayOS ApiKey is missing");
         var checksumKey = configuration["PayOS:ChecksumKey"] ?? throw new ArgumentException("PayOS ChecksumKey is missing");
         
-        _payOs = new PayOSClient(clientId, apiKey, checksumKey);
+        _payOs = new PayOSClient(new PayOSOptions
+        {
+            ClientId = clientId,
+            ApiKey = apiKey,
+            ChecksumKey = checksumKey,
+            HttpClient = new System.Net.Http.HttpClient(new System.Net.Http.HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+            })
+        });
     }
 
     public async Task<string> CreatePaymentLinkAsync(long orderCode, decimal amount, string description, string returnUrl, string cancelUrl, CancellationToken cancellationToken = default)

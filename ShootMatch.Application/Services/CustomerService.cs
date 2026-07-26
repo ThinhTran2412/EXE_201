@@ -39,6 +39,7 @@ public sealed class CustomerService(ICustomerRepository customerRepository)
             CreatedAt = existing?.CreatedAt ?? profile.CreatedAt,
             LastSeenAt = existing?.LastSeenAt,
             DeletedAt = existing?.DeletedAt,
+            MembershipTier = existing?.MembershipTier ?? profile.MembershipTier
         };
 
         await customerRepository.UpsertAsync(customer, cancellationToken);
@@ -60,6 +61,7 @@ public sealed class CustomerService(ICustomerRepository customerRepository)
         RollPreviewPhotos = customer.RollPreviewPhotos,
         PreferredStyles = customer.PreferredStyles,
         IsVerified = customer.IsVerified,
-        CreatedAt = customer.CreatedAt
+        CreatedAt = customer.CreatedAt,
+        MembershipTier = customer.MembershipTier
     };
 }

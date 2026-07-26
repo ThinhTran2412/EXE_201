@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Outlet, useNavigate, Link, useLocation } from "react-router-dom";
-import { Camera, LayoutDashboard, Users, Calendar, LogOut, Upload, ShieldCheck } from "lucide-react";
+import { Camera, LayoutDashboard, Users, Calendar, LogOut, Upload, ShieldCheck, CreditCard } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../store/useAuthStore";
 
@@ -67,6 +67,7 @@ export default function AdminLayout() {
     { name: "Người dùng", path: "/admin/users", icon: Users },
     { name: "Duyệt staff", path: "/admin/staff", icon: ShieldCheck },
     { name: "Booking & Giao dịch", path: "/admin/bookings", icon: Calendar },
+    { name: "Giao dịch Hội viên", path: "/admin/memberships", icon: CreditCard },
   ];
 
   return (

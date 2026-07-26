@@ -21,6 +21,7 @@ var builder = WebApplication.CreateBuilder(args);
 //  Core services
 // ──────────────────────────────────────────
 builder.Services.AddControllers();
+builder.Services.AddMemoryCache();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHttpContextAccessor();

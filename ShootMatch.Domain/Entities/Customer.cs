@@ -23,4 +23,5 @@ public sealed class Customer
     public DateTime CreatedAt { get; init; }
     public DateTime? LastSeenAt { get; init; }
     public DateTime? DeletedAt { get; init; }
+    public string MembershipTier { get; init; } = "Lướt Nhẹ";
 }

@@ -5,6 +5,10 @@ using ShootMatch.Application.Abstractions;
 using ShootMatch.Application.Contracts;
 using ShootMatch.Application.Services;
 using System.Security.Claims;
+using ShootMatch.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using ShootMatch.Infrastructure.Persistence;
+using ShootMatch.Infrastructure.Persistence.Entities;
 
 namespace ShootMatch.Api.Controllers;
 
@@ -12,6 +16,8 @@ namespace ShootMatch.Api.Controllers;
 [Route("api/customers")]
 public sealed class CustomersController(
     CustomerService customerService,
+    ICustomerRepository customerRepository,
+    ShootMatchDbContext db,
     IStorageService storageService) : ControllerBase
 {
     [Authorize(Roles = "customer")]
@@ -23,6 +29,51 @@ public sealed class CustomersController(
         var customerId = GetCustomerIdOrThrow(User);
         var profile = await customerService.GetProfileAsync(customerId, cancellationToken);
         return profile is null ? NotFound() : Ok(profile);
+    }
+
+    [HttpGet("/api/membership/plans")]
+    public async Task<IActionResult> GetMembershipPlans(CancellationToken cancellationToken)
+    {
+        var plans = await db.MembershipPlans.AsNoTracking().ToListAsync(cancellationToken);
+        return Ok(plans);
+    }
+
+    [Authorize(Roles = "customer")]
+    [HttpPost("membership")]
+    public async Task<IActionResult> UpdateMembership([FromBody] UpdateMembershipRequest request, CancellationToken cancellationToken)
+    {
+        var customerId = GetCustomerIdOrThrow(User);
+        var customer = await customerRepository.GetByIdAsync(customerId, cancellationToken);
+        if (customer is null) return NotFound();
+
+        var updated = new Customer
+        {
+            Id = customer.Id,
+            DisplayName = customer.DisplayName,
+            Phone = customer.Phone,
+            Email = customer.Email,
+            Region = customer.Region,
+            AvatarUrl = customer.AvatarUrl,
+            CoverPhotoUrl = customer.CoverPhotoUrl,
+            HighlightPhoto1Url = customer.HighlightPhoto1Url,
+            HighlightPhoto2Url = customer.HighlightPhoto2Url,
+            HighlightPhoto3Url = customer.HighlightPhoto3Url,
+            RollPreviewPhotos = customer.RollPreviewPhotos,
+            PreferredStyles = customer.PreferredStyles,
+            IsVerified = customer.IsVerified,
+            IsActive = customer.IsActive,
+            PasswordHash = customer.PasswordHash,
+            GoogleId = customer.GoogleId,
+            PreferredBudgetMin = customer.PreferredBudgetMin,
+            PreferredBudgetMax = customer.PreferredBudgetMax,
+            CreatedAt = customer.CreatedAt,
+            LastSeenAt = customer.LastSeenAt,
+            DeletedAt = customer.DeletedAt,
+            MembershipTier = request.MembershipTier
+        };
+
+        await customerRepository.UpsertAsync(updated, cancellationToken);
+        return Ok(new { membershipTier = updated.MembershipTier });
     }
 
     [Authorize(Roles = "customer")]
@@ -49,7 +100,8 @@ public sealed class CustomersController(
             RollPreviewPhotos = string.IsNullOrWhiteSpace(request.RollPreviewPhotos) ? existing?.RollPreviewPhotos ?? string.Empty : request.RollPreviewPhotos,
             PreferredStyles = string.IsNullOrWhiteSpace(request.PreferredStyles) ? existing?.PreferredStyles ?? string.Empty : request.PreferredStyles,
             IsVerified = existing?.IsVerified ?? true,
-            CreatedAt = existing?.CreatedAt ?? DateTime.UtcNow
+            CreatedAt = existing?.CreatedAt ?? DateTime.UtcNow,
+            MembershipTier = existing?.MembershipTier ?? "Lướt Nhẹ"
         }, cancellationToken);
 
         return Ok(profile);

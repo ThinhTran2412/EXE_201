@@ -71,6 +71,7 @@ public sealed class EfCustomerRepository(ShootMatchDbContext db) : ICustomerRepo
             existing.PreferredBudgetMax = customer.PreferredBudgetMax;
             existing.LastSeenAt         = customer.LastSeenAt;
             existing.DeletedAt          = customer.DeletedAt;
+            existing.MembershipTier     = customer.MembershipTier;
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -106,7 +107,8 @@ public sealed class EfCustomerRepository(ShootMatchDbContext db) : ICustomerRepo
         PreferredBudgetMax = r.PreferredBudgetMax,
         CreatedAt          = r.CreatedAt,
         LastSeenAt         = r.LastSeenAt,
-        DeletedAt          = r.DeletedAt
+        DeletedAt          = r.DeletedAt,
+        MembershipTier     = r.MembershipTier
     };
 
     private static CustomerRecord ToRecord(Customer c) => new()
@@ -131,6 +133,7 @@ public sealed class EfCustomerRepository(ShootMatchDbContext db) : ICustomerRepo
         PreferredBudgetMax = c.PreferredBudgetMax,
         CreatedAt          = c.CreatedAt,
         LastSeenAt         = c.LastSeenAt,
-        DeletedAt          = c.DeletedAt
+        DeletedAt          = c.DeletedAt,
+        MembershipTier     = c.MembershipTier
     };
 }

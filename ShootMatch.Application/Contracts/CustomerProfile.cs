@@ -16,4 +16,5 @@ public sealed class CustomerProfile
     public required string PreferredStyles { get; init; }
     public required bool IsVerified { get; init; }
     public required DateTime CreatedAt { get; init; }
+    public required string MembershipTier { get; init; }
 }
