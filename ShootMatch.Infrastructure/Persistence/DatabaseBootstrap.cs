@@ -24,6 +24,7 @@ public static class DatabaseBootstrap
         await EnsureMembershipTiersAsync(db, logger, cancellationToken);
         await EnsureStylesAndConceptsSeededAsync(db, logger, cancellationToken);
         await EnsureAdminAccountsSeededAsync(db, logger, cancellationToken);
+        await MigrateExistingPreferredStylesAsync(db, logger, cancellationToken);
     }
 
     private static async Task EnsureCallSessionsTableAsync(
@@ -347,6 +348,156 @@ public static class DatabaseBootstrap
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Admin accounts database seeding skipped.");
+        }
+    }
+
+    private static async Task MigrateExistingPreferredStylesAsync(
+        ShootMatchDbContext db,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            logger.LogInformation("Checking and cleaning up JSON PreferredStyles fields in database...");
+
+            var customers = await db.Customers
+                .Where(c => c.PreferredStyles.Contains("{") && c.PreferredStyles.Contains("}"))
+                .ToListAsync(cancellationToken);
+
+            if (customers.Count == 0)
+            {
+                logger.LogInformation("No customer PreferredStyles need cleanup.");
+                return;
+            }
+
+            logger.LogInformation("Found {Count} customer(s) with JSON preferred styles. Cleaning them up...", customers.Count);
+
+            var styles = await db.Styles.AsNoTracking().ToListAsync(cancellationToken);
+            var concepts = await db.Concepts.AsNoTracking().ToListAsync(cancellationToken);
+
+            var styleMap = styles.ToDictionary(s => s.Id, s => s.Name);
+            var conceptMap = concepts.ToDictionary(c => c.Id, c => c.Name);
+
+            var locationMapping = new Dictionary<string, string>
+            {
+                { "cafe", "Quán Cafe" },
+                { "studio", "Studio" },
+                { "home", "Tại nhà" },
+                { "museum", "Bảo tàng" },
+                { "park", "Công viên" },
+                { "urban", "Đường phố/Urban" },
+                { "beach", "Bãi biển" },
+                { "rooftop", "Sân thượng" },
+                { "landmark", "Landmark/Cầu" },
+                { "historical", "Di tích/Phố cổ" },
+                { "abandoned", "Nhà hoang" },
+                { "westlake", "Hồ Tây/Sunset" }
+            };
+
+            var colorMapping = new Dictionary<string, string>
+            {
+                { "warm", "Tone Ấm" },
+                { "cool", "Tone Lạnh" },
+                { "bright", "Pastel Tone" },
+                { "mono", "Đen Trắng" },
+                { "earthy", "Tone Đất" },
+                { "cyber", "Neon Cyber" }
+            };
+
+            foreach (var customer in customers)
+            {
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(customer.PreferredStyles);
+                    var root = doc.RootElement;
+                    var tags = new List<string>();
+
+                    // 1. Locations
+                    if (root.TryGetProperty("locations", out var locationsProp) && locationsProp.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        foreach (var loc in locationsProp.EnumerateArray())
+                        {
+                            var locStr = loc.GetString();
+                            if (!string.IsNullOrEmpty(locStr))
+                            {
+                                tags.Add(locationMapping.TryGetValue(locStr.ToLowerInvariant(), out var mapped) ? mapped : locStr);
+                            }
+                        }
+                    }
+
+                    // 2. Colors
+                    if (root.TryGetProperty("colors", out var colorsProp) && colorsProp.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        foreach (var col in colorsProp.EnumerateArray())
+                        {
+                            var colStr = col.GetString();
+                            if (!string.IsNullOrEmpty(colStr))
+                            {
+                                tags.Add(colorMapping.TryGetValue(colStr.ToLowerInvariant(), out var mapped) ? mapped : colStr);
+                            }
+                        }
+                    }
+
+                    // 3. Fashion (Styles)
+                    if (root.TryGetProperty("fashion", out var fashionProp) && fashionProp.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        foreach (var fash in fashionProp.EnumerateArray())
+                        {
+                            var fashStr = fash.GetString();
+                            if (Guid.TryParse(fashStr, out var styleId))
+                            {
+                                if (styleMap.TryGetValue(styleId, out var name))
+                                    tags.Add(name);
+                            }
+                            else if (!string.IsNullOrEmpty(fashStr))
+                            {
+                                tags.Add(fashStr);
+                            }
+                        }
+                    }
+
+                    // 4. Concepts
+                    if (root.TryGetProperty("concepts", out var conceptsProp) && conceptsProp.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        foreach (var con in conceptsProp.EnumerateArray())
+                        {
+                            var conStr = con.GetString();
+                            if (Guid.TryParse(conStr, out var conceptId))
+                            {
+                                if (conceptMap.TryGetValue(conceptId, out var name))
+                                    tags.Add(name);
+                            }
+                            else if (!string.IsNullOrEmpty(conStr))
+                            {
+                                tags.Add(conStr);
+                            }
+                        }
+                    }
+
+                    var cleanTags = tags
+                        .Where(t => !string.IsNullOrWhiteSpace(t))
+                        .Select(t => t.Trim())
+                        .Distinct()
+                        .ToList();
+
+                    var oldVal = customer.PreferredStyles;
+                    customer.PreferredStyles = string.Join(", ", cleanTags);
+
+                    logger.LogInformation("Migrated customer {DisplayName} ({Email}): {Old} -> {New}", 
+                        customer.DisplayName, customer.Email, oldVal, customer.PreferredStyles);
+                }
+                catch (Exception parseEx)
+                {
+                    logger.LogWarning(parseEx, "Failed to parse preferred styles JSON for customer {Id}.", customer.Id);
+                }
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Database PreferredStyles migration completed successfully.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to migrate database PreferredStyles.");
         }
     }
 }

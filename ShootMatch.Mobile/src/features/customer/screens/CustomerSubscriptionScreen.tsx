@@ -253,6 +253,11 @@ export default function CustomerSubscriptionScreen() {
           {CUSTOMER_PLANS.map((plan, idx) => {
             const isSelected = selectedPlanId === plan.id;
             const savings = getSavingsDisplay(plan);
+            const planColor = 
+              plan.id === 'Chốt Xịn' ? '#8B5CF6' :
+              plan.id === 'Chọn Xinh' ? '#F59E0B' : 
+              '#64748B';
+
             return (
               <Animated.View
                 key={plan.id}
@@ -262,44 +267,92 @@ export default function CustomerSubscriptionScreen() {
                   onPress={() => setSelectedPlanId(plan.id)}
                   style={[
                     styles.planCard,
-                    isSelected && styles.planCardSelected,
+                    isSelected && { borderColor: planColor, borderWidth: 2, shadowColor: planColor, shadowOpacity: 0.15, shadowRadius: 20, elevation: 6 },
+                    plan.id === 'Chốt Xịn' && isSelected && { shadowColor: '#EC4899' }
                   ]}
                 >
                   <LinearGradient
                     colors={plan.gradient}
-                    style={styles.cardHeaderGradient}
+                    style={styles.cardTopBar}
                     start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <View style={styles.cardHeaderRow}>
-                      <Text style={styles.planName}>{plan.name}</Text>
-                      {plan.badge ? (
-                        <View style={styles.badgeContainer}>
-                          <Text style={styles.badgeText}>{plan.badge}</Text>
-                        </View>
-                      ) : null}
+                    end={{ x: 1, y: 0 }}
+                  />
+
+                  {isSelected && (
+                    <View style={[styles.selectedIndicator, { backgroundColor: planColor }]}>
+                      <Ionicons name="checkmark" size={12} color="#FFF" />
                     </View>
-                    <Text style={styles.planPrice}>{getPriceDisplay(plan)}</Text>
-                    {savings ? <Text style={styles.savingsText}>{savings}</Text> : null}
-                  </LinearGradient>
+                  )}
+
+                  <View style={styles.cardHeader}>
+                    <View style={styles.cardHeaderLeft}>
+                      <Text style={[styles.planName, { color: isSelected ? planColor : '#0F172A' }]}>
+                        {plan.name}
+                      </Text>
+                      {plan.badge && (
+                        <LinearGradient
+                          colors={plan.gradient}
+                          style={styles.badgeContainer}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                        >
+                          <Text style={styles.badgeText}>{plan.badge}</Text>
+                        </LinearGradient>
+                      )}
+                    </View>
+                    
+                    <Text style={styles.planDescription}>{plan.description}</Text>
+                    
+                    <View style={styles.priceContainer}>
+                      <Text style={styles.planPrice}>
+                        {plan.monthlyPrice === 0 ? 'Miễn phí' : plan.monthlyPrice.toLocaleString('vi-VN')}
+                        {plan.monthlyPrice !== 0 && <Text style={styles.currency}> đ</Text>}
+                      </Text>
+                      {plan.monthlyPrice !== 0 && (
+                        <Text style={styles.periodText}>
+                          {cycle === 'month' ? '/tháng' : cycle === '6months' ? '/6 tháng' : '/năm'}
+                        </Text>
+                      )}
+                    </View>
+
+                    {savings ? (
+                      <View style={styles.savingsBadge}>
+                        <Text style={styles.savingsText}>{savings}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.divider} />
 
                   <View style={styles.cardBody}>
-                    <Text style={styles.planDescription}>{plan.description}</Text>
+                    <Text style={styles.featuresTitle}>Tính năng bao gồm:</Text>
                     <View style={styles.featuresList}>
-                      {plan.features.map((feat, fidx) => (
-                        <View key={fidx} style={styles.featureRow}>
-                          {typeof feat.checked === 'string' ? (
-                            <View style={styles.featureBadge}>
-                              <Text style={styles.featureBadgeText}>{feat.checked}</Text>
-                            </View>
-                          ) : feat.checked ? (
-                            <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-                          ) : (
-                            <Ionicons name="close-circle" size={18} color="#EF4444" />
-                          )}
-                          <Text style={styles.featureLabel}>{feat.label}</Text>
-                        </View>
-                      ))}
+                      {plan.features.map((feat, fidx) => {
+                        const isIncluded = feat.checked !== false;
+                        return (
+                          <View key={fidx} style={[styles.featureRow, !isIncluded && { opacity: 0.4 }]}>
+                            {typeof feat.checked === 'string' ? (
+                              <View style={[styles.featureBadge, { backgroundColor: planColor + '15' }]}>
+                                <Text style={[styles.featureBadgeText, { color: planColor }]}>{feat.checked}</Text>
+                              </View>
+                            ) : feat.checked ? (
+                              <View style={[styles.checkCircle, { backgroundColor: planColor + '15' }]}>
+                                <Ionicons name="checkmark" size={10} color={planColor} />
+                              </View>
+                            ) : (
+                              <View style={styles.uncheckCircle}>
+                                <Ionicons name="close" size={10} color="#94A3B8" />
+                              </View>
+                            )}
+                            <Text style={[
+                              styles.featureLabel, 
+                              !isIncluded && { textDecorationLine: 'line-through', color: '#94A3B8' }
+                            ]}>
+                              {feat.label}
+                            </Text>
+                          </View>
+                        );
+                      })}
                     </View>
                   </View>
                 </Pressable>
@@ -438,28 +491,30 @@ const styles = StyleSheet.create({
   },
   toggleContainer: {
     flexDirection: 'row',
-    backgroundColor: '#E2E8F0',
-    borderRadius: radius.md,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 99,
     padding: 4,
     marginBottom: spacing[6],
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   toggleBtn: {
     flex: 1,
-    paddingVertical: spacing[2],
+    paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: radius.sm,
+    borderRadius: 99,
   },
   toggleBtnActive: {
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   toggleText: {
-    fontSize: fontSizes.sm,
-    fontWeight: '600',
+    fontSize: fontSizes.sm - 1,
+    fontWeight: '700',
     color: '#64748B',
   },
   toggleTextActive: {
@@ -470,90 +525,147 @@ const styles = StyleSheet.create({
   },
   planCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: radius.lg,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  planCardSelected: {
-    borderColor: '#8B5CF6',
-    shadowOpacity: 0.1,
     shadowRadius: 16,
+    elevation: 3,
+    position: 'relative',
   },
-  cardHeaderGradient: {
-    padding: spacing[5],
+  cardTopBar: {
+    height: 6,
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  selectedIndicator: {
+    position: 'absolute',
+    top: 18,
+    right: 18,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
+  },
+  cardHeader: {
+    padding: 24,
+    paddingBottom: 16,
+  },
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
     marginBottom: spacing[2],
   },
   planName: {
-    fontSize: fontSizes.lg + 2,
-    fontWeight: fontWeights.bold,
-    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '800',
   },
   badgeContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    paddingHorizontal: spacing[2.5],
-    paddingVertical: 2,
-    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
   },
   badgeText: {
-    fontSize: fontSizes.xs - 2,
+    fontSize: fontSizes.xs - 3,
     fontWeight: '800',
     color: '#FFFFFF',
-    letterSpacing: 1,
-  },
-  planPrice: {
-    fontSize: fontSizes.xl + 2,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  savingsText: {
-    fontSize: fontSizes.xs,
-    color: 'rgba(255, 255, 255, 0.95)',
-    marginTop: spacing[1.5],
-    fontWeight: '600',
-  },
-  cardBody: {
-    padding: spacing[5],
+    letterSpacing: 0.5,
   },
   planDescription: {
-    fontSize: fontSizes.sm,
-    color: '#475569',
-    lineHeight: 20,
-    marginBottom: spacing[4],
+    fontSize: fontSizes.sm - 1,
+    color: '#64748B',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  planPrice: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+  currency: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  periodText: {
+    fontSize: 14,
+    color: '#64748B',
+    marginLeft: 4,
+    fontWeight: '600',
+  },
+  savingsBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 10,
+    alignSelf: 'flex-start',
+  },
+  savingsText: {
+    fontSize: 12,
+    color: '#059669',
+    fontWeight: '700',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginHorizontal: 24,
+  },
+  cardBody: {
+    padding: 24,
+  },
+  featuresTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 16,
   },
   featuresList: {
-    gap: spacing[3],
+    gap: 12,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  checkCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  uncheckCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
   featureBadge: {
-    backgroundColor: '#EEF2F6',
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
-    marginRight: 6,
+    borderRadius: 6,
+    marginRight: 10,
   },
   featureBadgeText: {
-    fontSize: fontSizes.xs - 1,
-    fontWeight: '700',
-    color: '#475569',
+    fontSize: 10,
+    fontWeight: '800',
   },
   featureLabel: {
-    fontSize: fontSizes.sm - 1,
-    color: '#1E293B',
-    marginLeft: spacing[2],
+    fontSize: 14,
+    color: '#334155',
     flex: 1,
   },
   footer: {

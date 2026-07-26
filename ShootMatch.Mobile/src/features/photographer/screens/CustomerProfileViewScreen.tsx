@@ -22,7 +22,31 @@ import { fontSizes, fontWeights } from '../../../app/theme/typography';
 import { radius, spacing } from '../../../app/theme/spacing';
 import { formatImageUrl } from '../../../shared/utils/formatImageUrl';
 import { localPictureSlice } from '../../../shared/assets/localPictures';
-import { getCustomerById, type CustomerProfile } from '../../customer/api';
+import { getCustomerById, getActiveStylesAndConceptsForLookbook, type CustomerProfile } from '../../customer/api';
+
+const LOCATION_MAPPING: Record<string, string> = {
+  cafe: 'Quán Cafe',
+  studio: 'Studio',
+  home: 'Tại nhà',
+  museum: 'Bảo tàng',
+  park: 'Công viên',
+  urban: 'Đường phố/Urban',
+  beach: 'Bãi biển',
+  rooftop: 'Sân thượng',
+  landmark: 'Landmark/Cầu',
+  historical: 'Di tích/Phố cổ',
+  abandoned: 'Nhà hoang',
+  westlake: 'Hồ Tây/Sunset',
+};
+
+const COLOR_MAPPING: Record<string, string> = {
+  warm: 'Tone Ấm',
+  cool: 'Tone Lạnh',
+  bright: 'Pastel Tone',
+  mono: 'Đen Trắng',
+  earthy: 'Tone Đất',
+  cyber: 'Neon Cyber',
+};
 
 const THEME = {
   primary: '#fff7e1',
@@ -99,6 +123,7 @@ export default function CustomerProfileViewScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isBasicInfoExpanded, setIsBasicInfoExpanded] = useState(true);
+  const [lookbookData, setLookbookData] = useState<any>(null);
 
   const filmStrip = useMemo(() => localPictureSlice(2, 6), []);
 
@@ -122,14 +147,63 @@ export default function CustomerProfileViewScreen() {
   const styleTags = useMemo(() => {
     const raw = profile?.preferredStyles ?? '';
     if (!raw) return ['Portrait', 'Golden hour', 'Film look', 'Lifestyle', 'Editorial'];
-    return raw.split(',').map(s => s.trim()).filter(Boolean);
-  }, [profile?.preferredStyles]);
+    try {
+      const parsedJSON = JSON.parse(raw);
+      if (Array.isArray(parsedJSON)) {
+        return parsedJSON.map(s => String(s).trim()).filter(Boolean);
+      } else if (parsedJSON && typeof parsedJSON === 'object') {
+        const tags: string[] = [];
+        // 1. Locations
+        if (Array.isArray(parsedJSON.locations)) {
+          parsedJSON.locations.forEach((loc: string) => {
+            tags.push(LOCATION_MAPPING[loc] || loc);
+          });
+        }
+        // 2. Colors
+        if (Array.isArray(parsedJSON.colors)) {
+          parsedJSON.colors.forEach((col: string) => {
+            tags.push(COLOR_MAPPING[col] || col);
+          });
+        }
+        // 3. Fashion
+        if (Array.isArray(parsedJSON.fashion)) {
+          parsedJSON.fashion.forEach((fash: string) => {
+            const label = lookbookData?.styles?.find((s: any) => s.id === fash)?.name;
+            if (label) {
+              tags.push(label);
+            } else if (fash && fash.length < 25) {
+              tags.push(fash);
+            }
+          });
+        }
+        // 4. Concepts
+        if (Array.isArray(parsedJSON.concepts)) {
+          parsedJSON.concepts.forEach((concept: string) => {
+            const label = lookbookData?.concepts?.find((c: any) => c.id === concept)?.name;
+            if (label) {
+              tags.push(label);
+            } else if (concept && concept.length < 25) {
+              tags.push(concept);
+            }
+          });
+        }
+        return tags.filter(Boolean);
+      }
+      return raw.split(',').map(s => s.trim()).filter(Boolean);
+    } catch {
+      return raw.split(',').map(s => s.trim()).filter(Boolean);
+    }
+  }, [profile?.preferredStyles, lookbookData]);
 
   useEffect(() => {
     (async () => {
       try {
-        const data = await getCustomerById(customerId);
+        const [data, tax] = await Promise.all([
+          getCustomerById(customerId),
+          getActiveStylesAndConceptsForLookbook().catch(() => null)
+        ]);
         setProfile(data);
+        setLookbookData(tax);
         if (!data) setError('Không tìm thấy hồ sơ khách hàng.');
       } catch {
         setError('Không tải được hồ sơ khách hàng.');

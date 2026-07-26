@@ -1,10 +1,11 @@
 using System;
 using System.IO;
 using System.Net;
-using System.Net.Mail;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using MailKit.Net.Smtp;
+using MimeKit;
 using ShootMatch.Application.Abstractions;
 
 namespace ShootMatch.Infrastructure.Services;
@@ -202,22 +203,20 @@ public sealed class SmtpEmailService : IEmailService
 
         try
         {
-            using var client = new SmtpClient(smtpHost, port)
-            {
-                Credentials = new NetworkCredential(smtpUser, smtpPass),
-                EnableSsl = true
-            };
+            var mailMessage = new MimeMessage();
+            mailMessage.From.Add(new MailboxAddress(senderName, senderEmail));
+            mailMessage.To.Add(new MailboxAddress("", toEmail));
+            mailMessage.Subject = subject;
 
-            var mailMessage = new MailMessage
-            {
-                From = new MailAddress(senderEmail, senderName),
-                Subject = subject,
-                Body = body,
-                IsBodyHtml = true
-            };
-            mailMessage.To.Add(toEmail);
+            var bodyBuilder = new BodyBuilder { HtmlBody = body };
+            mailMessage.Body = bodyBuilder.ToMessageBody();
 
-            await client.SendMailAsync(mailMessage, cancellationToken);
+            using var client = new SmtpClient();
+            await client.ConnectAsync(smtpHost, port, MailKit.Security.SecureSocketOptions.Auto, cancellationToken);
+            await client.AuthenticateAsync(smtpUser, smtpPass, cancellationToken);
+            await client.SendAsync(mailMessage, cancellationToken);
+            await client.DisconnectAsync(true, cancellationToken);
+
             Console.WriteLine($"[EMAIL SERVICE] Email successfully sent to {toEmail} with subject: {subject}");
         }
         catch (Exception ex)

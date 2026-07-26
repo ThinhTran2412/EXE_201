@@ -132,6 +132,8 @@ export default function PhotographerSubscriptionScreen() {
   const [activeOrder, setActiveOrder] = useState<{ orderCode: string; checkoutUrl: string } | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
 
+  const styles = getStyles(colors, isDark);
+
   const checkPaymentStatus = async () => {
     if (!activeOrder) return;
     setCheckingStatus(true);
@@ -224,42 +226,42 @@ export default function PhotographerSubscriptionScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Đăng ký Gói Đối tác</Text>
+        <Text style={styles.headerTitle}>Đăng ký Gói Đối tác</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { width: containerWidth, alignSelf: 'center' }]}>
         <Animated.View entering={FadeInUp.duration(450)} style={styles.heroSection}>
-          <Text style={[styles.heroTitle, { color: colors.text }]}>Nâng tầm Thương hiệu của bạn</Text>
-          <Text style={[styles.heroSubtitle, { color: colors.textMuted }]}>
+          <Text style={styles.heroTitle}>Nâng tầm Thương hiệu của bạn</Text>
+          <Text style={styles.heroSubtitle}>
             Chọn gói dịch vụ để mở rộng hiển thị, thu hút nhiều khách hàng chất lượng và quản lý công việc chuyên nghiệp hơn.
           </Text>
         </Animated.View>
 
         {/* ── CYCLE TOGGLE ── */}
-        <Animated.View entering={FadeInUp.delay(100).duration(450)} style={[styles.toggleContainer, { backgroundColor: isDark ? colors.surfaceStrong : '#EAE3D5' }]}>
+        <Animated.View entering={FadeInUp.delay(100).duration(450)} style={styles.toggleContainer}>
           <Pressable
             onPress={() => setCycle('month')}
-            style={[styles.toggleBtn, cycle === 'month' && [styles.toggleBtnActive, { backgroundColor: colors.surface }]]}
+            style={[styles.toggleBtn, cycle === 'month' && styles.toggleBtnActive]}
           >
-            <Text style={[styles.toggleText, { color: colors.textMuted }, cycle === 'month' && { color: colors.text }]}>Hàng tháng</Text>
+            <Text style={[styles.toggleText, cycle === 'month' && styles.toggleTextActive]}>Hàng tháng</Text>
           </Pressable>
           <Pressable
             onPress={() => setCycle('6months')}
-            style={[styles.toggleBtn, cycle === '6months' && [styles.toggleBtnActive, { backgroundColor: colors.surface }]]}
+            style={[styles.toggleBtn, cycle === '6months' && styles.toggleBtnActive]}
           >
-            <Text style={[styles.toggleText, { color: colors.textMuted }, cycle === '6months' && { color: colors.text }]}>6 Tháng</Text>
+            <Text style={[styles.toggleText, cycle === '6months' && styles.toggleTextActive]}>6 Tháng</Text>
           </Pressable>
           <Pressable
             onPress={() => setCycle('year')}
-            style={[styles.toggleBtn, cycle === 'year' && [styles.toggleBtnActive, { backgroundColor: colors.surface }]]}
+            style={[styles.toggleBtn, cycle === 'year' && styles.toggleBtnActive]}
           >
-            <Text style={[styles.toggleText, { color: colors.textMuted }, cycle === 'year' && { color: colors.text }]}>Hàng năm</Text>
+            <Text style={[styles.toggleText, cycle === 'year' && styles.toggleTextActive]}>Hàng năm</Text>
           </Pressable>
         </Animated.View>
 
@@ -268,6 +270,11 @@ export default function PhotographerSubscriptionScreen() {
           {PHOTOGRAPHER_PLANS.map((plan, idx) => {
             const isSelected = selectedPlanId === plan.id;
             const savings = getSavingsDisplay(plan);
+            const planColor = 
+              plan.id === 'Studio+' ? '#D4AF37' :
+              plan.id === 'Pro' ? '#FF4200' : 
+              '#7A8A9E';
+
             return (
               <Animated.View
                 key={plan.id}
@@ -277,45 +284,91 @@ export default function PhotographerSubscriptionScreen() {
                   onPress={() => setSelectedPlanId(plan.id)}
                   style={[
                     styles.planCard,
-                    { backgroundColor: colors.surface, shadowColor: colors.dark },
-                    isSelected && [styles.planCardSelected, { borderColor: colors.accentOrange }],
+                    isSelected && { borderColor: planColor, borderWidth: 2, shadowColor: planColor, shadowOpacity: 0.15, shadowRadius: 20, elevation: 6 },
                   ]}
                 >
                   <LinearGradient
                     colors={plan.gradient}
-                    style={styles.cardHeaderGradient}
+                    style={styles.cardTopBar}
                     start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <View style={styles.cardHeaderRow}>
-                      <Text style={styles.planName}>{plan.name}</Text>
-                      {plan.badge ? (
-                        <View style={styles.badgeContainer}>
-                          <Text style={styles.badgeText}>{plan.badge}</Text>
-                        </View>
-                      ) : null}
+                    end={{ x: 1, y: 0 }}
+                  />
+
+                  {isSelected && (
+                    <View style={[styles.selectedIndicator, { backgroundColor: planColor }]}>
+                      <Ionicons name="checkmark" size={12} color="#FFF" />
                     </View>
-                    <Text style={styles.planPrice}>{getPriceDisplay(plan)}</Text>
-                    {savings ? <Text style={styles.savingsText}>{savings}</Text> : null}
-                  </LinearGradient>
+                  )}
+
+                  <View style={styles.cardHeader}>
+                    <View style={styles.cardHeaderLeft}>
+                      <Text style={[styles.planName, { color: isSelected ? planColor : colors.text }]}>
+                        {plan.name}
+                      </Text>
+                      {plan.badge && (
+                        <LinearGradient
+                          colors={plan.gradient}
+                          style={styles.badgeContainer}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                        >
+                          <Text style={styles.badgeText}>{plan.badge}</Text>
+                        </LinearGradient>
+                      )}
+                    </View>
+                    
+                    <Text style={styles.planDescription}>{plan.description}</Text>
+                    
+                    <View style={styles.priceContainer}>
+                      <Text style={styles.planPrice}>
+                        {plan.monthlyPrice === 0 ? 'Miễn phí' : plan.monthlyPrice.toLocaleString('vi-VN')}
+                        {plan.monthlyPrice !== 0 && <Text style={styles.currency}> đ</Text>}
+                      </Text>
+                      {plan.monthlyPrice !== 0 && (
+                        <Text style={styles.periodText}>
+                          {cycle === 'month' ? '/tháng' : cycle === '6months' ? '/6 tháng' : '/năm'}
+                        </Text>
+                      )}
+                    </View>
+
+                    {savings ? (
+                      <View style={styles.savingsBadge}>
+                        <Text style={styles.savingsText}>{savings}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.divider} />
 
                   <View style={styles.cardBody}>
-                    <Text style={[styles.planDescription, { color: colors.textMuted }]}>{plan.description}</Text>
+                    <Text style={styles.featuresTitle}>Tính năng bao gồm:</Text>
                     <View style={styles.featuresList}>
-                      {plan.features.map((feat, fidx) => (
-                        <View key={fidx} style={styles.featureRow}>
-                          {typeof feat.checked === 'string' ? (
-                            <View style={[styles.featureBadge, { backgroundColor: isDark ? colors.surfaceStrong : '#F1EBE0' }]}>
-                              <Text style={[styles.featureBadgeText, { color: colors.text }]}>{feat.checked}</Text>
-                            </View>
-                          ) : feat.checked ? (
-                            <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-                          ) : (
-                            <Ionicons name="close-circle" size={18} color="#EF4444" />
-                          )}
-                          <Text style={[styles.featureLabel, { color: colors.text }]}>{feat.label}</Text>
-                        </View>
-                      ))}
+                      {plan.features.map((feat, fidx) => {
+                        const isIncluded = feat.checked !== false;
+                        return (
+                          <View key={fidx} style={[styles.featureRow, !isIncluded && { opacity: 0.4 }]}>
+                            {typeof feat.checked === 'string' ? (
+                              <View style={[styles.featureBadge, { backgroundColor: planColor + '15' }]}>
+                                <Text style={[styles.featureBadgeText, { color: planColor }]}>{feat.checked}</Text>
+                              </View>
+                            ) : feat.checked ? (
+                              <View style={[styles.checkCircle, { backgroundColor: planColor + '15' }]}>
+                                <Ionicons name="checkmark" size={10} color={planColor} />
+                              </View>
+                            ) : (
+                              <View style={styles.uncheckCircle}>
+                                <Ionicons name="close" size={10} color={colors.textMuted} />
+                              </View>
+                            )}
+                            <Text style={[
+                              styles.featureLabel, 
+                              !isIncluded && { textDecorationLine: 'line-through', color: colors.textMuted }
+                            ]}>
+                              {feat.label}
+                            </Text>
+                          </View>
+                        );
+                      })}
                     </View>
                   </View>
                 </Pressable>
@@ -328,19 +381,18 @@ export default function PhotographerSubscriptionScreen() {
       </ScrollView>
 
       {/* ── FOOTER REGISTER BUTTON ── */}
-      <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom > 0 ? insets.bottom : spacing[4] }]}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom > 0 ? insets.bottom : spacing[4] }]}>
         <View style={styles.footerInfo}>
-          <Text style={[styles.footerLabel, { color: colors.textMuted }]}>Gói đã chọn:</Text>
-          <Text style={[styles.footerValue, { color: colors.text }]}>{selectedPlanId}</Text>
+          <Text style={styles.footerLabel}>Gói đã chọn:</Text>
+          <Text style={styles.footerValue}>{selectedPlanId}</Text>
         </View>
         <Pressable
           onPress={handleSubscribe}
           disabled={buying}
           style={({ pressed }) => [
             styles.subscribeBtn,
-            { backgroundColor: colors.accentOrange },
             pressed && { opacity: 0.8 },
-            buying && { backgroundColor: '#FFA180' }
+            buying && { backgroundColor: isDark ? '#475569' : '#FFA180' }
           ]}
         >
           <Text style={styles.subscribeBtnText}>
@@ -352,23 +404,23 @@ export default function PhotographerSubscriptionScreen() {
       {/* ── PAYOS PAYMENT STATUS MODAL ── */}
       <Modal visible={!!activeOrder} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
-            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Thanh toán nâng cấp gói đối tác</Text>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Thanh toán nâng cấp gói đối tác</Text>
             
-            <View style={[styles.orderCodeBox, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
+            <View style={styles.orderCodeBox}>
               <Text style={styles.orderCodeLabel}>MÃ ĐƠN HÀNG:</Text>
-              <Text style={[styles.orderCodeVal, { color: isDark ? '#38BDF8' : '#0F172A' }]}>{activeOrder?.orderCode}</Text>
+              <Text style={styles.orderCodeVal}>{activeOrder?.orderCode}</Text>
             </View>
 
-            <Text style={[styles.modalInfo, { color: isDark ? '#94A3B8' : '#475569' }]}>
+            <Text style={styles.modalInfo}>
               Vui lòng thực hiện chuyển khoản thanh toán qua cổng PayOS để kích hoạt tài khoản đối tác {selectedPlanId}.
             </Text>
 
             <Pressable
               onPress={() => activeOrder && Linking.openURL(activeOrder.checkoutUrl)}
-              style={[styles.openWebBtn, { backgroundColor: colors.accent }]}
+              style={styles.openWebBtn}
             >
-              <Text style={[styles.openWebBtnText, { color: colors.primary }]}>Mở Trang Thanh Toán PayOS</Text>
+              <Text style={styles.openWebBtnText}>Mở Trang Thanh Toán PayOS</Text>
             </Pressable>
 
             <Pressable
@@ -405,9 +457,10 @@ export default function PhotographerSubscriptionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   safe: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -416,6 +469,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
     height: 56,
     borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
   },
   backBtn: {
     width: 40,
@@ -426,6 +481,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: fontSizes.lg,
     fontWeight: fontWeights.bold,
+    color: colors.text,
   },
   scrollContent: {
     paddingHorizontal: spacing[4],
@@ -438,124 +494,200 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: fontSizes.xl + 2,
     fontWeight: fontWeights.bold,
+    color: colors.text,
     textAlign: 'center',
     marginBottom: spacing[2],
   },
   heroSubtitle: {
     fontSize: fontSizes.sm,
+    color: colors.textMuted,
     textAlign: 'center',
     paddingHorizontal: spacing[4],
     lineHeight: 20,
   },
   toggleContainer: {
     flexDirection: 'row',
-    borderRadius: radius.md,
+    backgroundColor: isDark ? colors.surfaceStrong : '#F1EBE0',
+    borderRadius: 99,
     padding: 4,
     marginBottom: spacing[6],
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   toggleBtn: {
     flex: 1,
-    paddingVertical: spacing[2],
+    paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: radius.sm,
+    borderRadius: 99,
   },
   toggleBtnActive: {
+    backgroundColor: colors.surface,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: isDark ? 0.3 : 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   toggleText: {
-    fontSize: fontSizes.sm,
-    fontWeight: '600',
+    fontSize: fontSizes.sm - 1,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  toggleTextActive: {
+    color: colors.text,
   },
   cardsContainer: {
     gap: spacing[6],
   },
   planCard: {
-    borderRadius: radius.lg,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: colors.border,
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  planCardSelected: {
-    shadowOpacity: 0.15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: isDark ? 0.2 : 0.04,
     shadowRadius: 16,
+    elevation: 3,
+    position: 'relative',
   },
-  cardHeaderGradient: {
-    padding: spacing[5],
+  cardTopBar: {
+    height: 6,
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  selectedIndicator: {
+    position: 'absolute',
+    top: 18,
+    right: 18,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
+  },
+  cardHeader: {
+    padding: 24,
+    paddingBottom: 16,
+  },
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
     marginBottom: spacing[2],
   },
   planName: {
-    fontSize: fontSizes.lg + 2,
-    fontWeight: fontWeights.bold,
-    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '800',
   },
   badgeContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    paddingHorizontal: spacing[2.5],
-    paddingVertical: 2,
-    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
   },
   badgeText: {
-    fontSize: fontSizes.xs - 2,
+    fontSize: fontSizes.xs - 3,
     fontWeight: '800',
     color: '#FFFFFF',
-    letterSpacing: 1,
-  },
-  planPrice: {
-    fontSize: fontSizes.xl + 2,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  savingsText: {
-    fontSize: fontSizes.xs,
-    color: 'rgba(255, 255, 255, 0.95)',
-    marginTop: spacing[1.5],
-    fontWeight: '600',
-  },
-  cardBody: {
-    padding: spacing[5],
+    letterSpacing: 0.5,
   },
   planDescription: {
-    fontSize: fontSizes.sm,
-    lineHeight: 20,
-    marginBottom: spacing[4],
+    fontSize: fontSizes.sm - 1,
+    color: colors.textMuted,
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  planPrice: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: colors.text,
+  },
+  currency: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  periodText: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginLeft: 4,
+    fontWeight: '600',
+  },
+  savingsBadge: {
+    backgroundColor: isDark ? '#064E3B' : '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 10,
+    alignSelf: 'flex-start',
+  },
+  savingsText: {
+    fontSize: 12,
+    color: isDark ? '#A7F3D0' : '#059669',
+    fontWeight: '700',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: 24,
+  },
+  cardBody: {
+    padding: 24,
+  },
+  featuresTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 16,
   },
   featuresList: {
-    gap: spacing[3],
+    gap: 12,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  checkCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  uncheckCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: isDark ? colors.surfaceStrong : '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
   featureBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
-    marginRight: 6,
+    borderRadius: 6,
+    marginRight: 10,
   },
   featureBadgeText: {
-    fontSize: fontSizes.xs - 1,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
   },
   featureLabel: {
-    fontSize: fontSizes.sm - 1,
-    marginLeft: spacing[2],
+    fontSize: 14,
+    color: colors.text,
     flex: 1,
   },
   footer: {
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
+    borderTopColor: colors.border,
     paddingHorizontal: spacing[4],
     paddingTop: spacing[3],
     flexDirection: 'row',
@@ -567,13 +699,16 @@ const styles = StyleSheet.create({
   },
   footerLabel: {
     fontSize: fontSizes.xs,
+    color: colors.textMuted,
   },
   footerValue: {
     fontSize: fontSizes.md,
     fontWeight: fontWeights.bold,
+    color: colors.text,
     marginTop: 2,
   },
   subscribeBtn: {
+    backgroundColor: colors.accentOrange,
     paddingHorizontal: spacing[6],
     paddingVertical: spacing[3],
     borderRadius: radius.md,
@@ -581,7 +716,7 @@ const styles = StyleSheet.create({
   subscribeBtnText: {
     fontSize: fontSizes.md - 1,
     fontWeight: fontWeights.bold,
-    color: '#FFFFFF',
+    color: colors.primary,
   },
   modalOverlay: {
     flex: 1,
@@ -591,6 +726,7 @@ const styles = StyleSheet.create({
     padding: spacing[4],
   },
   modalContent: {
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing[6],
     width: '100%',
@@ -606,10 +742,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: fontSizes.lg,
     fontWeight: fontWeights.bold,
+    color: colors.text,
     marginBottom: spacing[2],
-    textAlign: 'center',
   },
   orderCodeBox: {
+    backgroundColor: isDark ? colors.surfaceStrong : '#F1F5F9',
     paddingVertical: spacing[3],
     paddingHorizontal: spacing[5],
     borderRadius: radius.md,
@@ -619,20 +756,23 @@ const styles = StyleSheet.create({
   orderCodeLabel: {
     fontSize: fontSizes.xs - 2,
     fontWeight: '800',
-    color: '#94A3B8',
+    color: colors.textMuted,
     letterSpacing: 1,
   },
   orderCodeVal: {
     fontSize: fontSizes.lg,
     fontWeight: fontWeights.bold,
+    color: colors.text,
     marginTop: 4,
   },
   modalInfo: {
     fontSize: fontSizes.sm,
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 20,
   },
   openWebBtn: {
+    backgroundColor: colors.accentOrange,
     paddingVertical: spacing[3],
     borderRadius: radius.md,
     width: '100%',
@@ -640,6 +780,7 @@ const styles = StyleSheet.create({
     marginTop: spacing[2],
   },
   openWebBtnText: {
+    color: colors.primary,
     fontWeight: fontWeights.bold,
     fontSize: fontSizes.md - 1,
   },

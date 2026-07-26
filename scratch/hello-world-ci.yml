@@ -1,0 +1,27 @@
+name: Vỡ lòng CI/CD - Hello World
+
+# 1. KHI NÀO THÌ CHẠY?
+on:
+  push:
+    branches:
+      - main  # Chỉ chạy khi có code push lên nhánh main
+
+# 2. LÀM NHỮNG VIỆC GÌ?
+jobs:
+  hoc-viec-job:
+    # Mượn một máy ảo Linux (Ubuntu) từ GitHub để chạy
+    runs-on: ubuntu-latest
+
+    # 3. CÁC BƯỚC THỰC HIỆN BÊN TRONG MÁY ẢO ĐÓ
+    steps:
+      # Bước 1: Mở Terminal lên và in ra một câu chào
+      - name: Bước chào hỏi
+        run: echo "Xin chào DevOps Intern tương lai!"
+      
+      # Bước 2: In ra ngày giờ hiện tại của máy chủ
+      - name: Xem giờ hệ thống
+        run: date
+
+      # Bước 3: Xem máy ảo này có những thư mục gì
+      - name: Khám phá máy ảo
+        run: ls -la

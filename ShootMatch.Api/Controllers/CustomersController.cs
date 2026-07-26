@@ -85,6 +85,12 @@ public sealed class CustomersController(
         var customerId = GetCustomerIdOrThrow(User);
         var existing = await customerService.GetProfileAsync(customerId, cancellationToken);
 
+        var preferredStylesRaw = string.IsNullOrWhiteSpace(request.PreferredStyles) 
+            ? existing?.PreferredStyles ?? string.Empty 
+            : request.PreferredStyles;
+
+        var preferredStylesClean = await ParsePreferredStylesAsync(preferredStylesRaw, cancellationToken);
+
         var profile = await customerService.UpsertProfileAsync(new CustomerProfile
         {
             Id = customerId,
@@ -98,7 +104,7 @@ public sealed class CustomersController(
             HighlightPhoto2Url = string.IsNullOrWhiteSpace(request.HighlightPhoto2Url) ? existing?.HighlightPhoto2Url ?? string.Empty : request.HighlightPhoto2Url,
             HighlightPhoto3Url = string.IsNullOrWhiteSpace(request.HighlightPhoto3Url) ? existing?.HighlightPhoto3Url ?? string.Empty : request.HighlightPhoto3Url,
             RollPreviewPhotos = string.IsNullOrWhiteSpace(request.RollPreviewPhotos) ? existing?.RollPreviewPhotos ?? string.Empty : request.RollPreviewPhotos,
-            PreferredStyles = string.IsNullOrWhiteSpace(request.PreferredStyles) ? existing?.PreferredStyles ?? string.Empty : request.PreferredStyles,
+            PreferredStyles = preferredStylesClean,
             IsVerified = existing?.IsVerified ?? true,
             CreatedAt = existing?.CreatedAt ?? DateTime.UtcNow,
             MembershipTier = existing?.MembershipTier ?? "Lướt Nhẹ"
@@ -175,6 +181,143 @@ public sealed class CustomersController(
         await using var stream = file.OpenReadStream();
         var photoUrl = await storageService.UploadAsync(stream, safeName, uploadContentType, ct);
         return Ok(new { photoUrl });
+    }
+
+    private static readonly Dictionary<string, string> LocationMapping = new()
+    {
+        { "cafe", "Quán Cafe" },
+        { "studio", "Studio" },
+        { "home", "Tại nhà" },
+        { "museum", "Bảo tàng" },
+        { "park", "Công viên" },
+        { "urban", "Đường phố/Urban" },
+        { "beach", "Bãi biển" },
+        { "rooftop", "Sân thượng" },
+        { "landmark", "Landmark/Cầu" },
+        { "historical", "Di tích/Phố cổ" },
+        { "abandoned", "Nhà hoang" },
+        { "westlake", "Hồ Tây/Sunset" }
+    };
+
+    private static readonly Dictionary<string, string> ColorMapping = new()
+    {
+        { "warm", "Tone Ấm" },
+        { "cool", "Tone Lạnh" },
+        { "bright", "Pastel Tone" },
+        { "mono", "Đen Trắng" },
+        { "earthy", "Tone Đất" },
+        { "cyber", "Neon Cyber" }
+    };
+
+    private async Task<string> ParsePreferredStylesAsync(string preferredStyles, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(preferredStyles))
+            return string.Empty;
+
+        preferredStyles = preferredStyles.Trim();
+        if (!preferredStyles.StartsWith('{') || !preferredStyles.EndsWith('}'))
+        {
+            return preferredStyles;
+        }
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(preferredStyles);
+            var root = doc.RootElement;
+            var tags = new List<string>();
+
+            // 1. Locations
+            if (root.TryGetProperty("locations", out var locationsProp) && locationsProp.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var loc in locationsProp.EnumerateArray())
+                {
+                    var locStr = loc.GetString();
+                    if (!string.IsNullOrEmpty(locStr))
+                    {
+                        tags.Add(LocationMapping.TryGetValue(locStr.ToLowerInvariant(), out var mapped) ? mapped : locStr);
+                    }
+                }
+            }
+
+            // 2. Colors
+            if (root.TryGetProperty("colors", out var colorsProp) && colorsProp.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var col in colorsProp.EnumerateArray())
+                {
+                    var colStr = col.GetString();
+                    if (!string.IsNullOrEmpty(colStr))
+                    {
+                        tags.Add(ColorMapping.TryGetValue(colStr.ToLowerInvariant(), out var mapped) ? mapped : colStr);
+                    }
+                }
+            }
+
+            // 3. Fashion
+            if (root.TryGetProperty("fashion", out var fashionProp) && fashionProp.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                var styleIds = new List<Guid>();
+                foreach (var fash in fashionProp.EnumerateArray())
+                {
+                    var fashStr = fash.GetString();
+                    if (Guid.TryParse(fashStr, out var styleId))
+                    {
+                        styleIds.Add(styleId);
+                    }
+                    else if (!string.IsNullOrEmpty(fashStr))
+                    {
+                        tags.Add(fashStr);
+                    }
+                }
+
+                if (styleIds.Count > 0)
+                {
+                    var styleNames = await db.Styles
+                        .Where(s => styleIds.Contains(s.Id))
+                        .Select(s => s.Name)
+                        .ToListAsync(cancellationToken);
+                    tags.AddRange(styleNames);
+                }
+            }
+
+            // 4. Concepts
+            if (root.TryGetProperty("concepts", out var conceptsProp) && conceptsProp.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                var conceptIds = new List<Guid>();
+                foreach (var con in conceptsProp.EnumerateArray())
+                {
+                    var conStr = con.GetString();
+                    if (Guid.TryParse(conStr, out var conceptId))
+                    {
+                        conceptIds.Add(conceptId);
+                    }
+                    else if (!string.IsNullOrEmpty(conStr))
+                    {
+                        tags.Add(conStr);
+                    }
+                }
+
+                if (conceptIds.Count > 0)
+                {
+                    var conceptNames = await db.Concepts
+                        .Where(c => conceptIds.Contains(c.Id))
+                        .Select(c => c.Name)
+                        .ToListAsync(cancellationToken);
+                    tags.AddRange(conceptNames);
+                }
+            }
+
+            var cleanTags = tags
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Select(t => t.Trim())
+                .Distinct()
+                .ToList();
+
+            return string.Join(", ", cleanTags);
+        }
+        catch
+        {
+            return preferredStyles;
+        }
     }
 
     private static Guid GetCustomerIdOrThrow(ClaimsPrincipal user)

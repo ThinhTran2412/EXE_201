@@ -386,6 +386,30 @@ export default function OnboardingQuestionnaireScreen() {
     }
   };
 
+  const handleSkip = async () => {
+    setLoading(true);
+    try {
+      await updateCustomerProfile({
+        preferredStyles: 'Portrait, Golden hour, Film look, Lifestyle, Editorial',
+        region: 'HN',
+      });
+
+      if (session?.userId) {
+        await AsyncStorage.setItem(`needs_walkthrough_${session.userId}`, 'true');
+      }
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'CustomerRoot' }]
+      });
+    } catch (e) {
+      Alert.alert('Lỗi', 'Không thể bỏ qua cá nhân hóa. Vui lòng thử lại.');
+      console.warn(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Reanimated style bindings
   const rCard1 = useAnimatedStyle(() => ({ transform: [{ rotate: `${card1Rot.value}deg` }] }));
   const rCard2 = useAnimatedStyle(() => ({ transform: [{ rotate: `${card2Rot.value}deg` }] }));
@@ -464,6 +488,10 @@ export default function OnboardingQuestionnaireScreen() {
             <Pressable style={styles.primaryButton} onPress={handleNext}>
               <Text style={styles.buttonText}>BẮT ĐẦU KHẢO SÁT</Text>
               <Ionicons name="arrow-forward" size={16} color="#fff" style={{ marginLeft: 8 }} />
+            </Pressable>
+
+            <Pressable style={styles.skipButton} onPress={handleSkip}>
+              <Text style={styles.skipButtonText}>Bỏ qua cá nhân hóa</Text>
             </Pressable>
           </Animated.View>
         )}
@@ -2126,5 +2154,17 @@ const styles = StyleSheet.create({
     fontWeight: fontWeights.bold,
     fontSize: fontSizes.xs - 1,
     letterSpacing: 1.2,
+  },
+  skipButton: {
+    marginTop: 12,
+    alignSelf: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  skipButtonText: {
+    fontSize: 14,
+    color: '#8A8A8F',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });

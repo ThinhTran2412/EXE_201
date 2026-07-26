@@ -33,11 +33,36 @@ import {
   getMyBookings,
   updateCustomerProfile,
   uploadCustomerProfileImage,
+  getActiveStylesAndConceptsForLookbook,
   type CustomerPhotoSlot,
   type CustomerProfile,
 } from '../api';
 
 const DEFAULT_STYLE_TAGS = ['Portrait', 'Golden hour', 'Film look', 'Lifestyle', 'Editorial'];
+
+const LOCATION_MAPPING: Record<string, string> = {
+  cafe: 'Quán Cafe',
+  studio: 'Studio',
+  home: 'Tại nhà',
+  museum: 'Bảo tàng',
+  park: 'Công viên',
+  urban: 'Đường phố/Urban',
+  beach: 'Bãi biển',
+  rooftop: 'Sân thượng',
+  landmark: 'Landmark/Cầu',
+  historical: 'Di tích/Phố cổ',
+  abandoned: 'Nhà hoang',
+  westlake: 'Hồ Tây/Sunset',
+};
+
+const COLOR_MAPPING: Record<string, string> = {
+  warm: 'Tone Ấm',
+  cool: 'Tone Lạnh',
+  bright: 'Pastel Tone',
+  mono: 'Đen Trắng',
+  earthy: 'Tone Đất',
+  cyber: 'Neon Cyber',
+};
 
 const THEME = {
   primary: '#fff7e1',
@@ -206,6 +231,7 @@ export default function ProfileScreen() {
   const [editLoading, setEditLoading] = useState(false);
   const [styleTags, setStyleTags] = useState<string[]>(DEFAULT_STYLE_TAGS);
   const [isBasicInfoExpanded, setIsBasicInfoExpanded] = useState(true);
+  const [lookbookData, setLookbookData] = useState<any>(null);
 
   const filmStrip = useMemo(() => localPictureSlice(2, 6), []);
   const favImages = useMemo(() => localPictureSlice(8, 2), []);
@@ -241,11 +267,13 @@ export default function ProfileScreen() {
 
     setError(null);
     try {
-      const [me, bookings] = await Promise.all([
+      const [me, bookings, lookbook] = await Promise.all([
         getCustomerProfile(),
         getMyBookings().catch(() => []),
+        getActiveStylesAndConceptsForLookbook().catch(() => null),
       ]);
       setProfile(me);
+      setLookbookData(lookbook);
       setCompletedShoots(bookings.filter(b => b.status === 'Completed').length);
       if (!me) {
         setError('Không tìm thấy hồ sơ khách hàng. Kéo để thử lại.');
@@ -254,8 +282,53 @@ export default function ProfileScreen() {
       // Load style preferences from profile first, fallback to AsyncStorage/defaults
       const styleStr = me?.preferredStyles ?? '';
       if (styleStr) {
-        const parsed = styleStr.split(',').map(s => s.trim()).filter(Boolean);
-        setStyleTags(parsed);
+        try {
+          const parsedJSON = JSON.parse(styleStr);
+          if (Array.isArray(parsedJSON)) {
+            setStyleTags(parsedJSON.map(s => String(s).trim()).filter(Boolean));
+          } else if (parsedJSON && typeof parsedJSON === 'object') {
+            const tags: string[] = [];
+            // 1. Locations
+            if (Array.isArray(parsedJSON.locations)) {
+              parsedJSON.locations.forEach((loc: string) => {
+                tags.push(LOCATION_MAPPING[loc] || loc);
+              });
+            }
+            // 2. Colors
+            if (Array.isArray(parsedJSON.colors)) {
+              parsedJSON.colors.forEach((col: string) => {
+                tags.push(COLOR_MAPPING[col] || col);
+              });
+            }
+            // 3. Fashion
+            if (Array.isArray(parsedJSON.fashion)) {
+              parsedJSON.fashion.forEach((fash: string) => {
+                const label = lookbook?.styles?.find((s: any) => s.id === fash)?.name;
+                if (label) {
+                  tags.push(label);
+                } else if (fash && fash.length < 25) {
+                  tags.push(fash);
+                }
+              });
+            }
+            // 4. Concepts
+            if (Array.isArray(parsedJSON.concepts)) {
+              parsedJSON.concepts.forEach((concept: string) => {
+                const label = lookbook?.concepts?.find((c: any) => c.id === concept)?.name;
+                if (label) {
+                  tags.push(label);
+                } else if (concept && concept.length < 25) {
+                  tags.push(concept);
+                }
+              });
+            }
+            setStyleTags(tags.filter(Boolean));
+          } else {
+            setStyleTags(styleStr.split(',').map(s => s.trim()).filter(Boolean));
+          }
+        } catch {
+          setStyleTags(styleStr.split(',').map(s => s.trim()).filter(Boolean));
+        }
       } else if (session?.userId) {
         const stored = await AsyncStorage.getItem(`sm_customer_styles_${session.userId}`);
         if (stored) {
@@ -487,45 +560,56 @@ export default function ProfileScreen() {
           </ScrollView>
         </Animated.View>
 
-        {/* ── THẺ THÀNH VIÊN (MEMBERSHIP CARD) ── */}
+        {/* ── THẺ THÀNH VIÊN (COMPACT MEMBERSHIP ROW) ── */}
         <Animated.View entering={FadeInDown.delay(100).duration(450)} style={styles.section}>
-          <Text style={styles.sectionEyebrow}>Thành viên</Text>
-          <Text style={styles.sectionTitle}>Hội viên ShootMatch</Text>
-          <LinearGradient
-            colors={
-              session?.membershipTier === 'Chốt Xịn'
-                ? ['#8B5CF6', '#EC4899', '#F43F5E']
-                : session?.membershipTier === 'Chọn Xinh'
-                ? ['#F59E0B', '#D97706']
-                : ['#64748B', '#475569']
-            }
-            style={styles.membershipCard}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <View style={styles.membershipCardHeader}>
-              <Text style={styles.membershipRole}>KHÁCH HÀNG</Text>
-              <View style={styles.membershipBadge}>
-                <Text style={styles.membershipBadgeText}>
-                  {session?.membershipTier?.toUpperCase() || 'LƯỚT NHẸ'}
+          <View style={styles.compactMembershipRow}>
+            <View style={styles.compactMembershipLeft}>
+              <View style={[
+                styles.compactMembershipIconContainer,
+                {
+                  backgroundColor: 
+                    session?.membershipTier === 'Chốt Xịn' ? '#8B5CF615' :
+                    session?.membershipTier === 'Chọn Xinh' ? '#F59E0B15' :
+                    '#64748B15'
+                }
+              ]}>
+                <Ionicons 
+                  name="ribbon-outline" 
+                  size={20} 
+                  color={
+                    session?.membershipTier === 'Chốt Xịn' ? '#8B5CF6' :
+                    session?.membershipTier === 'Chọn Xinh' ? '#F59E0B' :
+                    '#64748B'
+                  } 
+                />
+              </View>
+              <View>
+                <Text style={styles.compactMembershipLabel}>GÓI THÀNH VIÊN</Text>
+                <Text style={[
+                  styles.compactMembershipValue,
+                  {
+                    color: 
+                      session?.membershipTier === 'Chốt Xịn' ? '#8B5CF6' :
+                      session?.membershipTier === 'Chọn Xinh' ? '#F59E0B' :
+                      '#475569'
+                  }
+                ]}>
+                  {session?.membershipTier || 'Lướt Nhẹ'}
                 </Text>
               </View>
             </View>
-            <Text style={styles.membershipName}>{displayName}</Text>
-            <View style={styles.membershipFooter}>
-              <Text style={styles.membershipExpiry}>Gói đang hoạt động</Text>
-              <Pressable
-                onPress={() => navigation.navigate('CustomerSubscription')}
-                style={({ pressed }) => [
-                  styles.membershipActionBtn,
-                  pressed && { opacity: 0.8 },
-                ]}
-              >
-                <Text style={styles.membershipActionText}>Đổi gói / Nâng cấp</Text>
-                <Ionicons name="arrow-forward-outline" size={12} color="#0F172A" />
-              </Pressable>
-            </View>
-          </LinearGradient>
+            
+            <Pressable
+              onPress={() => navigation.navigate('CustomerSubscription')}
+              style={({ pressed }) => [
+                styles.compactMembershipActionBtn,
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <Text style={styles.compactMembershipActionText}>Thay đổi</Text>
+              <Ionicons name="chevron-forward" size={12} color="#8B5CF6" />
+            </Pressable>
+          </View>
         </Animated.View>
 
         {/* ── PHONG CÁCH ── */}
@@ -623,31 +707,6 @@ export default function ProfileScreen() {
           )}
         </Animated.View>
 
-        {/* ── DEVELOPER CHEAT MODE ── */}
-        <Animated.View entering={FadeInDown.delay(220).duration(450)} style={styles.section}>
-          <Text style={styles.sectionEyebrow}>Developer Mode</Text>
-          <Text style={styles.sectionTitle}>Chuyển nhanh gói để test</Text>
-          <View style={styles.cheatRow}>
-            <Pressable
-              onPress={() => updateMembershipTier('Lướt Nhẹ')}
-              style={[styles.cheatBtn, session?.membershipTier === 'Lướt Nhẹ' && styles.cheatBtnActive]}
-            >
-              <Text style={[styles.cheatBtnText, session?.membershipTier === 'Lướt Nhẹ' && styles.cheatBtnTextActive]}>Lướt Nhẹ</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => updateMembershipTier('Chọn Xinh')}
-              style={[styles.cheatBtn, session?.membershipTier === 'Chọn Xinh' && styles.cheatBtnActive]}
-            >
-              <Text style={[styles.cheatBtnText, session?.membershipTier === 'Chọn Xinh' && styles.cheatBtnTextActive]}>Chọn Xinh</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => updateMembershipTier('Chốt Xịn')}
-              style={[styles.cheatBtn, session?.membershipTier === 'Chốt Xịn' && styles.cheatBtnActive]}
-            >
-              <Text style={[styles.cheatBtnText, session?.membershipTier === 'Chốt Xịn' && styles.cheatBtnTextActive]}>Chốt Xịn</Text>
-            </Pressable>
-          </View>
-        </Animated.View>
 
         {/* ── SETTINGS ── */}
         <Animated.View entering={FadeInDown.delay(240).duration(450)} style={styles.section}>
@@ -1047,5 +1106,57 @@ const styles = StyleSheet.create({
   cheatBtnTextActive: {
     color: colors.accentOrange,
     fontWeight: '700',
+  },
+  compactMembershipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  compactMembershipLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  compactMembershipIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  compactMembershipLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#94A3B8',
+    letterSpacing: 1,
+  },
+  compactMembershipValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  compactMembershipActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8B5CF610',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 4,
+  },
+  compactMembershipActionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8B5CF6',
   },
 });

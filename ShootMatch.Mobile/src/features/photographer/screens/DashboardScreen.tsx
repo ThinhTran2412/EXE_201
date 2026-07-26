@@ -866,30 +866,7 @@ export default function DashboardScreen() {
             </ImageBackground>
           </Animated.View>
 
-          {/* ── DEVELOPER CHEAT MODE ── */}
-          <Animated.View entering={FadeInDown.delay(240)} style={styles.section}>
-            <Text style={styles.cheatSectionTitle}>TESTER: CHUYỂN GÓI ĐỐI TÁC</Text>
-            <View style={styles.cheatRow}>
-              <Pressable
-                onPress={() => updateMembershipTier('Basic')}
-                style={[styles.cheatBtn, session?.membershipTier === 'Basic' && styles.cheatBtnActive]}
-              >
-                <Text style={[styles.cheatBtnText, session?.membershipTier === 'Basic' && styles.cheatBtnTextActive]}>Basic</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => updateMembershipTier('Pro')}
-                style={[styles.cheatBtn, session?.membershipTier === 'Pro' && styles.cheatBtnActive]}
-              >
-                <Text style={[styles.cheatBtnText, session?.membershipTier === 'Pro' && styles.cheatBtnTextActive]}>Pro</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => updateMembershipTier('Studio+')}
-                style={[styles.cheatBtn, session?.membershipTier === 'Studio+' && styles.cheatBtnActive]}
-              >
-                <Text style={[styles.cheatBtnText, session?.membershipTier === 'Studio+' && styles.cheatBtnTextActive]}>Studio+</Text>
-              </Pressable>
-            </View>
-          </Animated.View>
+
 
           <View style={{ height: 100 }} />
         </View>
