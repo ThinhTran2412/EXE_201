@@ -495,7 +495,7 @@ export default function BookingDetailScreen() {
               timeInterval: 5000,
               distanceInterval: 10,
             },
-            (loc) => {
+            (loc: Location.LocationObject) => {
               const currentLat = loc.coords.latitude;
               const currentLng = loc.coords.longitude;
 
