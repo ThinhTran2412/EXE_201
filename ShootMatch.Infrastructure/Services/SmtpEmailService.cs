@@ -85,12 +85,18 @@ public sealed class SmtpEmailService : IEmailService
         var bankBoxHtml = "";
         if (!string.IsNullOrEmpty(accountNumber) && accountNumber != "N/A")
         {
+            var nameDetail = "";
+            if (!string.IsNullOrWhiteSpace(accountName) && 
+                !accountName.Equals("N/A", StringComparison.OrdinalIgnoreCase) && 
+                !accountName.Equals("MOMO TRANSFER", StringComparison.OrdinalIgnoreCase))
+            {
+                nameDetail = $"\n    <div class=\"bank-detail\">Tên người chuyển: <strong>{accountName}</strong></div>";
+            }
+
             bankBoxHtml = $"""
             <div class="bank-box">
-                <div class="bank-title">Thông tin giao dịch ngân hàng thực tế</div>
-                <div class="bank-detail">Tên chủ tài khoản: <strong>{accountName}</strong></div>
-                <div class="bank-detail">Số tài khoản chuyển: <strong>{accountNumber}</strong></div>
-                <div class="bank-detail">Ngân hàng phát hành: <strong>{bankName}</strong></div>
+                <div class="bank-title">Thông tin nguồn thanh toán</div>{nameDetail}
+                <div class="bank-detail">Tài khoản/Ví chuyển: <strong>{accountNumber}</strong></div>
             </div>
             """;
         }

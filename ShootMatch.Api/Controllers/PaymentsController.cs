@@ -364,10 +364,10 @@ public sealed class PaymentsController(
             o.Amount,
             o.Status,
             o.CreatedAt,
-            CounterAccountBankName = string.IsNullOrWhiteSpace(o.CounterAccountBankName) 
-                ? (string.IsNullOrWhiteSpace(o.CounterAccountName) ? "MOMO" : GetRandomBankName()) 
+            CounterAccountBankName = (o.CounterAccountBankName == "MOMO" || string.IsNullOrWhiteSpace(o.CounterAccountBankName))
+                ? (string.IsNullOrWhiteSpace(o.CounterAccountName) || o.CounterAccountName == "MOMO TRANSFER" ? "MOMO" : "") 
                 : o.CounterAccountBankName,
-            CounterAccountName = string.IsNullOrWhiteSpace(o.CounterAccountName) ? "MOMO TRANSFER" : o.CounterAccountName,
+            CounterAccountName = string.IsNullOrWhiteSpace(o.CounterAccountName) || o.CounterAccountName == "MOMO TRANSFER" ? "" : o.CounterAccountName,
             CounterAccountNumber = string.IsNullOrWhiteSpace(o.CounterAccountNumber) || o.CounterAccountNumber == "2281072020614" ? GetRandomMockAccount() : o.CounterAccountNumber
         });
 
@@ -383,12 +383,6 @@ public sealed class PaymentsController(
             "2281072028881", "2281072029090" 
         };
         return mockAccounts[new Random().Next(mockAccounts.Length)];
-    }
-
-    private static string GetRandomBankName()
-    {
-        var banks = new[] { "MB Bank", "Vietcombank", "Techcombank", "VietinBank", "TPBank", "BIDV", "VPBank", "ACB" };
-        return banks[new Random().Next(banks.Length)];
     }
 }
 

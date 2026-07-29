@@ -273,11 +273,22 @@ export default function AdminMemberships() {
                     <td className="py-4 px-6">
                       {tx.counterAccountNumber ? (
                         <div className="space-y-0.5">
-                          <div className="font-semibold text-slate-750">{tx.counterAccountName}</div>
-                          <div className="text-xs text-slate-600 font-mono">STK: {tx.counterAccountNumber}</div>
-                          <span className="inline-block text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md mt-1">
-                            {tx.counterAccountBankName}
-                          </span>
+                          {tx.counterAccountBankName === "MOMO" || !tx.counterAccountName ? (
+                            <>
+                              <div className="font-semibold text-slate-750">Ví MOMO</div>
+                              <div className="text-xs text-slate-600 font-mono">Mã GD/SĐT: {tx.counterAccountNumber}</div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="font-semibold text-slate-750">{tx.counterAccountName}</div>
+                              <div className="text-xs text-slate-600 font-mono">STK: {tx.counterAccountNumber}</div>
+                              {tx.counterAccountBankName && (
+                                <span className="inline-block text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md mt-1">
+                                  {tx.counterAccountBankName}
+                                </span>
+                              )}
+                            </>
+                          )}
                         </div>
                       ) : (
                         <span className="text-slate-400 italic text-xs">Chưa có thông tin chuyển khoản</span>
