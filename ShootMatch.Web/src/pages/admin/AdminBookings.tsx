@@ -263,10 +263,10 @@ export default function AdminBookings() {
   if (loading) {
     return (
       <div className="p-8 space-y-6 animate-in fade-in duration-500">
-        <div className="h-8 w-64 rounded-lg bg-slate-200 animate-pulse" />
+        <div className="h-10 w-72 rounded-full bg-[#1c1917]/5 animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-28 rounded-2xl bg-white border border-slate-100 shadow-sm animate-pulse" />
+            <div key={index} className="h-28 rounded-2xl bg-white/50 shadow-sm animate-pulse" />
           ))}
         </div>
       </div>
@@ -274,79 +274,83 @@ export default function AdminBookings() {
   }
 
   const cards = [
-    { title: "Tổng booking", value: stats.totalBookings, icon: CalendarCheck, color: "bg-blue-500" },
-    { title: "Hoàn thành", value: stats.completedBookings, icon: Users, color: "bg-emerald-500" },
-    { title: "Đã huỷ", value: stats.cancelledBookings, icon: Clock3, color: "bg-rose-500" },
+    { title: "Tổng Booking", value: stats.totalBookings, icon: CalendarCheck, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { title: "Hoàn Thành", value: stats.completedBookings, icon: Users, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { title: "Đã Hủy", value: stats.cancelledBookings, icon: Clock3, color: "text-rose-500", bg: "bg-rose-500/10" },
     {
-      title: "Doanh thu thực nhận",
+      title: "Doanh Thu",
       value: formatCurrency(stats.totalRevenue),
       icon: TrendingUp,
-      color: "bg-[#e65a28]",
+      color: "text-[#e65a28]",
+      bg: "bg-[#e65a28]/10"
     },
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 p-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-10 animate-in fade-in duration-500 p-8 max-w-7xl mx-auto">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-slate-500 font-semibold">Admin bookings</p>
-          <h1 className="font-sans text-3xl font-bold leading-[1.15] tracking-normal text-gray-800">
-            Booking & Giao dịch
+          <p className="text-xs uppercase tracking-widest text-[#e65a28] font-bold">Quản Lý Giao Dịch</p>
+          <h1 className="font-display text-[42px] uppercase leading-none tracking-wider text-[#1c1917] mt-2 drop-shadow-sm">
+            BOOKINGS
           </h1>
         </div>
-        <div className="flex flex-wrap gap-3 self-start">
+        <div className="flex flex-wrap gap-4 self-start">
           <button
             onClick={() => void exportBookingsReport("pdf")}
             disabled={Boolean(exportingFormat) || refreshing}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full border border-gray-200/60 bg-white/80 backdrop-blur-md px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-gray-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(230,90,40,0.1)] hover:-translate-y-0.5 transition-all disabled:opacity-50"
           >
             Xuất PDF
           </button>
           <button
             onClick={() => void exportBookingsReport("excel")}
             disabled={Boolean(exportingFormat) || refreshing}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full border border-gray-200/60 bg-white/80 backdrop-blur-md px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-gray-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(230,90,40,0.1)] hover:-translate-y-0.5 transition-all disabled:opacity-50"
           >
             Xuất Excel
           </button>
           <button
             onClick={() => void loadBookings({ showRefreshing: true })}
             disabled={refreshing}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full bg-[#e65a28] text-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest shadow-[0_8px_30px_rgb(230,90,40,0.3)] hover:shadow-[0_8px_30px_rgb(230,90,40,0.5)] hover:-translate-y-0.5 transition-all disabled:opacity-50"
           >
-            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
-            Làm mới
+            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} strokeWidth={3} />
+            LÀM MỚI
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
+        <div className="rounded-2xl bg-rose-50 border border-rose-100 px-5 py-4 text-sm font-medium text-rose-600 shadow-sm">{error}</div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 py-6 border-y border-gray-200/50">
         {cards.map((card) => (
           <div
             key={card.title}
-            className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex items-center gap-5"
+            className="flex flex-col gap-2 relative group"
           >
-            <div className={`p-4 rounded-xl text-white ${card.color} shadow-lg`}>
-              <card.icon size={26} />
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 rounded-lg ${card.bg} ${card.color}`}>
+                <card.icon size={14} strokeWidth={3} />
+              </div>
+              <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{card.title}</div>
             </div>
-            <div>
-              <div className="text-sm text-gray-500 font-medium uppercase tracking-wider">{card.title}</div>
-              <div className="text-3xl font-bold text-gray-900 mt-1">{card.value}</div>
-            </div>
+            <div className="text-2xl font-display tracking-wide text-gray-800">{card.value}</div>
+            
+            {/* Divider cho màn hình lớn */}
+            <div className="hidden md:block absolute right-[-12px] top-1/2 -translate-y-1/2 w-[1px] h-8 bg-gray-200/50 group-last:hidden" />
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="flex flex-col gap-4 px-6 py-5 border-b border-gray-100 lg:flex-row lg:items-center lg:justify-between">
+      <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
+        <div className="flex flex-col gap-4 px-8 py-7 border-b border-gray-100 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="font-sans text-xl font-bold leading-[1.2] tracking-normal text-gray-800">Toàn bộ booking</h2>
-            <p className="text-sm text-slate-500 mt-1">
-              Lọc theo trạng thái, thời gian tạo và tìm theo tên, email, booking id.
+            <h2 className="font-display text-2xl uppercase tracking-wider text-[#1c1917]">Danh Sách Booking</h2>
+            <p className="text-xs text-gray-400 font-medium uppercase tracking-widest mt-1">
+              Lọc theo trạng thái, thời gian tạo và tìm kiếm
             </p>
           </div>
           <div className="flex flex-col gap-3 lg:items-end">
@@ -411,9 +415,9 @@ export default function AdminBookings() {
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100 text-sm">
-            <thead className="bg-slate-50/70 text-slate-500 uppercase tracking-wider text-xs">
+        <div className="overflow-x-auto p-4">
+          <table className="min-w-full text-sm border-separate border-spacing-y-2">
+            <thead className="text-gray-400 uppercase tracking-widest text-xs font-semibold">
               <tr>
                 <th className="px-6 py-4 text-left font-semibold">Booking</th>
                 <th className="px-6 py-4 text-left font-semibold">Khách hàng</th>
@@ -425,7 +429,7 @@ export default function AdminBookings() {
                 <th className="px-6 py-4 text-left font-semibold">Ghi chú</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
+            <tbody className="bg-transparent">
               {filteredBookings.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
@@ -438,7 +442,7 @@ export default function AdminBookings() {
                   const photographer = photographerMap.get(booking.photographerId);
                   const statusLabel = normalizeBookingStatus(booking.status);
                   return (
-                    <tr key={booking.id} className="hover:bg-slate-50/70 transition-colors">
+                    <tr key={booking.id} className="bg-white hover:shadow-md transition-shadow rounded-2xl group">
                       <td className="px-6 py-4">
                         <div className="font-semibold text-gray-800">{booking.id}</div>
                         <div className="text-xs text-slate-500 mt-1">Tạo: {formatDateTime(booking.createdAt)}</div>

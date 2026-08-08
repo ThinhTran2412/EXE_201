@@ -72,81 +72,83 @@ export default function AdminStaff() {
   });
 
   if (loading) {
-    return <div className="p-8 text-slate-500">Đang tải staff...</div>;
+    return <div className="p-8 text-gray-500 text-sm font-semibold uppercase tracking-widest animate-pulse">Đang tải staff...</div>;
   }
 
   return (
-    <div className="space-y-6 p-8 animate-in fade-in duration-500">
-      <div className="flex items-end justify-between gap-4">
+    <div className="space-y-10 animate-in fade-in duration-500 p-8 max-w-7xl mx-auto">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-slate-500 font-semibold">Admin staff</p>
-          <h1 className="font-sans text-3xl font-bold text-gray-800">Duyệt tài khoản staff</h1>
+          <p className="text-xs uppercase tracking-widest text-[#e65a28] font-bold">Quản Lý Đội Ngũ</p>
+          <h1 className="font-display text-[42px] uppercase leading-none tracking-wider text-[#1c1917] mt-2 drop-shadow-sm">
+            TÀI KHOẢN STAFF
+          </h1>
         </div>
         <button
           onClick={() => void load(true)}
           disabled={refreshing}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-full border border-gray-200/60 bg-white/80 backdrop-blur-md px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-gray-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(230,90,40,0.1)] hover:-translate-y-0.5 transition-all disabled:opacity-50"
         >
-          <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
-          Làm mới
+          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} strokeWidth={3} />
+          LÀM MỚI
         </button>
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
+        <div className="rounded-2xl bg-rose-50 border border-rose-100 px-5 py-4 text-sm font-medium text-rose-600 shadow-sm">{error}</div>
       )}
 
-      <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-6 py-4">
+      <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
+        <div className="flex items-center justify-between gap-4 px-8 py-7 border-b border-gray-100">
           <div>
-            <h2 className="text-xl font-bold text-gray-800">Danh sách staff</h2>
-            <p className="text-sm text-slate-500">Duyệt staff để họ có quyền vào luồng photographer.</p>
+            <h2 className="font-display text-2xl uppercase tracking-wider text-[#1c1917]">Danh sách staff</h2>
+            <p className="text-xs text-gray-400 font-medium uppercase tracking-widest mt-1">Duyệt staff để họ có quyền vào luồng photographer</p>
           </div>
           <div className="relative w-80 max-w-full">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Tìm theo tên, email, trạng thái..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-[#e65a28]"
+              className="w-full rounded-full border border-gray-200 bg-white/50 py-3 pl-11 pr-5 text-sm outline-none transition focus:border-[#e65a28] focus:bg-white focus:shadow-sm"
             />
           </div>
         </div>
 
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-gray-100/50 p-4">
           {filtered.length === 0 ? (
-            <div className="px-6 py-10 text-center text-slate-500">Không có staff nào.</div>
+            <div className="px-6 py-12 text-center text-gray-400 font-medium">Không có staff nào.</div>
           ) : (
             filtered.map((staff) => (
               <div
                 key={staff.id}
-                className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center lg:justify-between"
+                className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center lg:justify-between bg-transparent hover:bg-white hover:shadow-md transition-all rounded-2xl group"
               >
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-gray-800">{staff.displayName || staff.email}</h3>
-                    <span className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-bold text-gray-800">{staff.displayName || staff.email}</h3>
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-600 group-hover:bg-slate-200 transition-colors">
                       {staff.approvalStatus}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm font-medium text-gray-500 mt-1">
                     {staff.email} • {staff.phone || "Chưa có số điện thoại"}
                   </p>
-                  <p className="text-xs text-slate-400 mt-1">Tạo lúc: {formatDate(staff.createdAt)}</p>
+                  <p className="text-[11px] uppercase tracking-widest font-semibold text-gray-400 mt-2">Tạo lúc: {formatDate(staff.createdAt)}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   {staff.approvalStatus === "Approved" ? (
-                    <span className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
-                      <ShieldCheck size={16} /> Đã duyệt
+                    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-100 px-4 py-2 text-xs font-bold uppercase tracking-widest text-emerald-600">
+                      <ShieldCheck size={16} strokeWidth={2.5} /> Đã duyệt
                     </span>
                   ) : (
                     <button
                       onClick={() => void handleApprove(staff.id)}
                       disabled={busyId === staff.id}
-                      className="inline-flex items-center gap-2 rounded-xl bg-[#e65a28] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex items-center gap-2 rounded-full bg-[#e65a28] px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white shadow-[0_8px_30px_rgb(230,90,40,0.3)] hover:shadow-[0_8px_30px_rgb(230,90,40,0.5)] hover:-translate-y-0.5 transition-all disabled:opacity-50"
                     >
-                      <CheckCircle2 size={16} />
-                      {busyId === staff.id ? "Đang duyệt..." : "Duyệt staff"}
+                      <CheckCircle2 size={16} strokeWidth={2.5} />
+                      {busyId === staff.id ? "ĐANG DUYỆT" : "DUYỆT STAFF"}
                     </button>
                   )}
                 </div>

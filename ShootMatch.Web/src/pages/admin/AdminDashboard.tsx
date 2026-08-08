@@ -192,26 +192,27 @@ export default function AdminDashboard() {
   );
 
   const cards = [
-    { title: "Khách hàng", value: stats.totalCustomers, icon: Users, color: "bg-blue-500" },
-    { title: "Nhiếp ảnh gia", value: stats.totalPhotographers, icon: Camera, color: "bg-indigo-500" },
-    { title: "Lượt booking", value: stats.totalBookings, icon: CalendarCheck, color: "bg-emerald-500" },
+    { title: "Khách Hàng", value: stats.totalCustomers, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { title: "Nhiếp Ảnh Gia", value: stats.totalPhotographers, icon: Camera, color: "text-indigo-500", bg: "bg-indigo-500/10" },
+    { title: "Lượt Booking", value: stats.totalBookings, icon: CalendarCheck, color: "text-emerald-500", bg: "bg-emerald-500/10" },
     {
-      title: "Doanh thu thực nhận",
+      title: "Doanh Thu",
       value: formatCurrency(stats.totalRevenue),
       icon: TrendingUp,
-      color: "bg-[#e65a28]",
+      color: "text-[#e65a28]",
+      bg: "bg-[#e65a28]/10"
     },
-    { title: "Chờ xác minh", value: stats.pendingVerifications, icon: Clock3, color: "bg-amber-500" },
-    { title: "Đã xác minh", value: stats.verifiedPhotographers, icon: BadgeCheck, color: "bg-slate-700" },
+    { title: "Chờ Xác Minh", value: stats.pendingVerifications, icon: Clock3, color: "text-amber-500", bg: "bg-amber-500/10" },
+    { title: "Đã Xác Minh", value: stats.verifiedPhotographers, icon: BadgeCheck, color: "text-slate-700", bg: "bg-slate-700/10" },
   ];
 
   if (loading) {
     return (
       <div className="p-8 space-y-6 animate-in fade-in duration-500">
-        <div className="h-8 w-72 rounded-lg bg-slate-200 animate-pulse" />
+        <div className="h-10 w-72 rounded-full bg-[#1c1917]/5 animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="h-28 rounded-2xl bg-white border border-slate-100 shadow-sm animate-pulse" />
+            <div key={index} className="h-32 rounded-[2rem] bg-white/50 shadow-sm animate-pulse" />
           ))}
         </div>
       </div>
@@ -219,116 +220,123 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 p-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-10 animate-in fade-in duration-500 p-8 max-w-7xl mx-auto">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-slate-500 font-semibold">Admin overview</p>
-          <h1 className="font-sans text-3xl font-bold leading-[1.15] tracking-normal text-gray-800">
-            Tổng quan hệ thống
+          <p className="text-xs uppercase tracking-widest text-[#e65a28] font-bold">
+            Bảng Điều Khiển
+          </p>
+          <h1 className="font-display text-[42px] uppercase leading-none tracking-wider text-[#1c1917] mt-2 drop-shadow-sm">
+            TỔNG QUAN
           </h1>
         </div>
-        <div className="flex flex-wrap gap-3 self-start">
+        <div className="flex flex-wrap gap-4 self-start">
           <button
             onClick={() => void exportDashboardReport("pdf")}
             disabled={Boolean(exportingFormat) || refreshing}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full border border-gray-200/60 bg-white/80 backdrop-blur-md px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-gray-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(230,90,40,0.1)] hover:-translate-y-0.5 transition-all disabled:opacity-50"
           >
             Xuất PDF
           </button>
           <button
             onClick={() => void exportDashboardReport("excel")}
             disabled={Boolean(exportingFormat) || refreshing}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full border border-gray-200/60 bg-white/80 backdrop-blur-md px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-gray-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(230,90,40,0.1)] hover:-translate-y-0.5 transition-all disabled:opacity-50"
           >
             Xuất Excel
           </button>
           <button
             onClick={() => void loadDashboard()}
             disabled={refreshing}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full bg-[#e65a28] text-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest shadow-[0_8px_30px_rgb(230,90,40,0.3)] hover:shadow-[0_8px_30px_rgb(230,90,40,0.5)] hover:-translate-y-0.5 transition-all disabled:opacity-50"
           >
-            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
-            Làm mới
+            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} strokeWidth={3} />
+            LÀM MỚI
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
+        <div className="rounded-2xl bg-rose-50 border border-rose-100 px-5 py-4 text-sm font-medium text-rose-600 shadow-sm">
+          {error}
+        </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 py-6 border-y border-gray-200/50">
         {cards.map((card) => (
           <div
             key={card.title}
-            className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex items-center gap-5"
+            className="flex flex-col gap-2 relative group"
           >
-            <div className={`p-4 rounded-xl text-white ${card.color} shadow-lg`}>
-              <card.icon size={26} />
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 rounded-lg ${card.bg} ${card.color}`}>
+                <card.icon size={14} strokeWidth={3} />
+              </div>
+              <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{card.title}</div>
             </div>
-            <div>
-              <div className="text-sm text-gray-500 font-medium uppercase tracking-wider">{card.title}</div>
-              <div className="text-3xl font-bold text-gray-900 mt-1">{card.value}</div>
-            </div>
+            <div className="text-2xl font-display tracking-wide text-gray-800">{card.value}</div>
+            
+            {/* Divider cho màn hình lớn */}
+            <div className="hidden xl:block absolute right-[-12px] top-1/2 -translate-y-1/2 w-[1px] h-8 bg-gray-200/50 group-last:hidden" />
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="font-sans text-xl font-bold leading-[1.2] tracking-normal text-gray-800 mb-2">
+        <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
+          <h2 className="font-display text-2xl uppercase tracking-wider text-[#1c1917] mb-1">
             Doanh thu theo tháng
           </h2>
-          <p className="text-sm text-slate-500 mb-6">Chỉ tính các booking đã hoàn thành.</p>
+          <p className="text-xs text-gray-400 font-medium uppercase tracking-widest mb-8">Chỉ tính booking hoàn thành</p>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={revenueSeries}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="month" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" tickFormatter={(value) => formatCurrency(Number(value)).replace(" ₫", "")} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+              <XAxis dataKey="month" stroke="#9ca3af" tick={{ fill: "#9ca3af", fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis stroke="#9ca3af" tickFormatter={(value) => formatCurrency(Number(value)).replace(" ₫", "")} tick={{ fill: "#9ca3af", fontSize: 12 }} axisLine={false} tickLine={false} />
               <Tooltip
-                contentStyle={{ backgroundColor: "#f9fafb", border: "1px solid #e5e7eb" }}
-                labelStyle={{ color: "#1f2937" }}
+                contentStyle={{ backgroundColor: "#ffffff", border: "none", borderRadius: "1rem", boxShadow: "0 10px 40px -10px rgba(0,0,0,0.1)" }}
+                labelStyle={{ color: "#9ca3af", fontSize: "12px", textTransform: "uppercase" }}
                 formatter={(value) => formatCurrency(Number(value))}
               />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: "12px", fontWeight: "500", color: "#6b7280" }} />
               <Line
                 type="monotone"
                 dataKey="revenue"
                 stroke="#e65a28"
-                strokeWidth={3}
-                dot={{ fill: "#e65a28", r: 5 }}
-                activeDot={{ r: 7 }}
+                strokeWidth={4}
+                dot={{ fill: "#ffffff", r: 5, strokeWidth: 2, stroke: "#e65a28" }}
+                activeDot={{ r: 7, stroke: "#e65a28", strokeWidth: 2 }}
                 name="Doanh thu (₫)"
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="font-sans text-xl font-bold leading-[1.2] tracking-normal text-gray-800 mb-2">
-            Booking theo ngày trong tuần
+        <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
+          <h2 className="font-display text-2xl uppercase tracking-wider text-[#1c1917] mb-1">
+            Booking theo ngày
           </h2>
-          <p className="text-sm text-slate-500 mb-6">Dựa trên thời điểm tạo booking thực tế.</p>
+          <p className="text-xs text-gray-400 font-medium uppercase tracking-widest mb-8">Số lượng trong tuần</p>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={bookingWeekSeries}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="date" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" allowDecimals={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+              <XAxis dataKey="date" stroke="#9ca3af" tick={{ fill: "#9ca3af", fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis stroke="#9ca3af" allowDecimals={false} tick={{ fill: "#9ca3af", fontSize: 12 }} axisLine={false} tickLine={false} />
               <Tooltip
-                contentStyle={{ backgroundColor: "#f9fafb", border: "1px solid #e5e7eb" }}
-                labelStyle={{ color: "#1f2937" }}
+                contentStyle={{ backgroundColor: "#ffffff", border: "none", borderRadius: "1rem", boxShadow: "0 10px 40px -10px rgba(0,0,0,0.1)" }}
+                labelStyle={{ color: "#9ca3af", fontSize: "12px", textTransform: "uppercase" }}
               />
-              <Legend />
-              <Bar dataKey="bookings" fill="#3b82f6" name="Lượt booking" radius={[8, 8, 0, 0]} />
+              <Legend wrapperStyle={{ fontSize: "12px", fontWeight: "500", color: "#6b7280" }} />
+              <Bar dataKey="bookings" fill="#3b82f6" name="Lượt booking" radius={[8, 8, 8, 8]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="font-sans text-xl font-bold leading-[1.2] tracking-normal text-gray-800 mb-2">
+        <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
+          <h2 className="font-display text-2xl uppercase tracking-wider text-[#1c1917] mb-1">
             Trạng thái booking
           </h2>
-          <p className="text-sm text-slate-500 mb-6">Phân bổ toàn bộ booking hiện có trong hệ thống.</p>
+          <p className="text-xs text-gray-400 font-medium uppercase tracking-widest mb-8">Tỷ lệ toàn hệ thống</p>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -337,27 +345,29 @@ export default function AdminDashboard() {
                 cy="50%"
                 labelLine={false}
                 label={({ name, value }) => `${name}: ${value}`}
-                outerRadius={90}
+                outerRadius={100}
+                innerRadius={60}
                 dataKey="value"
+                stroke="none"
               >
                 {bookingStatusSeries.map((entry, index) => (
                   <Cell key={`${entry.name}-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip
-                contentStyle={{ backgroundColor: "#f9fafb", border: "1px solid #e5e7eb" }}
-                labelStyle={{ color: "#1f2937" }}
+                contentStyle={{ backgroundColor: "#ffffff", border: "none", borderRadius: "1rem", boxShadow: "0 10px 40px -10px rgba(0,0,0,0.1)" }}
+                itemStyle={{ fontWeight: "600" }}
               />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: "12px", fontWeight: "500", color: "#6b7280" }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="font-sans text-xl font-bold leading-[1.2] tracking-normal text-gray-800 mb-2">
-            Trạng thái xác minh nhiếp ảnh gia
+        <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
+          <h2 className="font-display text-2xl uppercase tracking-wider text-[#1c1917] mb-1">
+            Xác minh nhiếp ảnh gia
           </h2>
-          <p className="text-sm text-slate-500 mb-6">Lấy từ dữ liệu thực của photographers.</p>
+          <p className="text-xs text-gray-400 font-medium uppercase tracking-widest mb-8">Tình trạng hồ sơ</p>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -366,36 +376,40 @@ export default function AdminDashboard() {
                 cy="50%"
                 labelLine={false}
                 label={({ name, value }) => `${name}: ${value}`}
-                outerRadius={90}
+                outerRadius={100}
+                innerRadius={60}
                 dataKey="value"
+                stroke="none"
               >
                 {verificationSeries.map((entry, index) => (
                   <Cell key={`${entry.name}-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip
-                contentStyle={{ backgroundColor: "#f9fafb", border: "1px solid #e5e7eb" }}
-                labelStyle={{ color: "#1f2937" }}
+                contentStyle={{ backgroundColor: "#ffffff", border: "none", borderRadius: "1rem", boxShadow: "0 10px 40px -10px rgba(0,0,0,0.1)" }}
+                itemStyle={{ fontWeight: "600" }}
               />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: "12px", fontWeight: "500", color: "#6b7280" }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="flex items-center justify-between gap-4 px-6 py-5 border-b border-gray-100">
+      <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
+        <div className="flex items-center justify-between gap-4 px-8 py-7 border-b border-gray-100">
           <div>
-            <h2 className="font-sans text-xl font-bold leading-[1.2] tracking-normal text-gray-800">
+            <h2 className="font-display text-2xl uppercase tracking-wider text-[#1c1917]">
               Booking gần nhất
             </h2>
-            <p className="text-sm text-slate-500 mt-1">8 booking mới nhất để theo dõi hoạt động thực tế.</p>
+            <p className="text-xs text-gray-400 font-medium uppercase tracking-widest mt-1">8 giao dịch mới nhất</p>
           </div>
-          <div className="text-sm text-slate-500">Tổng số: {payload.bookings.length}</div>
+          <div className="text-xs font-bold bg-[#e65a28]/10 text-[#e65a28] px-4 py-1.5 rounded-full">
+            TỔNG SỐ: {payload.bookings.length}
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100 text-sm">
-            <thead className="bg-slate-50/70 text-slate-500 uppercase tracking-wider text-xs">
+        <div className="overflow-x-auto p-4">
+          <table className="min-w-full text-sm border-separate border-spacing-y-2">
+            <thead className="text-gray-400 uppercase tracking-widest text-xs font-semibold">
               <tr>
                 <th className="px-6 py-4 text-left font-semibold">Khách hàng</th>
                 <th className="px-6 py-4 text-left font-semibold">Nhiếp ảnh gia</th>
@@ -406,11 +420,11 @@ export default function AdminDashboard() {
                 <th className="px-6 py-4 text-right font-semibold">Phí nền tảng</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
+            <tbody className="bg-transparent">
               {recentBookings.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
-                    Chưa có booking nào trong hệ thống.
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-400 font-medium">
+                    Chưa có booking nào.
                   </td>
                 </tr>
               ) : (
@@ -419,30 +433,30 @@ export default function AdminDashboard() {
                   const photographer = photographerMap.get(booking.photographerId);
 
                   return (
-                    <tr key={booking.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="px-6 py-4 text-slate-700">
+                    <tr key={booking.id} className="bg-white hover:shadow-md transition-shadow rounded-2xl group">
+                      <td className="px-6 py-4 rounded-l-2xl border-y border-l border-transparent group-hover:border-gray-100">
                         <div className="font-semibold text-gray-800">{customer?.displayName ?? booking.customerId}</div>
-                        <div className="text-xs text-slate-500 mt-1">{customer?.email ?? "-"}</div>
+                        <div className="text-xs text-gray-400 mt-1">{customer?.email ?? "-"}</div>
                       </td>
-                      <td className="px-6 py-4 text-slate-700">
+                      <td className="px-6 py-4 border-y border-transparent group-hover:border-gray-100">
                         <div className="font-semibold text-gray-800">
                           {photographer?.displayName ?? booking.photographerId}
                         </div>
-                        <div className="text-xs text-slate-500 mt-1">{photographer?.email ?? "-"}</div>
+                        <div className="text-xs text-gray-400 mt-1">{photographer?.email ?? "-"}</div>
                       </td>
-                      <td className="px-6 py-4 text-slate-500">{formatDateTime(booking.createdAt)}</td>
-                      <td className="px-6 py-4 text-slate-500">{formatDateTime(booking.scheduledAt)}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 text-gray-500 font-medium border-y border-transparent group-hover:border-gray-100">{formatDateTime(booking.createdAt)}</td>
+                      <td className="px-6 py-4 text-gray-500 font-medium border-y border-transparent group-hover:border-gray-100">{formatDateTime(booking.scheduledAt)}</td>
+                      <td className="px-6 py-4 border-y border-transparent group-hover:border-gray-100">
                         <span
-                          className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold whitespace-nowrap ${getBookingStatusTone(booking.status)}`}
+                          className={`inline-flex items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap ${getBookingStatusTone(booking.status).replace("border", "border-none")}`}
                         >
                           {normalizeBookingStatus(booking.status)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right font-semibold text-gray-800">
+                      <td className="px-6 py-4 text-right font-semibold text-gray-800 border-y border-transparent group-hover:border-gray-100">
                         {formatCurrency(booking.agreedPrice)}
                       </td>
-                      <td className="px-6 py-4 text-right font-semibold text-gray-800">
+                      <td className="px-6 py-4 text-right font-semibold text-[#e65a28] rounded-r-2xl border-y border-r border-transparent group-hover:border-gray-100">
                         {formatCurrency(booking.commission)}
                       </td>
                     </tr>

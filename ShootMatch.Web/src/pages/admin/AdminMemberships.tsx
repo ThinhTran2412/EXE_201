@@ -101,114 +101,104 @@ export default function AdminMemberships() {
   });
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-10 animate-in fade-in duration-500 p-8 max-w-7xl mx-auto">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-            Giao dịch Hội viên (Subscriptions)
+          <p className="text-xs uppercase tracking-widest text-[#e65a28] font-bold">Giao Dịch</p>
+          <h1 className="font-display text-[42px] uppercase leading-none tracking-wider text-[#1c1917] mt-2 drop-shadow-sm">
+            HỘI VIÊN
           </h1>
-          <p className="text-slate-500 mt-1">
-            Quản lý và thống kê thông tin nâng cấp gói thành viên qua cổng thanh toán PayOS.
-          </p>
         </div>
         <button
           onClick={fetchTransactions}
           disabled={loading}
-          className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl shadow-md hover:bg-slate-800 transition active:scale-[0.98] disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-full border border-gray-200/60 bg-white/80 backdrop-blur-md px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-gray-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(230,90,40,0.1)] hover:-translate-y-0.5 transition-all disabled:opacity-50"
         >
-          <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-          Tải lại dữ liệu
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} strokeWidth={3} />
+          LÀM MỚI
         </button>
       </div>
 
       {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Total Revenue */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-sm font-semibold text-slate-400 block uppercase tracking-wider">Tổng doanh thu</span>
-            <span className="text-2xl font-bold text-slate-850 mt-1 block">
-              {totalRevenue.toLocaleString("vi-VN")} ₫
-            </span>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 py-6 border-y border-gray-200/50">
+        <div className="flex flex-col gap-2 relative group">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
+              <DollarSign size={14} strokeWidth={3} />
+            </div>
+            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Tổng Doanh Thu</div>
           </div>
-          <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
-            <DollarSign size={24} />
-          </div>
+          <div className="text-2xl font-display tracking-wide text-gray-800">{totalRevenue.toLocaleString("vi-VN")} ₫</div>
+          <div className="hidden md:block absolute right-[-12px] top-1/2 -translate-y-1/2 w-[1px] h-8 bg-gray-200/50 group-last:hidden" />
         </div>
 
-        {/* Total Successful Transactions */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-sm font-semibold text-slate-400 block uppercase tracking-wider">Thành công (Paid)</span>
-            <span className="text-2xl font-bold text-slate-850 mt-1 block">
-              {paidTxns.length} giao dịch
-            </span>
+        <div className="flex flex-col gap-2 relative group">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-violet-500/10 text-violet-500">
+              <CheckCircle size={14} strokeWidth={3} />
+            </div>
+            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Thành Công (Paid)</div>
           </div>
-          <div className="h-12 w-12 rounded-xl bg-violet-50 text-violet-500 flex items-center justify-center">
-            <CheckCircle size={24} />
-          </div>
+          <div className="text-2xl font-display tracking-wide text-gray-800">{paidTxns.length}</div>
+          <div className="hidden md:block absolute right-[-12px] top-1/2 -translate-y-1/2 w-[1px] h-8 bg-gray-200/50 group-last:hidden" />
         </div>
 
-        {/* Pending Transactions */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-sm font-semibold text-slate-400 block uppercase tracking-wider">Đang chờ (Pending)</span>
-            <span className="text-2xl font-bold text-slate-850 mt-1 block">
-              {pendingTxns.length} giao dịch
-            </span>
+        <div className="flex flex-col gap-2 relative group">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
+              <Activity size={14} strokeWidth={3} />
+            </div>
+            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Đang Chờ (Pending)</div>
           </div>
-          <div className="h-12 w-12 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
-            <Activity size={24} className="animate-pulse" />
-          </div>
+          <div className="text-2xl font-display tracking-wide text-gray-800">{pendingTxns.length}</div>
+          <div className="hidden md:block absolute right-[-12px] top-1/2 -translate-y-1/2 w-[1px] h-8 bg-gray-200/50 group-last:hidden" />
         </div>
 
-        {/* Success Rate */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-sm font-semibold text-slate-400 block uppercase tracking-wider">Tỉ lệ chuyển đổi</span>
-            <span className="text-2xl font-bold text-slate-850 mt-1 block">
-              {successRate.toFixed(1)}%
-            </span>
+        <div className="flex flex-col gap-2 relative group">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+              <ArrowUpRight size={14} strokeWidth={3} />
+            </div>
+            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Tỉ Lệ Chuyển Đổi</div>
           </div>
-          <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
-            <ArrowUpRight size={24} />
-          </div>
+          <div className="text-2xl font-display tracking-wide text-gray-800">{successRate.toFixed(1)}%</div>
+          <div className="hidden md:block absolute right-[-12px] top-1/2 -translate-y-1/2 w-[1px] h-8 bg-gray-200/50 group-last:hidden" />
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative w-full md:w-96">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input
             type="text"
             placeholder="Tìm theo mã đơn, tên, số tài khoản..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all text-sm"
+            className="w-full pl-11 pr-5 py-3 bg-white/50 border border-gray-200 rounded-full text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#e65a28] transition-all text-sm focus:bg-white"
           />
         </div>
 
-        <div className="flex gap-2 w-full md:w-auto">
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
           {["all", "Paid", "Pending", "Cancelled"].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold tracking-wide uppercase transition active:scale-[0.98] ${
+              className={`rounded-full border px-4 py-2 text-xs font-bold tracking-widest uppercase transition-all ${
                 statusFilter === status
-                  ? "bg-slate-900 text-white shadow-sm"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  ? "border-[#e65a28] bg-[#e65a28] text-white"
+                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
-              {status === "all" ? "Tất cả" : status === "Paid" ? "Đã thanh toán" : status === "Pending" ? "Đang chờ" : "Đã huỷ"}
+              {status === "all" ? "Tất Cả" : status === "Paid" ? "Đã Thanh Toán" : status === "Pending" ? "Đang Chờ" : "Đã Hủy"}
             </button>
           ))}
         </div>
       </div>
 
       {/* Transactions Table Container */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
         {loading ? (
           <div className="p-20 text-center text-slate-500 flex flex-col items-center gap-3">
             <RefreshCw className="animate-spin text-slate-400" size={32} />
@@ -225,31 +215,31 @@ export default function AdminMemberships() {
             <span>Không tìm thấy giao dịch nào phù hợp.</span>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100 text-slate-450 uppercase text-xs tracking-wider font-semibold">
-                  <th className="py-4 px-6">Mã đơn hàng (PayOS)</th>
+          <div className="overflow-x-auto p-4">
+            <table className="w-full min-w-full text-sm border-separate border-spacing-y-2 text-left">
+              <thead className="text-gray-400 uppercase tracking-widest text-xs font-semibold">
+                <tr>
+                  <th className="py-4 px-6">Mã đơn hàng</th>
                   <th className="py-4 px-6">Người mua</th>
                   <th className="py-4 px-6">Gói / Chu kỳ</th>
                   <th className="py-4 px-6">Số tiền</th>
-                  <th className="py-4 px-6">Ngân hàng chuyển khoản thực tế</th>
+                  <th className="py-4 px-6">Ngân hàng</th>
                   <th className="py-4 px-6 text-center">Trạng thái</th>
-                  <th className="py-4 px-6 text-right">Hành động</th>
+                  <th className="py-4 px-6 text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
+              <tbody className="bg-transparent text-sm">
                 {filteredTransactions.map((tx) => (
-                  <tr key={tx.orderCode} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={tx.orderCode} className="bg-white hover:shadow-md transition-shadow rounded-2xl group">
                     {/* Order Code */}
-                    <td className="py-4 px-6 font-bold text-slate-800">
+                    <td className="py-4 px-6 font-bold text-slate-800 rounded-l-2xl border-y border-l border-transparent group-hover:border-gray-100">
                       {tx.orderCode}
                     </td>
 
                     {/* User */}
-                    <td className="py-4 px-6">
+                    <td className="py-4 px-6 border-y border-transparent group-hover:border-gray-100">
                       <div className="font-semibold text-slate-800">{tx.userName}</div>
-                      <span className={`inline-block text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 mt-1 rounded-md ${
+                      <span className={`inline-block text-[10px] uppercase font-extrabold tracking-widest px-2 py-0.5 mt-1 rounded-md ${
                         tx.userRole === "customer" 
                           ? "bg-sky-50 text-sky-600 border border-sky-100" 
                           : "bg-indigo-50 text-indigo-600 border border-indigo-100"
@@ -259,18 +249,18 @@ export default function AdminMemberships() {
                     </td>
 
                     {/* Plan & Cycle */}
-                    <td className="py-4 px-6">
+                    <td className="py-4 px-6 border-y border-transparent group-hover:border-gray-100">
                       <div className="font-medium text-slate-700">{formatPlanName(tx.planId)}</div>
                       <span className="text-xs text-slate-400 block mt-0.5">Chu kỳ: {formatCycle(tx.cycle)}</span>
                     </td>
 
                     {/* Amount */}
-                    <td className="py-4 px-6 font-bold text-slate-850">
+                    <td className="py-4 px-6 font-bold text-slate-850 border-y border-transparent group-hover:border-gray-100">
                       {tx.amount.toLocaleString("vi-VN")} ₫
                     </td>
 
                     {/* Transfer Bank Details */}
-                    <td className="py-4 px-6">
+                    <td className="py-4 px-6 border-y border-transparent group-hover:border-gray-100">
                       {tx.counterAccountNumber ? (
                         <div className="space-y-0.5">
                           {tx.counterAccountBankName === "MOMO" || !tx.counterAccountName ? (
@@ -296,8 +286,8 @@ export default function AdminMemberships() {
                     </td>
 
                     {/* Status Badge */}
-                    <td className="py-4 px-6 text-center">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold leading-none ${
+                    <td className="py-4 px-6 text-center border-y border-transparent group-hover:border-gray-100">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest leading-none ${
                         tx.status === "Paid"
                           ? "bg-emerald-50 text-emerald-600"
                           : tx.status === "Pending"
@@ -323,20 +313,22 @@ export default function AdminMemberships() {
                       </span>
                     </td>
 
-                    {/* Action buttons */}
-                    <td className="py-4 px-6 text-right">
-                      {tx.status === "Pending" ? (
+                    {/* Actions */}
+                    <td className="py-4 px-6 text-right rounded-r-2xl border-y border-r border-transparent group-hover:border-gray-100">
+                      <div className="flex justify-end gap-2">
                         <button
                           onClick={() => checkStatusWithPayOS(tx.orderCode)}
                           disabled={checkingOrderId === tx.orderCode}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition active:scale-[0.97] disabled:opacity-50"
+                          className="px-3 py-2 text-xs font-bold uppercase tracking-widest bg-white border border-gray-200/60 text-gray-700 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(230,90,40,0.1)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Check PayOS Status"
                         >
-                          <RefreshCw size={12} className={checkingOrderId === tx.orderCode ? "animate-spin" : ""} />
-                          {checkingOrderId === tx.orderCode ? "Đang check..." : "Check PayOS"}
+                          {checkingOrderId === tx.orderCode ? (
+                            <RefreshCw size={14} className="animate-spin text-slate-400" />
+                          ) : (
+                            <Search size={14} />
+                          )}
                         </button>
-                      ) : (
-                        <span className="text-xs text-slate-400 font-medium">Hoàn tất</span>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}

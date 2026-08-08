@@ -142,10 +142,15 @@ export default function InstallPage() {
                  </div>
               </div>
               
-              <button className="mt-auto flex items-center justify-center w-full py-4 bg-[#ff4200] hover:bg-[#e63b00] text-[#fff7e1] rounded-xl font-mono text-xs tracking-widest uppercase transition-colors group">
+              <a 
+                href="https://github.com/ThinhTran2412/EXE_201/releases/latest/download/Pickic.apk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-auto flex items-center justify-center w-full py-4 bg-[#ff4200] hover:bg-[#e63b00] text-[#fff7e1] rounded-xl font-mono text-xs tracking-widest uppercase transition-colors group"
+              >
                 <Download className="w-4 h-4 mr-2 group-hover:-translate-y-1 transition-transform" />
                 Tải File APK
-              </button>
+              </a>
             </Reveal>
           </div>
 

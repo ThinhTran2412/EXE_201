@@ -3,7 +3,9 @@ import LandingPage from "./pages/LandingPage";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminUsers from "./pages/admin/AdminUsers";
+import AdminCustomers from "./pages/admin/AdminCustomers";
+import AdminPhotographers from "./pages/admin/AdminPhotographers";
+import AdminVerifications from "./pages/admin/AdminVerifications";
 import AdminStaff from "./pages/admin/AdminStaff";
 import AdminBookings from "./pages/admin/AdminBookings";
 import AdminMemberships from "./pages/admin/AdminMemberships";
@@ -66,7 +68,10 @@ function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="users" element={<AdminUsers />} />
+          <Route path="users" element={<Navigate to="/admin/users/customers" replace />} />
+          <Route path="users/customers" element={<AdminCustomers />} />
+          <Route path="users/photographers" element={<AdminPhotographers />} />
+          <Route path="users/verifications" element={<AdminVerifications />} />
           <Route path="staff" element={<AdminStaff />} />
           <Route path="bookings" element={<AdminBookings />} />
           <Route path="memberships" element={<AdminMemberships />} />
