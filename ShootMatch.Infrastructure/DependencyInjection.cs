@@ -22,9 +22,12 @@ public static class DependencyInjection
             throw new InvalidOperationException(
                 "Connection string 'DefaultConnection' is required. Set it in appsettings.json or environment variables.");
 
-        services.AddDbContext<ShootMatchDbContext>(options =>
+        services.AddDbContextFactory<ShootMatchDbContext>(options =>
             options.UseNpgsql(connectionString)
                 .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
+
+        services.AddScoped<ShootMatchDbContext>(p =>
+            p.GetRequiredService<IDbContextFactory<ShootMatchDbContext>>().CreateDbContext());
 
         services.AddScoped<DomainEventDispatcher>();
 

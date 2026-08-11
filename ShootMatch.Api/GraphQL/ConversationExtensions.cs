@@ -1,8 +1,6 @@
 using HotChocolate;
 using HotChocolate.Types;
-using Microsoft.EntityFrameworkCore;
 using ShootMatch.Domain.Entities;
-using ShootMatch.Infrastructure.Persistence;
 
 namespace ShootMatch.Api.GraphQL;
 
@@ -11,59 +9,48 @@ public sealed class ConversationExtensions
 {
     public async Task<string?> GetCustomerDisplayName(
         [Parent] Conversation conversation,
-        [Service] ShootMatchDbContext db,
+        CustomerDataLoader customerLoader,
         CancellationToken cancellationToken)
     {
-        return await db.Customers.AsNoTracking()
-            .Where(x => x.Id == conversation.CustomerId)
-            .Select(x => x.DisplayName)
-            .FirstOrDefaultAsync(cancellationToken);
+        var customer = await customerLoader.LoadAsync(conversation.CustomerId, cancellationToken);
+        return customer?.DisplayName;
     }
 
     public async Task<string?> GetCustomerAvatarUrl(
         [Parent] Conversation conversation,
-        [Service] ShootMatchDbContext db,
+        CustomerDataLoader customerLoader,
         CancellationToken cancellationToken)
     {
-        return await db.Customers.AsNoTracking()
-            .Where(x => x.Id == conversation.CustomerId)
-            .Select(x => x.AvatarUrl)
-            .FirstOrDefaultAsync(cancellationToken);
+        var customer = await customerLoader.LoadAsync(conversation.CustomerId, cancellationToken);
+        return customer?.AvatarUrl;
     }
 
     public async Task<string?> GetPhotographerDisplayName(
         [Parent] Conversation conversation,
-        [Service] ShootMatchDbContext db,
+        PhotographerDataLoader photographerLoader,
         CancellationToken cancellationToken)
     {
-        return await db.Photographers.AsNoTracking()
-            .Where(x => x.Id == conversation.PhotographerId)
-            .Select(x => x.DisplayName)
-            .FirstOrDefaultAsync(cancellationToken);
+        var photographer = await photographerLoader.LoadAsync(conversation.PhotographerId, cancellationToken);
+        return photographer?.DisplayName;
     }
 
     public async Task<string?> GetPhotographerAvatarUrl(
         [Parent] Conversation conversation,
-        [Service] ShootMatchDbContext db,
+        PhotographerDataLoader photographerLoader,
         CancellationToken cancellationToken)
     {
-        return await db.Photographers.AsNoTracking()
-            .Where(x => x.Id == conversation.PhotographerId)
-            .Select(x => x.AvatarUrl)
-            .FirstOrDefaultAsync(cancellationToken);
+        var photographer = await photographerLoader.LoadAsync(conversation.PhotographerId, cancellationToken);
+        return photographer?.AvatarUrl;
     }
 
     public async Task<string?> GetLastMessageContent(
         [Parent] Conversation conversation,
-        [Service] ShootMatchDbContext db,
+        LastMessageDataLoader lastMessageLoader,
+        CustomerDataLoader customerLoader,
+        PhotographerDataLoader photographerLoader,
         CancellationToken cancellationToken)
     {
-        var lastMsg = await db.Messages.AsNoTracking()
-            .Where(x => x.ConversationId == conversation.Id)
-            .OrderByDescending(x => x.SentAt)
-            .Select(x => new { x.Content, x.ContentType, x.SenderId, x.SenderRole })
-            .FirstOrDefaultAsync(cancellationToken);
-
+        var lastMsg = await lastMessageLoader.LoadAsync(conversation.Id, cancellationToken);
         if (lastMsg is null) return null;
 
         if (lastMsg.ContentType == "Image")
@@ -71,17 +58,13 @@ public sealed class ConversationExtensions
             string senderName = "Đối phương";
             if (lastMsg.SenderRole == "customer")
             {
-                senderName = await db.Customers.AsNoTracking()
-                    .Where(x => x.Id == lastMsg.SenderId)
-                    .Select(x => x.DisplayName)
-                    .FirstOrDefaultAsync(cancellationToken) ?? "Khách hàng";
+                var customer = await customerLoader.LoadAsync(lastMsg.SenderId, cancellationToken);
+                senderName = customer?.DisplayName ?? "Khách hàng";
             }
             else if (lastMsg.SenderRole == "photographer")
             {
-                senderName = await db.Photographers.AsNoTracking()
-                    .Where(x => x.Id == lastMsg.SenderId)
-                    .Select(x => x.DisplayName)
-                    .FirstOrDefaultAsync(cancellationToken) ?? "Nhiếp ảnh gia";
+                var photographer = await photographerLoader.LoadAsync(lastMsg.SenderId, cancellationToken);
+                senderName = photographer?.DisplayName ?? "Nhiếp ảnh gia";
             }
             return $"{senderName} đã gửi một ảnh";
         }
@@ -91,42 +74,32 @@ public sealed class ConversationExtensions
 
     public async Task<string?> GetLastMessageSenderRole(
         [Parent] Conversation conversation,
-        [Service] ShootMatchDbContext db,
+        LastMessageDataLoader lastMessageLoader,
         CancellationToken cancellationToken)
     {
-        return await db.Messages.AsNoTracking()
-            .Where(x => x.ConversationId == conversation.Id)
-            .OrderByDescending(x => x.SentAt)
-            .Select(x => x.SenderRole)
-            .FirstOrDefaultAsync(cancellationToken);
+        var lastMsg = await lastMessageLoader.LoadAsync(conversation.Id, cancellationToken);
+        return lastMsg?.SenderRole;
     }
 
     public async Task<string?> GetLastMessageSenderName(
         [Parent] Conversation conversation,
-        [Service] ShootMatchDbContext db,
+        LastMessageDataLoader lastMessageLoader,
+        CustomerDataLoader customerLoader,
+        PhotographerDataLoader photographerLoader,
         CancellationToken cancellationToken)
     {
-        var lastMessage = await db.Messages.AsNoTracking()
-            .Where(x => x.ConversationId == conversation.Id)
-            .OrderByDescending(x => x.SentAt)
-            .Select(x => new { x.SenderId, x.SenderRole })
-            .FirstOrDefaultAsync(cancellationToken);
-
+        var lastMessage = await lastMessageLoader.LoadAsync(conversation.Id, cancellationToken);
         if (lastMessage is null) return null;
 
         if (lastMessage.SenderRole == "customer")
         {
-            return await db.Customers.AsNoTracking()
-                .Where(x => x.Id == lastMessage.SenderId)
-                .Select(x => x.DisplayName)
-                .FirstOrDefaultAsync(cancellationToken);
+            var customer = await customerLoader.LoadAsync(lastMessage.SenderId, cancellationToken);
+            return customer?.DisplayName;
         }
         else if (lastMessage.SenderRole == "photographer")
         {
-            return await db.Photographers.AsNoTracking()
-                .Where(x => x.Id == lastMessage.SenderId)
-                .Select(x => x.DisplayName)
-                .FirstOrDefaultAsync(cancellationToken);
+            var photographer = await photographerLoader.LoadAsync(lastMessage.SenderId, cancellationToken);
+            return photographer?.DisplayName;
         }
 
         return null;

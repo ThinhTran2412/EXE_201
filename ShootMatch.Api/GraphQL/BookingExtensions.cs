@@ -1,8 +1,6 @@
 using HotChocolate;
 using HotChocolate.Types;
-using Microsoft.EntityFrameworkCore;
 using ShootMatch.Domain.Aggregates;
-using ShootMatch.Infrastructure.Persistence;
 
 namespace ShootMatch.Api.GraphQL;
 
@@ -11,18 +9,16 @@ public sealed class BookingExtensions
 {
     public async Task<string?> GetCustomerName(
         [Parent] BookingAggregate booking,
-        [Service] ShootMatchDbContext db,
+        CustomerDataLoader customerLoader,
         CancellationToken cancellationToken)
     {
-        return await db.Customers.AsNoTracking()
-            .Where(x => x.Id == booking.CustomerId)
-            .Select(x => x.DisplayName)
-            .FirstOrDefaultAsync(cancellationToken);
+        var customer = await customerLoader.LoadAsync(booking.CustomerId, cancellationToken);
+        return customer?.DisplayName;
     }
 
     public async Task<string?> GetServicePackageName(
         [Parent] BookingAggregate booking,
-        [Service] ShootMatchDbContext db,
+        ServicePackageDataLoader servicePackageLoader,
         CancellationToken cancellationToken)
     {
         if (booking.ServicePackageId == null)
@@ -30,34 +26,26 @@ public sealed class BookingExtensions
             return null;
         }
 
-        return await db.ServicePackages.AsNoTracking()
-            .Where(x => x.Id == booking.ServicePackageId.Value)
-            .Select(x => x.Title)
-            .FirstOrDefaultAsync(cancellationToken);
+        var package = await servicePackageLoader.LoadAsync(booking.ServicePackageId.Value, cancellationToken);
+        return package?.Title;
     }
 
     public async Task<string?> GetCustomerAvatarUrl(
         [Parent] BookingAggregate booking,
-        [Service] ShootMatchDbContext db,
+        CustomerDataLoader customerLoader,
         CancellationToken cancellationToken)
     {
-        return await db.Customers.AsNoTracking()
-            .Where(x => x.Id == booking.CustomerId)
-            .Select(x => x.AvatarUrl)
-            .FirstOrDefaultAsync(cancellationToken);
+        var customer = await customerLoader.LoadAsync(booking.CustomerId, cancellationToken);
+        return customer?.AvatarUrl;
     }
 
     public async Task<string?> GetServicePackageImageUrl(
         [Parent] BookingAggregate booking,
-        [Service] ShootMatchDbContext db,
+        ServicePackageImageDataLoader servicePackageImageLoader,
         CancellationToken cancellationToken)
     {
         if (booking.ServicePackageId == null) return null;
         
-        return await db.ServicePackageMedia.AsNoTracking()
-            .Where(x => x.ServicePackageId == booking.ServicePackageId.Value)
-            .OrderBy(x => x.SortOrder)
-            .Select(x => x.ImageUrl)
-            .FirstOrDefaultAsync(cancellationToken);
+        return await servicePackageImageLoader.LoadAsync(booking.ServicePackageId.Value, cancellationToken);
     }
 }

@@ -7,6 +7,7 @@ using Microsoft.OpenApi.Models;
 using HotChocolate;
 using HotChocolate.Configuration;
 using HotChocolate.Execution.Configuration;
+using GreenDonut;
 using ShootMatch.Api.GraphQL;
 using ShootMatch.Api.Hubs;
 using ShootMatch.Api.Services;
@@ -151,6 +152,12 @@ builder.Services.AddSwaggerGen(options =>
 // ──────────────────────────────────────────
 //  GraphQL (with HotChocolate authorization)
 // ──────────────────────────────────────────
+builder.Services.AddDataLoader<CustomerDataLoader>();
+builder.Services.AddDataLoader<PhotographerDataLoader>();
+builder.Services.AddDataLoader<ServicePackageDataLoader>();
+builder.Services.AddDataLoader<ServicePackageImageDataLoader>();
+builder.Services.AddDataLoader<LastMessageDataLoader>();
+
 builder.Services
     .AddGraphQLServer()
     .AddQueryType<MatchingQuery>()

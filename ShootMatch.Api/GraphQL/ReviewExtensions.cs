@@ -1,8 +1,6 @@
 using HotChocolate;
 using HotChocolate.Types;
-using Microsoft.EntityFrameworkCore;
 using ShootMatch.Domain.Entities;
-using ShootMatch.Infrastructure.Persistence;
 
 namespace ShootMatch.Api.GraphQL;
 
@@ -11,23 +9,19 @@ public sealed class ReviewExtensions
 {
     public async Task<string?> GetAuthorName(
         [Parent] Review review,
-        [Service] ShootMatchDbContext db,
+        CustomerDataLoader customerLoader,
         CancellationToken cancellationToken)
     {
-        return await db.Customers.AsNoTracking()
-            .Where(x => x.Id == review.AuthorCustomerId)
-            .Select(x => x.DisplayName)
-            .FirstOrDefaultAsync(cancellationToken);
+        var customer = await customerLoader.LoadAsync(review.AuthorCustomerId, cancellationToken);
+        return customer?.DisplayName;
     }
 
     public async Task<string?> GetAuthorAvatarUrl(
         [Parent] Review review,
-        [Service] ShootMatchDbContext db,
+        CustomerDataLoader customerLoader,
         CancellationToken cancellationToken)
     {
-        return await db.Customers.AsNoTracking()
-            .Where(x => x.Id == review.AuthorCustomerId)
-            .Select(x => x.AvatarUrl)
-            .FirstOrDefaultAsync(cancellationToken);
+        var customer = await customerLoader.LoadAsync(review.AuthorCustomerId, cancellationToken);
+        return customer?.AvatarUrl;
     }
 }
