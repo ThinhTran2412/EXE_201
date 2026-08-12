@@ -45,6 +45,7 @@ type DashboardPayload = {
   photographers: AdminPhotographer[];
   bookings: AdminBooking[];
   verificationRequests: AdminVerificationRequest[];
+  memberships: any[];
 };
 
 function normalizeList<T>(value: unknown): T[] {
@@ -63,6 +64,7 @@ export default function AdminDashboard() {
     photographers: [],
     bookings: [],
     verificationRequests: [],
+    memberships: [],
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,13 +75,14 @@ export default function AdminDashboard() {
     try {
       setError(null);
       setRefreshing(true);
-      const [statsResponse, customersResponse, photographersResponse, bookingsResponse, verificationResponse] =
+      const [statsResponse, customersResponse, photographersResponse, bookingsResponse, verificationResponse, membershipResponse] =
         await Promise.all([
           api.get("/admin/dashboard-stats"),
           api.get("/admin/customers"),
           api.get("/admin/photographers"),
           api.get("/admin/bookings"),
           api.get("/admin/verification-requests"),
+          api.get("/payments/membership/transactions"),
         ]);
 
       setPayload({
@@ -88,6 +91,7 @@ export default function AdminDashboard() {
         photographers: normalizeList<AdminPhotographer>(photographersResponse.data),
         bookings: normalizeList<AdminBooking>(bookingsResponse.data),
         verificationRequests: normalizeList<AdminVerificationRequest>(verificationResponse.data),
+        memberships: normalizeList<any>(membershipResponse.data),
       });
     } catch (loadError) {
       console.error(loadError);
@@ -103,13 +107,14 @@ export default function AdminDashboard() {
 
     void (async () => {
       try {
-        const [statsResponse, customersResponse, photographersResponse, bookingsResponse, verificationResponse] =
+        const [statsResponse, customersResponse, photographersResponse, bookingsResponse, verificationResponse, membershipResponse] =
           await Promise.all([
             api.get("/admin/dashboard-stats"),
             api.get("/admin/customers"),
             api.get("/admin/photographers"),
             api.get("/admin/bookings"),
             api.get("/admin/verification-requests"),
+            api.get("/payments/membership/transactions"),
           ]);
 
         if (active) {
@@ -119,6 +124,7 @@ export default function AdminDashboard() {
             photographers: normalizeList<AdminPhotographer>(photographersResponse.data),
             bookings: normalizeList<AdminBooking>(bookingsResponse.data),
             verificationRequests: normalizeList<AdminVerificationRequest>(verificationResponse.data),
+            memberships: normalizeList<any>(membershipResponse.data),
           });
         }
       } catch (loadError) {
@@ -153,15 +159,15 @@ export default function AdminDashboard() {
   };
 
   const stats = useMemo(() => {
-    const revenueFromData = payload.bookings.reduce((sum, booking) => {
-      return normalizeBookingStatus(booking.status) === "Completed" ? sum + (booking.commission ?? 0) : sum;
+    const revenueFromData = payload.memberships.reduce((sum, membership) => {
+      return membership.status === "Paid" ? sum + (membership.amount || 0) : sum;
     }, 0);
 
     return {
       totalCustomers: payload.stats.totalCustomers || payload.customers.length,
       totalPhotographers: payload.stats.totalPhotographers || payload.photographers.length,
       totalBookings: payload.stats.totalBookings || payload.bookings.length,
-      totalRevenue: payload.stats.totalRevenue || revenueFromData,
+      totalRevenue: revenueFromData,
       pendingVerifications: payload.verificationRequests.length,
       verifiedPhotographers: payload.photographers.filter(
         (photographer) => normalizeVerificationStatus(photographer.verificationStatus) === "Verified",
@@ -169,7 +175,7 @@ export default function AdminDashboard() {
     };
   }, [payload]);
 
-  const revenueSeries = useMemo(() => buildMonthlyRevenueSeries(payload.bookings, 6), [payload.bookings]);
+  const revenueSeries = useMemo(() => buildMonthlyRevenueSeries(payload.memberships, 6), [payload.memberships]);
   const bookingWeekSeries = useMemo(() => buildWeeklyBookingSeries(payload.bookings), [payload.bookings]);
   const bookingStatusSeries = useMemo(() => buildBookingStatusSeries(payload.bookings), [payload.bookings]);
   const verificationSeries = useMemo(
@@ -287,7 +293,7 @@ export default function AdminDashboard() {
           <h2 className="font-display text-2xl uppercase tracking-wider text-[#1c1917] mb-1">
             Doanh thu theo tháng
           </h2>
-          <p className="text-xs text-gray-400 font-medium uppercase tracking-widest mb-8">Chỉ tính booking hoàn thành</p>
+          <p className="text-xs text-gray-400 font-medium uppercase tracking-widest mb-8">Chỉ tính các giao dịch mua gói thành công</p>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={revenueSeries}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />

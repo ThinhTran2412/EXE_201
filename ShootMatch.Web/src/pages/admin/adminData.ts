@@ -225,7 +225,7 @@ export function parseDashboardStats(data: any): AdminDashboardStats {
   };
 }
 
-export function buildMonthlyRevenueSeries(bookings: AdminBooking[], months = 6) {
+export function buildMonthlyRevenueSeries(memberships: any[], months = 6) {
   const now = new Date();
   const buckets = new Map<string, number>();
 
@@ -236,15 +236,15 @@ export function buildMonthlyRevenueSeries(bookings: AdminBooking[], months = 6) 
     buckets.set(key, 0);
   }
 
-  bookings.forEach((booking) => {
-    if (normalizeBookingStatus(booking.status) !== "Completed") return;
-    const completedAt = booking.completedAt ? new Date(booking.completedAt) : null;
+  memberships.forEach((membership) => {
+    if (membership.status !== "Paid") return;
+    const completedAt = membership.createdAt ? new Date(membership.createdAt) : null;
     if (!completedAt || Number.isNaN(completedAt.getTime())) return;
 
     const key = `${completedAt.getFullYear()}-${String(completedAt.getMonth() + 1).padStart(2, "0")}`;
     if (!buckets.has(key)) return;
 
-    buckets.set(key, (buckets.get(key) ?? 0) + (booking.commission || 0));
+    buckets.set(key, (buckets.get(key) ?? 0) + (membership.amount || 0));
   });
 
   return Array.from(buckets.entries()).map(([key, revenue]) => {
