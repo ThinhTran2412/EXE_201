@@ -147,6 +147,8 @@ public sealed class AdminController(
             ("bookings", "pdf") => await reportExportService.BuildBookingsPdfAsync(reportFilter, cancellationToken),
             ("bookings", "excel") => await reportExportService.BuildBookingsExcelAsync(reportFilter, cancellationToken),
             ("bookings", "xlsx") => await reportExportService.BuildBookingsExcelAsync(reportFilter, cancellationToken),
+            ("memberships", "excel") => await reportExportService.BuildMembershipsExcelAsync(new AdminMembershipReportFilter(statusFilter, search), cancellationToken),
+            ("memberships", "xlsx") => await reportExportService.BuildMembershipsExcelAsync(new AdminMembershipReportFilter(statusFilter, search), cancellationToken),
             _ => null
         };
 

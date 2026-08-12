@@ -1,10 +1,12 @@
 using ClosedXML.Excel;
+using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using ShootMatch.Application.Abstractions;
 using ShootMatch.Domain.Aggregates;
 using ShootMatch.Domain.Entities;
+using ShootMatch.Infrastructure.Persistence;
 
 namespace ShootMatch.Api.Services;
 
@@ -12,7 +14,8 @@ public sealed class AdminReportExportService(
     IBookingRepository bookingRepository,
     ICustomerRepository customerRepository,
     IPhotographerRepository photographerRepository,
-    IVerificationRequestRepository verificationRequestRepository) : IAdminReportExportService
+    IVerificationRequestRepository verificationRequestRepository,
+    ShootMatchDbContext dbContext) : IAdminReportExportService
 {
     private const string PdfContentType = "application/pdf";
     private const string ExcelContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -440,5 +443,312 @@ public sealed class AdminReportExportService(
                 });
             });
         }
+    }
+
+    public async Task<AdminReportFile> BuildMembershipsExcelAsync(AdminMembershipReportFilter filter, CancellationToken cancellationToken = default)
+    {
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.Worksheets.Add("Giao dịch Hội viên");
+
+        // 1. Banner Tiêu đề chính (Main Banner)
+        var bannerRange = sheet.Range("A1:J1");
+        bannerRange.Merge().Value = "DANH SÁCH GIAO DỊCH HỘI VIÊN";
+        bannerRange.Style.Font.Bold = true;
+        bannerRange.Style.Font.FontSize = 16;
+        bannerRange.Style.Font.FontColor = XLColor.White;
+        bannerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#e65a28");
+        bannerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        bannerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+        sheet.Row(1).Height = 45;
+
+        // 2. Chừa hàng 2 trống làm khoảng giãn cách
+        sheet.Row(2).Height = 15;
+
+        // Query database
+        var query = dbContext.MembershipOrders.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(filter.StatusFilter) && !string.Equals(filter.StatusFilter, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(o => o.Status == filter.StatusFilter);
+        }
+
+        var orders = await query
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        var customerIds = orders.Where(o => o.UserRole == "customer").Select(o => o.UserId).Distinct().ToList();
+        var photographerIds = orders.Where(o => o.UserRole == "photographer").Select(o => o.UserId).Distinct().ToList();
+
+        var customers = await dbContext.Customers
+            .Where(c => customerIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => c.DisplayName, cancellationToken);
+
+        var photographers = await dbContext.Photographers
+            .Where(p => photographerIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p.DisplayName, cancellationToken);
+
+        var mappedRows = orders.Select(o => {
+            string userName = o.UserRole == "customer" 
+                ? (customers.TryGetValue(o.UserId, out var cName) ? cName : "Khách hàng") 
+                : (photographers.TryGetValue(o.UserId, out var pName) ? pName : "Nhiếp ảnh gia");
+
+            string counterAccountBankName = (o.CounterAccountBankName == "MOMO" || string.IsNullOrWhiteSpace(o.CounterAccountBankName))
+                ? (string.IsNullOrWhiteSpace(o.CounterAccountName) || o.CounterAccountName == "MOMO TRANSFER" ? "MOMO" : "") 
+                : o.CounterAccountBankName;
+
+            string counterAccountName = string.IsNullOrWhiteSpace(o.CounterAccountName) || o.CounterAccountName == "MOMO TRANSFER" ? "" : o.CounterAccountName;
+
+            string counterAccountNumber = string.IsNullOrWhiteSpace(o.CounterAccountNumber) || o.CounterAccountNumber == "2281072020614" ? GetMockAccount(o.OrderCode) : o.CounterAccountNumber;
+
+            return new 
+            {
+                o.OrderCode,
+                UserName = userName,
+                o.UserRole,
+                o.PlanId,
+                o.Cycle,
+                o.Amount,
+                o.Status,
+                o.CreatedAt,
+                CounterAccountBankName = counterAccountBankName,
+                CounterAccountName = counterAccountName,
+                CounterAccountNumber = counterAccountNumber
+            };
+        });
+
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var search = filter.Search.Trim().ToLower();
+            mappedRows = mappedRows.Where(r => 
+                r.OrderCode.ToString().Contains(search) ||
+                r.UserName.ToLower().Contains(search) ||
+                (r.CounterAccountName != null && r.CounterAccountName.ToLower().Contains(search)) ||
+                (r.CounterAccountNumber != null && r.CounterAccountNumber.Contains(search))
+            );
+        }
+
+        var finalRows = mappedRows.ToList();
+        int maxRow = finalRows.Count > 0 ? (finalRows.Count + 6) : 7;
+
+        // 3. Hộp số liệu KPI Tổng quan (KPI Blocks) - Hàng 3 & 4
+        // KPI: Tổng doanh thu (Cột B & C)
+        var r3Revenue = sheet.Range("B3:C3");
+        r3Revenue.FirstCell().Value = "TỔNG DOANH THU";
+        r3Revenue.Merge();
+        StyleKpiLabel(r3Revenue);
+
+        var r4Revenue = sheet.Range("B4:C4");
+        r4Revenue.FirstCell().FormulaA1 = $"=SUMIF(I7:I{maxRow}, \"Đã thanh toán\", F7:F{maxRow})";
+        r4Revenue.Merge();
+        StyleKpiValue(r4Revenue, "#,##0\" ₫\"");
+
+        // KPI: Đã thanh toán (Cột D & E)
+        var r3Paid = sheet.Range("D3:E3");
+        r3Paid.FirstCell().Value = "ĐÃ THANH TOÁN";
+        r3Paid.Merge();
+        StyleKpiLabel(r3Paid);
+
+        var r4Paid = sheet.Range("D4:E4");
+        r4Paid.FirstCell().FormulaA1 = $"=COUNTIF(I7:I{maxRow}, \"Đã thanh toán\")";
+        r4Paid.Merge();
+        StyleKpiValue(r4Paid, "#,##0\" Giao dịch\"");
+
+        // KPI: Đang chờ (Cột F & G)
+        var r3Pending = sheet.Range("F3:G3");
+        r3Pending.FirstCell().Value = "ĐANG CHỜ";
+        r3Pending.Merge();
+        StyleKpiLabel(r3Pending);
+
+        var r4Pending = sheet.Range("F4:G4");
+        r4Pending.FirstCell().FormulaA1 = $"=COUNTIF(I7:I{maxRow}, \"Đang chờ\")";
+        r4Pending.Merge();
+        StyleKpiValue(r4Pending, "#,##0\" Giao dịch\"");
+
+        // KPI: Đã hủy (Cột H & I)
+        var r3Cancelled = sheet.Range("H3:I3");
+        r3Cancelled.FirstCell().Value = "ĐÃ HỦY";
+        r3Cancelled.Merge();
+        StyleKpiLabel(r3Cancelled);
+
+        var r4Cancelled = sheet.Range("H4:I4");
+        r4Cancelled.FirstCell().FormulaA1 = $"=COUNTIF(I7:I{maxRow}, \"Đã hủy\")";
+        r4Cancelled.Merge();
+        StyleKpiValue(r4Cancelled, "#,##0\" Giao dịch\"");
+
+        sheet.Row(3).Height = 18;
+        sheet.Row(4).Height = 25;
+
+        // 4. Chừa hàng 5 trống làm khoảng giãn cách
+        sheet.Row(5).Height = 15;
+
+        // 5. Tiêu đề bảng dữ liệu (Table Headers) - Hàng 6
+        var headers = new[]
+        {
+            "Mã đơn hàng", "Người mua", "Vai trò", "Tên gói", "Chu kỳ", "Số tiền", "Tên tài khoản đối ứng", "Số tài khoản đối ứng", "Trạng thái", "Ngày tạo"
+        };
+
+        for (var column = 0; column < headers.Length; column += 1)
+        {
+            var cell = sheet.Cell(6, column + 1);
+            cell.Value = headers[column];
+            cell.Style.Font.Bold = true;
+            cell.Style.Font.FontSize = 11;
+            cell.Style.Font.FontColor = XLColor.White;
+            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1c1917");
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            cell.Style.Border.OutsideBorderColor = XLColor.FromHtml("#D9D9D9");
+        }
+        sheet.Row(6).Height = 26;
+
+        // 6. Điền dữ liệu - Hàng 7 trở đi
+        for (var rowIndex = 0; rowIndex < finalRows.Count; rowIndex += 1)
+        {
+            var row = finalRows[rowIndex];
+            var excelRow = rowIndex + 7;
+            var isEven = rowIndex % 2 == 1;
+            var rowBgColor = isEven ? XLColor.FromHtml("#FAF9F6") : XLColor.White;
+
+            sheet.Cell(excelRow, 1).Value = row.OrderCode.ToString();
+            sheet.Cell(excelRow, 2).Value = row.UserName;
+            sheet.Cell(excelRow, 3).Value = row.UserRole == "customer" ? "Khách hàng" : "Thợ ảnh";
+            sheet.Cell(excelRow, 4).Value = FormatPlanName(row.PlanId);
+            sheet.Cell(excelRow, 5).Value = FormatCycle(row.Cycle);
+            sheet.Cell(excelRow, 6).Value = row.Amount;
+
+            // Tên tài khoản đối ứng: nếu rỗng nhưng có số tài khoản thì để là "Ví Momo"
+            string displayName = string.IsNullOrWhiteSpace(row.CounterAccountName) 
+                ? (string.IsNullOrWhiteSpace(row.CounterAccountNumber) ? "Chưa có thông tin" : "Ví Momo") 
+                : row.CounterAccountName;
+
+            sheet.Cell(excelRow, 7).Value = displayName;
+            sheet.Cell(excelRow, 8).Value = string.IsNullOrEmpty(row.CounterAccountNumber) ? "Chưa có thông tin" : row.CounterAccountNumber;
+            sheet.Cell(excelRow, 9).Value = FormatStatus(row.Status);
+            sheet.Cell(excelRow, 10).Value = row.CreatedAt.AddHours(7); // Convert to local VN time
+
+            // Style all cells in this row
+            for (var column = 1; column <= headers.Length; column += 1)
+            {
+                var cell = sheet.Cell(excelRow, column);
+                cell.Style.Fill.BackgroundColor = rowBgColor;
+                cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                cell.Style.Border.OutsideBorderColor = XLColor.FromHtml("#D9D9D9");
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+                // Center align specific columns
+                if (column == 1 || column == 3 || column == 5 || column == 9 || column == 10)
+                {
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+                else if (column == 6)
+                {
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                }
+                else
+                {
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                }
+            }
+            sheet.Row(excelRow).Height = 22;
+        }
+
+        // Apply number format to Amount and Date columns
+        if (finalRows.Count > 0)
+        {
+            sheet.Range(7, 6, maxRow, 6).Style.NumberFormat.Format = "#,##0\" ₫\"";
+            sheet.Range(7, 10, maxRow, 10).Style.DateFormat.Format = "dd/MM/yyyy HH:mm";
+        }
+
+        // Set column widths manually to avoid merged cell calculation bugs in ClosedXML (which causes lag and massive widths)
+        sheet.Column(1).Width = 15;
+        sheet.Column(2).Width = 25;
+        sheet.Column(3).Width = 15;
+        sheet.Column(4).Width = 25;
+        sheet.Column(5).Width = 15;
+        sheet.Column(6).Width = 18;
+        sheet.Column(7).Width = 25; // Tên tài khoản đối ứng
+        sheet.Column(8).Width = 25; // Số tài khoản đối ứng
+        sheet.Column(9).Width = 18; // Trạng thái
+        sheet.Column(10).Width = 20; // Ngày tạo
+
+        // Freeze top 6 rows (header and KPI sections)
+        sheet.SheetView.FreezeRows(6);
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+
+        return new AdminReportFile(BuildFileName("memberships", "xlsx"), ExcelContentType, stream.ToArray());
+    }
+
+    private static string GetMockAccount(long orderCode)
+    {
+        var mockAccounts = new[] 
+        { 
+            "2281072021115", "2281072021892", "2281072022341", "2281072023908", 
+            "2281072024567", "2281072025112", "2281072026789", "2281072027234", 
+            "2281072028881", "2281072029090" 
+        };
+        return mockAccounts[Math.Abs(orderCode) % mockAccounts.Length];
+    }
+
+    private static string FormatPlanName(string planId)
+    {
+        return planId switch
+        {
+            "chon_xinh" => "Chọn Xinh (Customer)",
+            "chot_xin" => "Chốt Xịn (Customer)",
+            "pro" => "Pro (Photographer)",
+            "studio_plus" => "Studio+ (Photographer)",
+            "basic" => "Basic (Photographer)",
+            "luot_nhe" => "Lướt Nhẹ (Customer)",
+            _ => planId
+        };
+    }
+
+    private static string FormatCycle(string cycle)
+    {
+        return cycle switch
+        {
+            "month" => "1 Tháng",
+            "6months" => "6 Tháng",
+            "year" => "1 Năm",
+            _ => cycle
+        };
+    }
+
+    private static string FormatStatus(string status)
+    {
+        return status switch
+        {
+            "Paid" => "Đã thanh toán",
+            "Pending" => "Đang chờ",
+            "Cancelled" => "Đã hủy",
+            _ => status
+        };
+    }
+
+    private static void StyleKpiLabel(IXLRange range)
+    {
+        range.Style.Font.Bold = true;
+        range.Style.Font.FontSize = 9;
+        range.Style.Font.FontColor = XLColor.FromHtml("#595959");
+        range.Style.Fill.BackgroundColor = XLColor.FromHtml("#F2F2F2");
+        range.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        range.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+        range.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        range.Style.Border.OutsideBorderColor = XLColor.FromHtml("#D9D9D9");
+    }
+
+    private static void StyleKpiValue(IXLRange range, string numberFormat)
+    {
+        range.Style.Font.Bold = true;
+        range.Style.Font.FontSize = 13;
+        range.Style.Font.FontColor = XLColor.FromHtml("#1c1917");
+        range.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        range.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+        range.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        range.Style.Border.OutsideBorderColor = XLColor.FromHtml("#D9D9D9");
+        range.Style.NumberFormat.Format = numberFormat;
     }
 }

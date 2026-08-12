@@ -17,7 +17,7 @@ export default function AdminLogin() {
     setLoading(true);
     try {
       const res = await api.post("/admin/auth/login", { username, password });
-      setAdminToken(res.data.accessToken);
+      setAdminToken(res.data.accessToken, res.data.refreshToken);
       navigate("/admin/dashboard");
     } catch {
       setError("THÔNG TIN ĐĂNG NHẬP KHÔNG CHÍNH XÁC.");

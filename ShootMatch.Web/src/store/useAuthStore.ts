@@ -19,7 +19,7 @@ interface AuthState {
   adminAvatarUrl: string | null;
   isReady: boolean;
   setSession: (session: AuthSession) => void;
-  setAdminToken: (token: string | null) => void;
+  setAdminToken: (token: string | null, refreshToken?: string | null) => void;
   setAdminAvatarUrl: (avatarUrl: string | null) => void;
   clearSession: () => void;
 }
@@ -123,7 +123,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       isReady: true,
     });
   },
-  setAdminToken: (token) => {
+  setAdminToken: (token, refreshToken) => {
     if (!token) {
       persistSession(null);
       persistAdminProfile({ avatarUrl: null });
@@ -141,7 +141,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     const session: AuthSession = {
       accessToken: token,
-      refreshToken: null,
+      refreshToken: refreshToken ?? null,
       role: "admin",
       userId: resolveTokenUserId(token),
     };
@@ -150,7 +150,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({
       session,
       accessToken: token,
-      refreshToken: null,
+      refreshToken: refreshToken ?? null,
       role: "admin",
       userId: session.userId,
       adminAvatarUrl: readAdminProfile().avatarUrl,

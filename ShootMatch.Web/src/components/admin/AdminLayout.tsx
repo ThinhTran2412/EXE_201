@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { Outlet, useNavigate, Link, useLocation } from "react-router-dom";
+import { useRef, useState, type ChangeEvent } from "react";
+import { Outlet, useNavigate, Link, useLocation, Navigate } from "react-router-dom";
 import { Camera, LayoutDashboard, Users, Calendar, LogOut, Upload, ShieldCheck, CreditCard, ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../store/useAuthStore";
@@ -17,13 +17,9 @@ export default function AdminLayout() {
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  useEffect(() => {
-    if (!session || role !== "admin") {
-      navigate("/admin/login");
-    }
-  }, [role, session, navigate]);
-
-  if (!session || role !== "admin") return null;
+  if (!session || role !== "admin") {
+    return <Navigate to="/admin/login" replace />;
+  }
 
   const handleLogout = () => {
     clearSession();

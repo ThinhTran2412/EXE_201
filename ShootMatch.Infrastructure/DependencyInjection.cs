@@ -27,7 +27,11 @@ public static class DependencyInjection
                 .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
         services.AddScoped<ShootMatchDbContext>(p =>
-            p.GetRequiredService<IDbContextFactory<ShootMatchDbContext>>().CreateDbContext());
+        {
+            var options = p.GetRequiredService<DbContextOptions<ShootMatchDbContext>>();
+            var dispatcher = p.GetService<DomainEventDispatcher>();
+            return new ShootMatchDbContext(options, dispatcher);
+        });
 
         services.AddScoped<DomainEventDispatcher>();
 

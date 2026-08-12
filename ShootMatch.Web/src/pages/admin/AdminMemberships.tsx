@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CreditCard, Search, RefreshCw, CheckCircle, AlertCircle, XCircle, ArrowUpRight, DollarSign, Activity } from "lucide-react";
 import { api } from "../../lib/api";
+import { downloadAdminReport } from "./adminExports";
 
 interface MembershipTransaction {
   orderCode: number;
@@ -24,6 +25,28 @@ export default function AdminMemberships() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [checkingOrderId, setCheckingOrderId] = useState<number | null>(null);
+  const [exportingFormat, setExportingFormat] = useState<"excel" | null>(null);
+
+  const exportMembershipsReport = async () => {
+    try {
+      setExportingFormat("excel");
+      const params = new URLSearchParams();
+      if (statusFilter !== "all") params.append("statusFilter", statusFilter);
+      if (searchTerm.trim()) params.append("search", searchTerm.trim());
+
+      const response = await api.get<Blob>(`/admin/reports/memberships/excel`, {
+        params,
+        responseType: "blob",
+      });
+
+      downloadAdminReport(response, `admin-memberships-report.xlsx`);
+    } catch (err) {
+      console.error(err);
+      alert("Không thể xuất file excel giao dịch hội viên.");
+    } finally {
+      setExportingFormat(null);
+    }
+  };
 
   const fetchTransactions = async () => {
     try {
@@ -110,14 +133,24 @@ export default function AdminMemberships() {
             HỘI VIÊN
           </h1>
         </div>
-        <button
-          onClick={fetchTransactions}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-full border border-gray-200/60 bg-white/80 backdrop-blur-md px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-gray-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(230,90,40,0.1)] hover:-translate-y-0.5 transition-all disabled:opacity-50"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} strokeWidth={3} />
-          LÀM MỚI
-        </button>
+        <div className="flex flex-wrap items-center gap-4">
+          <button
+            onClick={exportMembershipsReport}
+            disabled={exportingFormat !== null}
+            className="inline-flex items-center gap-2 rounded-full border border-gray-200/60 bg-white/80 backdrop-blur-md px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-gray-750 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(230,90,40,0.1)] hover:-translate-y-0.5 transition-all disabled:opacity-50"
+          >
+            <ArrowUpRight size={14} className={exportingFormat === "excel" ? "animate-spin" : ""} strokeWidth={3} />
+            {exportingFormat === "excel" ? "ĐANG XUẤT..." : "XUẤT EXCEL"}
+          </button>
+          <button
+            onClick={fetchTransactions}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-full border border-gray-200/60 bg-white/80 backdrop-blur-md px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-gray-750 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(230,90,40,0.1)] hover:-translate-y-0.5 transition-all disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} strokeWidth={3} />
+            LÀM MỚI
+          </button>
+        </div>
       </div>
 
       {/* Stats Section */}

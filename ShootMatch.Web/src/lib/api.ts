@@ -48,7 +48,13 @@ api.interceptors.response.use(
 
     const role = currentSession?.role ?? resolveTokenRole(currentSession?.accessToken ?? "");
     const refreshEndpoint =
-      role === "photographer" ? "/photographer-auth/refresh" : role === "customer" ? "/auth/refresh" : null;
+      role === "photographer"
+        ? "/photographer-auth/refresh"
+        : role === "customer"
+        ? "/auth/refresh"
+        : role === "admin"
+        ? "/admin/auth/refresh"
+        : null;
 
     if (!refreshEndpoint) {
       useAuthStore.getState().clearSession();
