@@ -313,7 +313,8 @@ export default function DiscoverScreen() {
   async function init() {
     setLoading(true);
     try {
-      const feed = await getPhotographers();
+      const allPhotographers = await getPhotographers();
+      const feed = allPhotographers.filter(p => (p.portfolioPhotos?.length ?? 0) >= 3);
       setCards(feed);
       setTotalCards(feed.length);
     } catch (e) {

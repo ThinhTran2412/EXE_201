@@ -681,14 +681,16 @@ export default function DashboardScreen() {
             </View>
 
             {/* TAB 0 — Photographer deck swipe */}
-            {activeTab === 0 && (
+            {activeTab === 0 && (() => {
+              const displayFeed = (feed.length > 0 ? feed : (profile ? [profile] : [])).filter(item => (item.portfolioPhotos?.length ?? 0) >= 3);
+              return (
               <View style={[styles.modeTabContent, styles.cardStageWrap]}>
                 <FlatList
                   ref={feedRef}
                   horizontal
                   pagingEnabled
                   showsHorizontalScrollIndicator={false}
-                  data={feed.length > 0 ? feed : (profile ? [profile] : [])}
+                  data={displayFeed}
                   keyExtractor={(item) => item.id}
                   snapToInterval={width * 0.8 + 12}
                   snapToAlignment="start"
@@ -740,7 +742,7 @@ export default function DashboardScreen() {
                           <View style={styles.cardFooter}>
                             <View>
                               <Text style={styles.cardFooterLabel}>Quẹt sang</Text>
-                              <Text style={styles.cardFooterValue}>{index + 1} / {feed.length > 0 ? feed.length : 1}</Text>
+                              <Text style={styles.cardFooterValue}>{index + 1} / {displayFeed.length > 0 ? displayFeed.length : 1}</Text>
                             </View>
                             <Pressable style={styles.cardMenuBtn} onPress={() => navigation.navigate('PProfile')}>
                               <Ionicons name="ellipsis-horizontal" size={16} color="#FFF3D8" />
@@ -752,7 +754,7 @@ export default function DashboardScreen() {
                   }}
                   onMomentumScrollEnd={(e) => {
                     const idx = Math.round(e.nativeEvent.contentOffset.x / (width * 0.8 + 12));
-                    handleSwipeEnd(Math.max(0, Math.min(idx, (feed.length > 0 ? feed.length : 1) - 1)));
+                    handleSwipeEnd(Math.max(0, Math.min(idx, (displayFeed.length > 0 ? displayFeed.length : 1) - 1)));
                   }}
                 />
                 <Pressable style={styles.tabActionBtn} onPress={() => navigation.navigate('PhotographerPortfolio', { photographer: activePhotographer })}>
@@ -760,7 +762,8 @@ export default function DashboardScreen() {
                   <Text style={styles.tabActionBtnText}>MỞ THƯ VIỆN PORTFOLIO</Text>
                 </Pressable>
               </View>
-            )}
+              );
+            })()}
 
             {/* TAB 1 — Xu hướng chụp mới */}
             {activeTab === 1 && (

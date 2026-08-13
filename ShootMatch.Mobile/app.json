@@ -18,7 +18,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#fff7e1"
+        "backgroundColor": "#000000"
       },
       "package": "com.shootmatch.mobile",
       "permissions": [
@@ -36,9 +36,6 @@
     },
     "experiments": {
       "tsconfigPaths": true
-    },
-    "plugins": [
-      "expo-web-browser"
-    ]
+    }
   }
 }
